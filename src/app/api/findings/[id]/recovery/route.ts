@@ -1,0 +1,51 @@
+import { NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import { db } from "@/lib/db";
+import { hasPermission } from "@/lib/rbac";
+import { logActivity } from "@/lib/activity";
+
+export async function PATCH(
+    req: Request,
+    { params }: { params: Promise<{ id: string }> }
+) {
+    const { id } = await params;
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) {
+        return new Response("Unauthorized", { status: 401 });
+    }
+
+    // Admin/Owner can update recovery status
+    if (!hasPermission(session.user.role, "TASK_MANAGE")) {
+        return new Response("Forbidden", { status: 403 });
+    }
+
+    try {
+        const { status, recoveredAmount } = await req.json();
+
+        const finding = await db.finding.update({
+            where: {
+                id,
+                orgId: session.user.orgId
+            },
+            data: {
+                status,
+                recoveredAmount: recoveredAmount ? parseFloat(recoveredAmount) : undefined,
+            },
+        });
+
+        await logActivity({
+            orgId: session.user.orgId,
+            userId: session.user.id,
+            action: status === "RECOVERED" ? "RECOVERY_LOGGED" : "STATUS_UPDATED",
+            resourceId: finding.id,
+            resourceType: "Finding",
+            details: `${status} update for ${finding.type}${recoveredAmount ? ` ($${recoveredAmount} recovered)` : ""}`
+        });
+
+        return NextResponse.json(finding);
+    } catch (err: any) {
+        console.error("Recovery update failed:", err);
+        return new Response(err.message, { status: 500 });
+    }
+}

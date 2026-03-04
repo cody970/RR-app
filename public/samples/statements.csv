@@ -1,0 +1,4 @@
+ISRC             , Title              , Artist          , Uses, Amount, Source       , Period
+"US-UMG-17-04770", "Humble"           , "Kendrick Lamar", 1000,  10.50, "Spotify"    , "2024-Q1"
+"GB-AAA-05-00101", "Bohemian Rhapsody", "Queen"         ,  500,   5.25, "Spotify"    , "2024-Q1"
+"US-FAKE-ISRC"   , "Unknown Track"    , "Unknown"       ,  100,   2.00, "Apple Music", "2024-Q1"
