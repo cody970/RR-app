@@ -26,6 +26,7 @@ model Organization {
   notifications Notification[]
   dspReports    DspReport[]
   cwrRegistrations CwrRegistration[]
+  catalogScans  CatalogScan[]
   syncQuotes    SyncQuote[]
   syncLicenses  SyncLicense[]
   syncPlacements SyncPlacement[]
@@ -410,4 +411,48 @@ model SyncPlacement {
 
   @@index([orgId])
   @@index([workId])
+}
+
+model CatalogScan {
+  id                String            @id @default(cuid())
+  orgId             String
+  status            String            @default("PENDING") // PENDING, SCANNING, COMPLETE, FAILED
+  totalWorks        Int               @default(0)
+  totalRecordings   Int               @default(0)
+  unregisteredCount Int               @default(0)
+  scannedCount      Int               @default(0)
+  error             String?
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+
+  organization      Organization      @relation(fields: [orgId], references: [id])
+  gaps              RegistrationGap[]
+
+  @@index([orgId])
+}
+
+model RegistrationGap {
+  id              String       @id @default(cuid())
+  scanId          String
+  workId          String?
+  recordingId     String?
+  title           String
+  isrc            String?
+  iswc            String?
+  artistName      String?
+  society         String       // ASCAP, BMI, SESAC, MLC, SoundExchange
+  gapType         String       // MISSING_WORK, MISSING_RECORDING, MISSING_SPLIT, NO_REGISTRATION
+  confidence      Int          // 0-100 matching confidence
+  estimatedImpact Float?
+  status          String       @default("OPEN") // OPEN, REGISTERING, REGISTERED, DISMISSED
+  songviewMatch   Json?
+  musicbrainzId   String?
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  scan            CatalogScan  @relation(fields: [scanId], references: [id])
+
+  @@index([scanId])
+  @@index([status])
+  @@index([gapType])
 }
