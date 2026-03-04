@@ -1,0 +1,46 @@
+import { NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import { db } from "@/lib/db";
+
+export async function GET(req: Request) {
+    try {
+        const session = await getServerSession(authOptions);
+        if (!session?.user) return new Response("Unauthorized", { status: 401 });
+        const orgId = (session.user as any).orgId;
+
+        const tasks = await db.task.findMany({
+            where: { orgId },
+            include: { finding: true },
+            orderBy: { createdAt: 'desc' }
+        });
+
+        return NextResponse.json(tasks);
+    } catch (err: any) {
+        return new Response(err.message, { status: 500 });
+    }
+}
+
+export async function POST(req: Request) {
+    try {
+        const session = await getServerSession(authOptions);
+        if (!session?.user) return new Response("Unauthorized", { status: 401 });
+        const orgId = (session.user as any).orgId;
+
+        const { findingId, assigneeEmail, notes } = await req.json();
+
+        const task = await db.task.create({
+            data: {
+                findingId,
+                assigneeEmail,
+                notes,
+                status: "OPEN",
+                orgId
+            }
+        });
+
+        return NextResponse.json(task);
+    } catch (err: any) {
+        return new Response(err.message, { status: 500 });
+    }
+}

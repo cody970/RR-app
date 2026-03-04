@@ -1,0 +1,12 @@
+{
+    "gitlens.ai.generateCommits.customInstructions": "@id:gitlens.ai.generateCommits.customInstructions",
+    "workbench.editor.autoLockGroups": {
+        "repl": true,
+        "imagePreview.previewEditor": true,
+        "workbench.editors.gettingStartedInput": true
+    },
+    "workbench.editor.defaultBinaryEditor": "repl",
+    "workbench.editor.wrapTabs": true,
+    "accessibility.signalOptions.debouncePositionChanges": true,
+    "editor.acceptSuggestionOnCommitCharacter": false
+}

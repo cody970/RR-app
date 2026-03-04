@@ -1,0 +1,413 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Organization {
+  id            String         @id @default(cuid())
+  name          String
+  users         User[]
+  writers       Writer[]
+  publishers    Publisher[]
+  works         Work[]
+  recordings    Recording[]
+  statements    Statement[]
+  findings      Finding[]
+  tasks         Task[]
+  auditLogs     AuditLog[]
+  activities    Activity[]
+  auditJobs     AuditJob[]
+  apiKeys       ApiKey[]
+  ingestJobs    IngestJob[]
+  notifications Notification[]
+  dspReports    DspReport[]
+  cwrRegistrations CwrRegistration[]
+  syncQuotes    SyncQuote[]
+  syncLicenses  SyncLicense[]
+  syncPlacements SyncPlacement[]
+  currency      String         @default("USD")
+  
+  // Stripe Billing Fields
+  stripeCustomerId       String?   @unique
+  stripeSubscriptionId   String?   @unique
+  stripePriceId          String?
+  stripeCurrentPeriodEnd DateTime?
+  subscriptionStatus     String    @default("freemium")
+
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+}
+
+model IngestJob {
+  id           String   @id @default(cuid())
+  type         String
+  status       String   @default("COMPLETED")
+  filename     String?
+  totalRows    Int      @default(0)
+  importedRows Int      @default(0)
+  failedRows   Int      @default(0)
+  errors       String?
+  orgId        String
+  userId       String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  organization Organization @relation(fields: [orgId], references: [id])
+  user         User         @relation(fields: [userId], references: [id])
+
+  @@index([orgId, createdAt])
+}
+
+model User {
+  id            String         @id @default(cuid())
+  email         String         @unique
+  passwordHash  String
+  role          String         @default("OWNER")
+  organization  Organization   @relation(fields: [orgId], references: [id])
+  orgId         String
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  auditLogs     AuditLog[]
+  activities    Activity[]
+  ingestJobs    IngestJob[]
+  notifications Notification[]
+  writerId      String?
+  writer        Writer?        @relation(fields: [writerId], references: [id])
+}
+
+model Writer {
+  id            String         @id @default(cuid())
+  name          String
+  ipiCae        String?
+  organization  Organization   @relation(fields: [orgId], references: [id])
+  orgId         String
+  works         WorkWriter[]
+  users         User[]
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  @@unique([ipiCae, orgId])
+}
+
+model Publisher {
+  id            String         @id @default(cuid())
+  name          String
+  ipiCae        String?
+  organization  Organization   @relation(fields: [orgId], references: [id])
+  orgId         String
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  @@unique([ipiCae, orgId])
+}
+
+model Work {
+  id            String         @id @default(cuid())
+  title         String
+  iswc          String?
+  organization  Organization   @relation(fields: [orgId], references: [id])
+  orgId         String
+  writers       WorkWriter[]
+  recordings    Recording[]
+  registrations Registration[]
+  syncQuotes    SyncQuote[]
+  syncLicenses  SyncLicense[]
+  syncPlacements SyncPlacement[]
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  @@unique([iswc, orgId])
+  @@index([orgId])
+  @@index([iswc])
+  @@index([title, orgId])
+}
+
+model WorkWriter {
+  work          Work           @relation(fields: [workId], references: [id])
+  workId        String
+  writer        Writer         @relation(fields: [writerId], references: [id])
+  writerId      String
+  splitPercent  Float
+  role          String?
+
+  @@id([workId, writerId])
+}
+
+model Recording {
+  id            String         @id @default(cuid())
+  title         String
+  isrc          String?
+  durationSec   Int?
+  work          Work?          @relation(fields: [workId], references: [id])
+  workId        String?
+  organization  Organization   @relation(fields: [orgId], references: [id])
+  orgId         String
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  @@unique([isrc, orgId])
+  @@index([orgId])
+  @@index([isrc])
+  @@index([title, orgId])
+}
+
+model Registration {
+  id                 String    @id @default(cuid())
+  work               Work      @relation(fields: [workId], references: [id])
+  workId             String
+  society            String
+  status             String
+  totalSplitRegistered Float
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+}
+
+model Statement {
+  id            String         @id @default(cuid())
+  source        String
+  period        String
+  organization  Organization   @relation(fields: [orgId], references: [id])
+  orgId         String
+  lines         StatementLine[]
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+}
+
+model StatementLine {
+  id            String         @id @default(cuid())
+  statement     Statement      @relation(fields: [statementId], references: [id])
+  statementId   String
+  isrc          String?
+  uses          Int
+  amount        Float
+  amountOriginal Float?
+  currency      String         @default("USD")
+  title         String?
+  artist        String?
+  createdAt     DateTime       @default(now())
+
+  @@index([statementId])
+  @@index([isrc])
+  @@index([title])
+}
+
+model Finding {
+  id              String       @id @default(cuid())
+  type            String
+  severity        String
+  status          String       @default("OPEN")
+  confidence      Int
+  estimatedImpact Float?
+  recoveredAmount Float?
+  amountOriginal  Float?
+  currency        String       @default("USD")
+  resourceType    String?
+  resourceId      String
+  metadataFix     String?
+  organization    Organization @relation(fields: [orgId], references: [id])
+  orgId           String
+  tasks           Task[]
+  createdAt       DateTime     @default(now())
+
+  @@index([orgId, estimatedImpact])
+  @@index([orgId, status])
+  @@index([orgId, severity])
+  @@index([orgId, createdAt])
+  @@index([orgId, type])
+}
+
+model Task {
+  id            String         @id @default(cuid())
+  finding       Finding        @relation(fields: [findingId], references: [id])
+  findingId     String
+  assigneeEmail String?
+  status        String         @default("OPEN")
+  notes         String?
+  organization  Organization   @relation(fields: [orgId], references: [id])
+  orgId         String
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+}
+
+model AuditLog {
+  id            String         @id @default(cuid())
+  action        String
+  details       String
+  evidenceHash  String
+  user          User?          @relation(fields: [userId], references: [id])
+  userId        String?
+  organization  Organization   @relation(fields: [orgId], references: [id])
+  orgId         String
+  timestamp     DateTime       @default(now())
+}
+
+model RateLimit {
+  key           String         @id
+  count         Int            @default(0)
+  expiresAt     DateTime
+}
+
+model Activity {
+  id           String   @id @default(cuid())
+  orgId        String
+  userId       String
+  action       String
+  resourceId   String?
+  resourceType String?
+  details      String?
+  createdAt    DateTime @default(now())
+
+  organization Organization @relation(fields: [orgId], references: [id])
+  user         User         @relation(fields: [userId], references: [id])
+
+  @@index([orgId, createdAt])
+}
+
+model AuditJob {
+  id           String   @id @default(cuid())
+  orgId        String
+  status       String   @default("PENDING")
+  findingsCount Int      @default(0)
+  error        String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  organization Organization @relation(fields: [orgId], references: [id])
+
+  @@index([orgId])
+}
+
+model ApiKey {
+  id           String   @id @default(cuid())
+  key          String   @unique
+  name         String?
+  orgId        String
+  createdAt    DateTime @default(now())
+  lastUsedAt   DateTime?
+
+  organization Organization @relation(fields: [orgId], references: [id])
+
+  @@index([orgId])
+}
+
+model Notification {
+  id           String   @id @default(cuid())
+  orgId        String
+  userId       String
+  title        String
+  message      String
+  type         String   @default("INFO") // INFO, SUCCESS, WARNING, ERROR
+  read         Boolean  @default(false)
+  link         String?  // Optional navigation link
+  createdAt    DateTime @default(now())
+
+  organization Organization @relation(fields: [orgId], references: [id])
+  user         User         @relation(fields: [userId], references: [id])
+
+  @@index([userId, read])
+  @@index([orgId, createdAt])
+}
+
+model DspReport {
+  id             String   @id @default(cuid())
+  source         String
+  period         String
+  territory      String?
+  isrc           String
+  title          String
+  artist         String?
+  streams        Int
+  revenue        Float
+  perStreamRate  Float
+  orgId          String
+  createdAt      DateTime @default(now())
+
+  organization   Organization @relation(fields: [orgId], references: [id])
+
+  @@index([orgId])
+  @@index([isrc])
+}
+
+model CwrRegistration {
+  id             String   @id @default(cuid())
+  workTitle      String
+  iswc           String?
+  society        String?
+  territory      String?
+  publisherName  String?
+  publisherIpi   String?
+  writerName     String?
+  writerIpi      String?
+  shares         Float?
+  recordType     String?
+  rawRecord      String?
+  orgId          String
+  createdAt      DateTime @default(now())
+
+  organization   Organization @relation(fields: [orgId], references: [id])
+
+  @@index([orgId])
+}
+
+model SyncQuote {
+  id           String   @id @default(cuid())
+  workId       String
+  orgId        String
+  clientName   String
+  projectName  String
+  proposedFee  Float
+  status       String   @default("PENDING") // PENDING, ACCEPTED, REJECTED
+  notes        String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  work         Work         @relation(fields: [workId], references: [id])
+  organization Organization @relation(fields: [orgId], references: [id])
+
+  @@index([orgId])
+  @@index([workId])
+}
+
+model SyncLicense {
+  id           String   @id @default(cuid())
+  quoteId      String?  @unique
+  workId       String
+  orgId        String
+  licenseeName String
+  projectName  String
+  fee          Float
+  terms        String?
+  status       String   @default("ACTIVE") // ACTIVE, EXPIRED, TERMINATED
+  validFrom    DateTime?
+  validUntil   DateTime?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  work         Work         @relation(fields: [workId], references: [id])
+  organization Organization @relation(fields: [orgId], references: [id])
+
+  @@index([orgId])
+  @@index([workId])
+}
+
+model SyncPlacement {
+  id             String   @id @default(cuid())
+  workId         String
+  orgId          String
+  mediaType      String   // TV, FILM, AD, GAME
+  productionName String
+  episodeOrScene String?
+  airDate        DateTime?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  work           Work         @relation(fields: [workId], references: [id])
+  organization   Organization @relation(fields: [orgId], references: [id])
+
+  @@index([orgId])
+  @@index([workId])
+}
