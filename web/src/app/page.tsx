@@ -3,6 +3,7 @@ import { ArrowRight, Music, Shield, Zap, Search, FileCheck, DollarSign } from "l
 import { Button } from "@/components/ui/button";
 
 import { HeroVisualizer } from "@/components/landing/hero-visualizer";
+import { GlowingEffectDemo } from "@/components/landing/glowing-features";
 
 export default function LandingPage() {
   return (
@@ -80,18 +81,8 @@ export default function LandingPage() {
             </Link>
           </div>
 
-          {/* Hero Dashboard Image */}
-          <div className="mt-16 relative max-w-5xl mx-auto animate-slide-up delay-300 perspective-1000">
-            <div className="absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-slate-50 to-transparent z-10" />
-            <div className="relative rounded-xl border border-slate-200/50 bg-slate-900 p-2 shadow-2xl overflow-hidden ring-1 ring-slate-900/5 group transform hover:-translate-y-2 hover:shadow-3xl transition-all duration-500">
-              <div className="absolute inset-0 bg-amber-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-              <img
-                src="/hero-dashboard.png"
-                alt="RoyaltyRadar Dashboard"
-                className="w-full h-auto rounded-lg object-cover ring-1 ring-white/10"
-              />
-            </div>
-          </div>
+          {/* Space for animations/visualizer remains above */}
+
 
           {/* Dashboard Preview / Stats */}
           <div className="mt-16 pt-10 border-t border-slate-200 flex flex-wrap justify-center gap-12 sm:gap-24 animate-slide-up delay-400">
@@ -119,52 +110,13 @@ export default function LandingPage() {
             <p className="text-slate-500 max-w-xl mx-auto text-lg">Everything you need to clean your catalog and maximize your global royalty collections.</p>
           </div>
 
-          <div className="grid md:grid-cols-3 gap-6">
-            {/* Feature 1 */}
-            <div className="glass-card rounded-2xl p-8 group border border-slate-200 hover:border-amber-200 transition-colors">
-              <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-amber-500 to-yellow-600 p-[1px] mb-6 shadow-lg shadow-amber-500/20 group-hover:scale-110 transition-transform">
-                <div className="w-full h-full bg-white rounded-xl flex items-center justify-center">
-                  <Search className="w-6 h-6 text-amber-600" />
-                </div>
-              </div>
-              <h3 className="text-xl font-bold text-slate-900 mb-3 group-hover:text-amber-600 transition-colors">Deep Metadata Audits</h3>
-              <p className="text-slate-500 leading-relaxed">
-                Automatically cross-reference your catalog against societies, DSPs, and global databases to find missing ISRC and ISWC linkages.
-              </p>
-            </div>
-
-            {/* Feature 2 */}
-            <div className="glass-card rounded-2xl p-8 group border border-slate-200 hover:border-slate-300 transition-colors">
-              <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-slate-600 to-slate-800 p-[1px] mb-6 shadow-lg shadow-slate-500/20 group-hover:scale-110 transition-transform">
-                <div className="w-full h-full bg-white rounded-xl flex items-center justify-center">
-                  <FileCheck className="w-6 h-6 text-slate-700" />
-                </div>
-              </div>
-              <h3 className="text-xl font-bold text-slate-900 mb-3 group-hover:text-slate-800 transition-colors">Dispute Automation</h3>
-              <p className="text-slate-500 leading-relaxed">
-                Instantly generate and file CWR compliant dispute letters for split conflicts and under-claims across all major collection societies.
-              </p>
-            </div>
-
-            {/* Feature 3 */}
-            <div className="glass-card rounded-2xl p-8 group border border-slate-200 hover:border-amber-200 transition-colors">
-              <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-yellow-500 to-amber-600 p-[1px] mb-6 shadow-lg shadow-amber-500/20 group-hover:scale-110 transition-transform">
-                <div className="w-full h-full bg-white rounded-xl flex items-center justify-center">
-                  <DollarSign className="w-6 h-6 text-amber-500" />
-                </div>
-              </div>
-              <h3 className="text-xl font-bold text-slate-900 mb-3 group-hover:text-amber-600 transition-colors">Black Box Recovery</h3>
-              <p className="text-slate-500 leading-relaxed">
-                Identify unclaimed royalties sitting in society black boxes by matching unlinked DSP streaming data to your composition rights.
-              </p>
-            </div>
-          </div>
+          <GlowingEffectDemo />
         </div>
       </section>
 
       {/* Visual Showcase Section */}
       <section className="py-32 bg-slate-900 relative overflow-hidden">
-        <div className="absolute inset-0 bg-[url('/music-vault.png')] bg-cover bg-center opacity-10 mix-blend-luminosity"></div>
+        <div className="absolute inset-0 bg-slate-800/20 backdrop-blur-sm opacity-10"></div>
         <div className="absolute inset-0 bg-gradient-to-r from-slate-900 via-slate-900/95 to-slate-900/50"></div>
 
         <div className="container mx-auto max-w-6xl px-6 relative z-10 flex flex-col lg:flex-row items-center gap-16">
@@ -202,15 +154,13 @@ export default function LandingPage() {
               </Button>
             </Link>
           </div>
-          <div className="lg:w-1/2 relative w-full">
-            {/* Glow effect behind image */}
+          <div className="lg:w-1/2 relative w-full h-[300px] md:h-[400px]">
+            {/* Glow effect kept as a visual element */}
             <div className="absolute -inset-1 bg-gradient-to-tr from-amber-500/30 to-yellow-500/10 blur-3xl rounded-[3rem] animate-pulse-glow"></div>
-            <div className="relative rounded-2xl overflow-hidden shadow-2xl border border-white/10 group">
-              <img
-                src="/music-vault.png"
-                alt="Secure Royalty Vault"
-                className="w-full h-auto object-cover transform scale-105 group-hover:scale-110 transition-transform duration-1000"
-              />
+            <div className="relative h-full w-full rounded-2xl overflow-hidden shadow-2xl border border-white/10 bg-slate-800/50 backdrop-blur-md group flex items-center justify-center">
+              <div className="w-24 h-24 rounded-full bg-amber-500/20 flex items-center justify-center animate-bounce shadow-[0_0_50px_rgba(245,158,11,0.3)]">
+                <Shield className="w-12 h-12 text-amber-500" />
+              </div>
               <div className="absolute inset-0 bg-gradient-to-t from-slate-900/80 via-transparent to-transparent pointer-events-none" />
             </div>
           </div>
