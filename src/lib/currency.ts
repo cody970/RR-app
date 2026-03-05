@@ -1,13 +1,11 @@
 // Simulated exchange rates (Base: USD)
 // In a real app, these would be fetched from an API like exchangerate-api.com
 const GET_LIVE_RATES = () => {
-    // Add a small random fluctuation to make it feel "live"
-    const jitter = () => (Math.random() - 0.5) * 0.01;
     return {
         USD: 1.0,
-        EUR: 0.92 + jitter(),
-        GBP: 0.79 + jitter(),
-        JPY: 151.0 + (Math.random() - 0.5) * 2.0,
+        EUR: 0.92,
+        GBP: 0.79,
+        JPY: 151.0,
     };
 };
 

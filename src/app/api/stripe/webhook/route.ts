@@ -21,13 +21,15 @@ export async function POST(req: Request) {
         return new NextResponse(`Webhook Error: ${error.message}`, { status: 400 });
     }
 
-    const session = event.data.object as Stripe.Checkout.Session;
-
     if (event.type === "checkout.session.completed") {
+        const session = event.data.object as any;
+        const subscriptionId = session.subscription as string;
+
         // Retrieve the subscription details from Stripe
-        const subscription = (await stripe.subscriptions.retrieve(
-            session.subscription as string
-        )) as Stripe.Subscription;
+        const subscription = await stripe.subscriptions.retrieve(subscriptionId) as any;
+
+        // Guard against deleted subscription
+        if (subscription.deleted) return new NextResponse("Subscription deleted", { status: 400 });
 
         // Update the organization in your database
         if (session?.metadata?.orgId) {
@@ -42,16 +44,20 @@ export async function POST(req: Request) {
                     stripeCurrentPeriodEnd: new Date(
                         subscription.current_period_end * 1000
                     ),
-                    subscriptionStatus: "active", // Or based on your tier logic
+                    subscriptionStatus: "active",
                 },
             });
         }
     }
 
     if (event.type === "invoice.payment_succeeded") {
-        const subscription = (await stripe.subscriptions.retrieve(
-            session.subscription as string
-        )) as Stripe.Subscription;
+        const invoice = event.data.object as any;
+        const subscriptionId = invoice.subscription as string;
+
+        if (!subscriptionId) return new NextResponse("No subscription on invoice", { status: 400 });
+
+        const subscription = await stripe.subscriptions.retrieve(subscriptionId) as any;
+        if (subscription.deleted) return new NextResponse("Subscription deleted", { status: 400 });
 
         const stripeCustomerId = subscription.customer as string;
 
@@ -71,9 +77,17 @@ export async function POST(req: Request) {
     }
 
     if (event.type === "customer.subscription.deleted" || event.type === "customer.subscription.updated") {
-        const subscription = (await stripe.subscriptions.retrieve(
-            session.id as string
-        )) as Stripe.Subscription;
+        const subscription = event.data.object as any;
+        // In deleted/updated events, the object is the subscription itself.
+        // If it's a deleted event, it might be a DeletedSubscription object.
+        if (subscription.deleted) {
+            await prisma.organization.update({
+                where: { stripeSubscriptionId: subscription.id },
+                data: { subscriptionStatus: "canceled" }
+            });
+            return new NextResponse(null, { status: 200 });
+        }
+
         const stripeCustomerId = subscription.customer as string;
 
         await prisma.organization.update({

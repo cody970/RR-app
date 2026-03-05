@@ -12,6 +12,31 @@ interface AuditJobData {
     userId: string;
 }
 
+const upsertFinding = async (data: any) => {
+    const existing = await db.finding.findFirst({
+        where: {
+            orgId: data.orgId,
+            type: data.type,
+            resourceId: data.resourceId,
+            status: "OPEN"
+        }
+    });
+
+    if (existing) {
+        return db.finding.update({
+            where: { id: existing.id },
+            data: {
+                estimatedImpact: data.estimatedImpact,
+                amountOriginal: data.amountOriginal,
+                confidence: data.confidence,
+                metadataFix: data.metadataFix
+            }
+        });
+    }
+
+    return db.finding.create({ data });
+};
+
 export const processAuditJob = async (job: Job<AuditJobData>) => {
     const { jobId, orgId, userId } = job.data;
     console.log(`Processing audit job ${jobId} for org ${orgId}`);
@@ -42,7 +67,7 @@ export const processAuditJob = async (job: Job<AuditJobData>) => {
         let findingsCount = 0;
 
         // Build lookup sets for cross-referencing
-        const catalogISRCs = new Set(recordings.filter(r => r.isrc).map(r => r.isrc!.toUpperCase()));
+        const catalogISRCs = new Set(recordings.filter((r: any) => r.isrc).map((r: any) => r.isrc!.toUpperCase()));
         const catalogTitles = new Map<string, string>(); // normalized title -> work id
         for (const w of works) {
             catalogTitles.set(w.title.toLowerCase().trim(), w.id);
@@ -54,19 +79,17 @@ export const processAuditJob = async (job: Job<AuditJobData>) => {
             if (!work.iswc) {
                 const enrichment = await enrichMetadata(work.title, work.iswc);
                 const impactUSD = 15.50;
-                await db.finding.create({
-                    data: {
-                        type: "MISSING_ISWC",
-                        severity: "MEDIUM",
-                        confidence: enrichment.matchScore,
-                        metadataFix: enrichment.suggestions ? JSON.stringify(enrichment.suggestions) : null,
-                        estimatedImpact: impactUSD,
-                        amountOriginal: convertFromUSD(impactUSD, currency),
-                        currency,
-                        resourceType: "Work",
-                        resourceId: work.id,
-                        orgId
-                    }
+                await upsertFinding({
+                    type: "MISSING_ISWC",
+                    severity: "MEDIUM",
+                    confidence: enrichment.matchScore,
+                    metadataFix: enrichment.suggestions ? JSON.stringify(enrichment.suggestions) : null,
+                    estimatedImpact: impactUSD,
+                    amountOriginal: convertFromUSD(impactUSD, currency),
+                    currency,
+                    resourceType: "Work",
+                    resourceId: work.id,
+                    orgId
                 });
                 findingsCount++;
             }
@@ -78,18 +101,16 @@ export const processAuditJob = async (job: Job<AuditJobData>) => {
             }
             if (totalSplit > 100) {
                 const impactUSD = 250.00;
-                await db.finding.create({
-                    data: {
-                        type: "SPLIT_OVERLAP",
-                        severity: "HIGH",
-                        confidence: 100,
-                        estimatedImpact: impactUSD,
-                        amountOriginal: convertFromUSD(impactUSD, currency),
-                        currency,
-                        resourceType: "Work",
-                        resourceId: work.id,
-                        orgId
-                    }
+                await upsertFinding({
+                    type: "SPLIT_OVERLAP",
+                    severity: "HIGH",
+                    confidence: 100,
+                    estimatedImpact: impactUSD,
+                    amountOriginal: convertFromUSD(impactUSD, currency),
+                    currency,
+                    resourceType: "Work",
+                    resourceId: work.id,
+                    orgId
                 });
                 findingsCount++;
             }
@@ -98,18 +119,16 @@ export const processAuditJob = async (job: Job<AuditJobData>) => {
             if (work.writers.length > 0 && totalSplit < 100 && totalSplit > 0) {
                 const unclaimed = 100 - totalSplit;
                 const impactUSD = unclaimed * 5; // Estimate based on unclaimed percentage
-                await db.finding.create({
-                    data: {
-                        type: "SPLIT_UNDERCLAIM",
-                        severity: unclaimed > 30 ? "HIGH" : "MEDIUM",
-                        confidence: 95,
-                        estimatedImpact: impactUSD,
-                        amountOriginal: convertFromUSD(impactUSD, currency),
-                        currency,
-                        resourceType: "Work",
-                        resourceId: work.id,
-                        orgId
-                    }
+                await upsertFinding({
+                    type: "SPLIT_UNDERCLAIM",
+                    severity: unclaimed > 30 ? "HIGH" : "MEDIUM",
+                    confidence: 95,
+                    estimatedImpact: impactUSD,
+                    amountOriginal: convertFromUSD(impactUSD, currency),
+                    currency,
+                    resourceType: "Work",
+                    resourceId: work.id,
+                    orgId
                 });
                 findingsCount++;
             }
@@ -128,18 +147,16 @@ export const processAuditJob = async (job: Job<AuditJobData>) => {
                 const otherStripped = otherNorm.replace(/\s*\(.*?\)\s*/g, "").trim();
 
                 if (variations[0] === otherStripped && normalizedTitle !== otherNorm) {
-                    await db.finding.create({
-                        data: {
-                            type: "POSSIBLE_DUPLICATE",
-                            severity: "LOW",
-                            confidence: 75,
-                            estimatedImpact: 10.00,
-                            amountOriginal: convertFromUSD(10.00, currency),
-                            currency,
-                            resourceType: "Work",
-                            resourceId: work.id,
-                            orgId
-                        }
+                    await upsertFinding({
+                        type: "POSSIBLE_DUPLICATE",
+                        severity: "LOW",
+                        confidence: 75,
+                        estimatedImpact: 10.00,
+                        amountOriginal: convertFromUSD(10.00, currency),
+                        currency,
+                        resourceType: "Work",
+                        resourceId: work.id,
+                        orgId
                     });
                     findingsCount++;
                     break; // Only flag once per work
@@ -153,19 +170,17 @@ export const processAuditJob = async (job: Job<AuditJobData>) => {
             if (!rec.isrc) {
                 const enrichment = await enrichMetadata(rec.title, rec.isrc);
                 const impactUSD = 45.00;
-                await db.finding.create({
-                    data: {
-                        type: "MISSING_ISRC",
-                        severity: "HIGH",
-                        confidence: enrichment.matchScore,
-                        metadataFix: enrichment.suggestions ? JSON.stringify(enrichment.suggestions) : null,
-                        estimatedImpact: impactUSD,
-                        amountOriginal: convertFromUSD(impactUSD, currency),
-                        currency,
-                        resourceType: "Recording",
-                        resourceId: rec.id,
-                        orgId
-                    }
+                await upsertFinding({
+                    type: "MISSING_ISRC",
+                    severity: "HIGH",
+                    confidence: enrichment.matchScore,
+                    metadataFix: enrichment.suggestions ? JSON.stringify(enrichment.suggestions) : null,
+                    estimatedImpact: impactUSD,
+                    amountOriginal: convertFromUSD(impactUSD, currency),
+                    currency,
+                    resourceType: "Recording",
+                    resourceId: rec.id,
+                    orgId
                 });
                 findingsCount++;
             }
@@ -173,18 +188,16 @@ export const processAuditJob = async (job: Job<AuditJobData>) => {
             // Rule 6: Unlinked Recording
             if (!rec.workId) {
                 const impactUSD = 25.00;
-                await db.finding.create({
-                    data: {
-                        type: "UNLINKED_RECORDING",
-                        severity: "MEDIUM",
-                        confidence: 90,
-                        estimatedImpact: impactUSD,
-                        amountOriginal: convertFromUSD(impactUSD, currency),
-                        currency,
-                        resourceType: "Recording",
-                        resourceId: rec.id,
-                        orgId
-                    }
+                await upsertFinding({
+                    type: "UNLINKED_RECORDING",
+                    severity: "MEDIUM",
+                    confidence: 90,
+                    estimatedImpact: impactUSD,
+                    amountOriginal: convertFromUSD(impactUSD, currency),
+                    currency,
+                    resourceType: "Recording",
+                    resourceId: rec.id,
+                    orgId
                 });
                 findingsCount++;
             }
@@ -198,18 +211,16 @@ export const processAuditJob = async (job: Job<AuditJobData>) => {
                 // This is unclaimed revenue — no catalog entry matches this ISRC
                 const impactUSD = line.amount || 0;
                 if (impactUSD > 0) {
-                    await db.finding.create({
-                        data: {
-                            type: "BLACK_BOX_REVENUE",
-                            severity: impactUSD > 100 ? "HIGH" : impactUSD > 20 ? "MEDIUM" : "LOW",
-                            confidence: 85,
-                            estimatedImpact: impactUSD,
-                            amountOriginal: line.amountOriginal || impactUSD,
-                            currency: line.currency || currency,
-                            resourceType: "StatementLine",
-                            resourceId: line.id,
-                            orgId
-                        }
+                    await upsertFinding({
+                        type: "BLACK_BOX_REVENUE",
+                        severity: impactUSD > 100 ? "HIGH" : impactUSD > 20 ? "MEDIUM" : "LOW",
+                        confidence: 85,
+                        estimatedImpact: impactUSD,
+                        amountOriginal: line.amountOriginal || impactUSD,
+                        currency: line.currency || currency,
+                        resourceType: "StatementLine",
+                        resourceId: line.id,
+                        orgId
                     });
                     findingsCount++;
                 }

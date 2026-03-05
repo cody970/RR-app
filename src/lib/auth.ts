@@ -75,7 +75,7 @@ export const authOptions: NextAuthOptions = {
                     const newUser = await db.user.create({
                         data: {
                             email: user.email!,
-                            passwordHash: "oauth-user-" + account.provider,
+                            passwordHash: "$2b$10$OAUTH_USER_SENTINEL_DO_NOT_USE_FOR_LOGIN",
                             role: "OWNER",
                             orgId: org.id
                         }
