@@ -3,7 +3,15 @@
     "workbench.editor.autoLockGroups": {
         "repl": true,
         "imagePreview.previewEditor": true,
-        "workbench.editors.gettingStartedInput": true
+        "workbench.editors.gettingStartedInput": true,
+        "gitlens.rebase": true,
+        "antigravity.artifactsEditorInput": true,
+        "antigravity.globalArtifactsEditorInput": true,
+        "default": true,
+        "workbench.editor.chatSession": true,
+        "workbench.editorinputs.searchEditorInput": true,
+        "notebookOutputEditor": true,
+        "jupyter-notebook": true
     },
     "workbench.editor.defaultBinaryEditor": "repl",
     "workbench.editor.wrapTabs": true,

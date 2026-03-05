@@ -24,6 +24,9 @@ out/
 # misc
 .DS_Store
 *.pem
+node_modules_old/
+*.swp
+*.swo
 
 # debug
 npm-debug.log*
