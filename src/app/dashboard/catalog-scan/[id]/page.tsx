@@ -13,6 +13,7 @@ import {
     Filter,
     Music,
     FileText,
+    Send,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -20,6 +21,7 @@ import { Badge } from "@/components/ui/badge";
 
 interface Gap {
     id: string;
+    workId: string | null;
     title: string;
     isrc: string | null;
     iswc: string | null;
@@ -123,6 +125,24 @@ export default function ScanResultsPage() {
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ gapIds: Array.from(selectedGaps), status }),
         });
+        setSelectedGaps(new Set());
+        fetchGaps(pagination?.page || 1);
+        fetchScanDetail();
+    };
+
+    const submitToTuneRegistry = async () => {
+        if (selectedGaps.size === 0) return;
+        const res = await fetch(`/api/catalog-scan/${scanId}/register`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ gapIds: Array.from(selectedGaps) }),
+        });
+        const data = await res.json();
+        if (res.ok) {
+            alert(`Successfully submitted ${data.submitted} gap(s) for registration.${data.failed > 0 ? ` ${data.failed} failed.` : ""}`);
+        } else {
+            alert(data.error || "Failed to submit registrations");
+        }
         setSelectedGaps(new Set());
         fetchGaps(pagination?.page || 1);
         fetchScanDetail();
@@ -300,6 +320,9 @@ export default function ScanResultsPage() {
             {selectedGaps.size > 0 && (
                 <div className="flex items-center gap-3 p-3 bg-amber-50 border border-amber-200 rounded-lg">
                     <span className="text-sm font-medium text-amber-800">{selectedGaps.size} selected</span>
+                    <Button size="sm" variant="outline" onClick={submitToTuneRegistry} className="border-indigo-300 text-indigo-700 hover:bg-indigo-100">
+                        <Send className="w-3.5 h-3.5 mr-1" /> Register via TuneRegistry
+                    </Button>
                     <Button size="sm" variant="outline" onClick={() => batchUpdate("REGISTERING")} className="border-amber-300 text-amber-700 hover:bg-amber-100">
                         Mark as Registering
                     </Button>
@@ -336,6 +359,8 @@ export default function ScanResultsPage() {
                     <option value="BMI">BMI</option>
                     <option value="ASCAP/BMI">ASCAP/BMI</option>
                     <option value="SESAC">SESAC</option>
+                    <option value="MLC">The MLC</option>
+                    <option value="SoundExchange">SoundExchange</option>
                 </select>
             </div>
 
@@ -415,10 +440,10 @@ export default function ScanResultsPage() {
                                                     <div className="w-8 h-1.5 bg-slate-100 rounded-full overflow-hidden">
                                                         <div
                                                             className={`h-full rounded-full ${gap.confidence >= 80
-                                                                    ? "bg-emerald-500"
-                                                                    : gap.confidence >= 60
-                                                                        ? "bg-amber-500"
-                                                                        : "bg-red-500"
+                                                                ? "bg-emerald-500"
+                                                                : gap.confidence >= 60
+                                                                    ? "bg-amber-500"
+                                                                    : "bg-red-500"
                                                                 }`}
                                                             style={{ width: `${gap.confidence}%` }}
                                                         />

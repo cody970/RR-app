@@ -14,6 +14,8 @@ import {
     searchWorkByTitle,
 } from "./musicbrainz-client";
 import { searchByISRC as spotifySearchByISRC } from "./spotify";
+import { searchMLCByTitle } from "./mlc-client";
+import { searchByISRC as seSearchByISRC } from "./soundexchange-client";
 
 export interface ScanProgress {
     scanId: string;
@@ -229,6 +231,83 @@ export async function runCatalogScan(
         scannedItems++;
         if (onProgress && scannedItems % 10 === 0) {
             await onProgress({ scanId, totalItems, scannedItems, gapsFound });
+        }
+    }
+
+    // ---------- Phase 3: MLC + SoundExchange Gap Check ----------
+
+    // Phase 3a: Check works against The MLC for mechanical licensing gaps
+    if (process.env.MLC_API_KEY) {
+        for (const work of works) {
+            try {
+                const writerName = work.writers?.[0]?.writer?.name;
+                const mlcResult = await searchMLCByTitle(work.title, writerName);
+
+                if (!mlcResult.found) {
+                    await db.registrationGap.create({
+                        data: {
+                            scanId,
+                            workId: work.id,
+                            title: work.title,
+                            iswc: work.iswc,
+                            artistName: writerName,
+                            society: "MLC",
+                            gapType: "NO_REGISTRATION",
+                            confidence: 80,
+                            estimatedImpact: estimateWorkImpact(work.id, recordings, revenueByISRC) * 0.15,
+                        },
+                    });
+                    gapsFound++;
+                } else if (mlcResult.works.some((w) => w.claimStatus === "UNCLAIMED")) {
+                    await db.registrationGap.create({
+                        data: {
+                            scanId,
+                            workId: work.id,
+                            title: work.title,
+                            iswc: work.iswc,
+                            artistName: writerName,
+                            society: "MLC",
+                            gapType: "MISSING_SPLIT",
+                            confidence: 90,
+                            estimatedImpact: mlcResult.unclaimedAmount ?? null,
+                        },
+                    });
+                    gapsFound++;
+                }
+            } catch (e) {
+                console.error(`MLC check error for work ${work.id}:`, e);
+            }
+        }
+    }
+
+    // Phase 3b: Check recordings against SoundExchange
+    if (process.env.SOUNDEXCHANGE_API_KEY) {
+        for (const recording of recordings) {
+            try {
+                if (recording.isrc) {
+                    const seResult = await seSearchByISRC(recording.isrc);
+
+                    if (!seResult.found) {
+                        const revenue = revenueByISRC.get(recording.isrc);
+                        await db.registrationGap.create({
+                            data: {
+                                scanId,
+                                recordingId: recording.id,
+                                title: recording.title,
+                                isrc: recording.isrc,
+                                artistName: null,
+                                society: "SoundExchange",
+                                gapType: "NO_REGISTRATION",
+                                confidence: 80,
+                                estimatedImpact: revenue ? revenue.totalRevenue * 0.10 : null,
+                            },
+                        });
+                        gapsFound++;
+                    }
+                }
+            } catch (e) {
+                console.error(`SoundExchange check error for recording ${recording.id}:`, e);
+            }
         }
     }
 
