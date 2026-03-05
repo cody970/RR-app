@@ -8,8 +8,8 @@ export async function POST(req: Request) {
     try {
         const session = await getServerSession(authOptions);
         if (!session?.user) return new Response("Unauthorized", { status: 401 });
-        const orgId = (session.user as any).orgId;
-        const userId = (session.user as any).id;
+        const orgId = session.user.orgId;
+        const userId = session.user.id;
 
         const { taskId, proposedFix } = await req.json();
 

@@ -4,6 +4,10 @@ import { authOptions } from "@/lib/auth";
 import { db } from "@/lib/db";
 import crypto from "crypto";
 
+function hashApiKey(key: string): string {
+    return crypto.createHash("sha256").update(key).digest("hex");
+}
+
 export async function POST(req: Request) {
     const session = await getServerSession(authOptions);
     if (!session?.user) return new Response("Unauthorized", { status: 401 });
@@ -14,16 +18,19 @@ export async function POST(req: Request) {
     const rawKey = crypto.randomBytes(32).toString("hex");
     const apiKey = `rr_${rawKey}`;
 
+    // Store only the hash — the raw key is returned once and never stored
+    const keyHash = hashApiKey(apiKey);
+
     const newKey = await db.apiKey.create({
         data: {
-            key: apiKey,
+            key: keyHash,
             name: name || "Default Key",
             orgId: session.user.orgId,
         }
     });
 
-    // Return the key only once
-    return NextResponse.json(newKey);
+    // Return the raw key only on creation (client must save it)
+    return NextResponse.json({ ...newKey, key: apiKey });
 }
 
 export async function DELETE(req: Request) {

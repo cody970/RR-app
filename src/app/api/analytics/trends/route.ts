@@ -7,7 +7,7 @@ export async function GET() {
     try {
         const session = await getServerSession(authOptions);
         if (!session?.user) return new Response("Unauthorized", { status: 401 });
-        const orgId = (session.user as any).orgId;
+        const orgId = session.user.orgId;
 
         // Get findings grouped by creation week for trend analysis
         const findings = await db.finding.findMany({

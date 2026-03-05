@@ -14,7 +14,7 @@ export async function PATCH(
         if (!session?.user) return new Response("Unauthorized", { status: 401 });
 
         const orgId = session.user.orgId;
-        const role = (session.user as any).role;
+        const role = session.user.role;
 
         // RBAC Check
         try {

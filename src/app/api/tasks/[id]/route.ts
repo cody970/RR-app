@@ -8,7 +8,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
         const { id } = await params;
         const session = await getServerSession(authOptions);
         if (!session?.user) return new Response("Unauthorized", { status: 401 });
-        const orgId = (session.user as any).orgId;
+        const orgId = session.user.orgId;
 
         const { status, notes } = await req.json();
 

@@ -7,7 +7,7 @@ export async function GET(req: Request) {
     try {
         const session = await getServerSession(authOptions);
         if (!session?.user) return new Response("Unauthorized", { status: 401 });
-        const orgId = (session.user as any).orgId;
+        const orgId = session.user.orgId;
 
         const tasks = await db.task.findMany({
             where: { orgId },
@@ -25,7 +25,7 @@ export async function POST(req: Request) {
     try {
         const session = await getServerSession(authOptions);
         if (!session?.user) return new Response("Unauthorized", { status: 401 });
-        const orgId = (session.user as any).orgId;
+        const orgId = session.user.orgId;
 
         const { findingId, assigneeEmail, notes } = await req.json();
 

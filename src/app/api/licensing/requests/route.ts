@@ -8,7 +8,7 @@ export async function GET(req: NextRequest) {
     try {
         const session = await getServerSession(authOptions);
         if (!session?.user) return new Response("Unauthorized", { status: 401 });
-        const orgId = (session.user as any).orgId;
+        const orgId = session.user.orgId;
 
         const requests = await db.licenseRequest.findMany({
             where: { orgId },
@@ -35,7 +35,7 @@ export async function POST(req: NextRequest) {
         if (!orgId) {
             const session = await getServerSession(authOptions);
             if (!session?.user) return new Response("Unauthorized", { status: 401 });
-            orgId = (session.user as any).orgId;
+            orgId = session.user.orgId;
         }
 
         const request = await db.licenseRequest.create({

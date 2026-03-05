@@ -373,10 +373,19 @@ model ApiKey {
   orgId        String
   createdAt    DateTime @default(now())
   lastUsedAt   DateTime?
+  revokedAt    DateTime?
 
   organization Organization @relation(fields: [orgId], references: [id])
 
   @@index([orgId])
+}
+
+model WebhookEvent {
+  id        String   @id // Stripe event ID
+  type      String
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
 }
 
 model Notification {

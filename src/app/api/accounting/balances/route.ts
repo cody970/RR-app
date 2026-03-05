@@ -8,7 +8,7 @@ export async function GET(req: NextRequest) {
     try {
         const session = await getServerSession(authOptions);
         if (!session?.user) return new Response("Unauthorized", { status: 401 });
-        const orgId = (session.user as any).orgId;
+        const orgId = session.user.orgId;
 
         // Fetch all UNPAID ledgers
         const ledgers = await db.payeeLedger.findMany({
