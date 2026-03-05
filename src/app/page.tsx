@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, Music, Shield, Zap, Search, FileCheck, DollarSign } from "lucide-react";
+import { ArrowRight, Music, Shield, Zap, Search, FileCheck, DollarSign, Upload, ScanSearch, TrendingUp, Github, Twitter, Linkedin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 import { HeroVisualizer } from "@/components/landing/hero-visualizer";
@@ -22,7 +22,7 @@ export default function LandingPage() {
             <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-500 to-yellow-600 flex items-center justify-center text-xs font-black text-white shadow-lg shadow-amber-500/20">
               RR
             </div>
-            <span className="text-xl font-bold bg-gradient-to-r from-amber-600 via-yellow-600 to-amber-600 bg-clip-text text-transparent animate-shimmer">
+            <span className="text-xl font-bold text-gradient-gold">
               RoyaltyRadar
             </span>
           </div>
@@ -56,7 +56,7 @@ export default function LandingPage() {
           <h1 className="text-5xl md:text-7xl font-extrabold tracking-tight mb-8 animate-slide-up delay-100 text-slate-900">
             Stop leaving your <br className="hidden md:block" />
             <span className="relative inline-block mt-2">
-              <span className="bg-gradient-to-r from-amber-600 to-yellow-500 bg-clip-text text-transparent">
+              <span className="text-gradient-gold">
                 royalties
               </span>
               <div className="absolute -bottom-2 left-0 right-0 h-1 bg-gradient-to-r from-amber-600 to-transparent rounded-full opacity-50" />
@@ -81,9 +81,6 @@ export default function LandingPage() {
             </Link>
           </div>
 
-          {/* Space for animations/visualizer remains above */}
-
-
           {/* Dashboard Preview / Stats */}
           <div className="mt-16 pt-10 border-t border-slate-200 flex flex-wrap justify-center gap-12 sm:gap-24 animate-slide-up delay-400">
             <div className="text-center group">
@@ -91,7 +88,7 @@ export default function LandingPage() {
               <div className="text-sm text-slate-500 mt-1 uppercase tracking-widest font-semibold">Tracks Audited</div>
             </div>
             <div className="text-center group">
-              <div className="text-3xl font-black text-amber-600 group-hover:scale-110 transition-transform">$2.4M</div>
+              <div className="text-3xl font-black text-gradient-gold group-hover:scale-110 transition-transform">$2.4M</div>
               <div className="text-sm text-slate-500 mt-1 uppercase tracking-widest font-semibold">Recovered</div>
             </div>
             <div className="text-center group">
@@ -111,6 +108,56 @@ export default function LandingPage() {
           </div>
 
           <GlowingEffectDemo />
+        </div>
+      </section>
+
+      {/* How it Works Section */}
+      <section id="how-it-works" className="py-24 bg-slate-50 relative">
+        <div className="absolute inset-0 grid-pattern opacity-10 pointer-events-none" />
+        <div className="container mx-auto max-w-5xl px-6 relative z-10">
+          <div className="text-center mb-16">
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-amber-50 border border-amber-200 text-xs font-medium text-amber-700 mb-6">
+              Simple Process
+            </div>
+            <h2 className="text-3xl md:text-5xl font-bold mb-4 text-slate-900">How It Works</h2>
+            <p className="text-slate-500 max-w-xl mx-auto text-lg">Three simple steps to recover your missing royalties.</p>
+          </div>
+
+          <div className="grid md:grid-cols-3 gap-8">
+            {[
+              {
+                step: "01",
+                icon: Upload,
+                title: "Import Your Catalog",
+                description: "Upload your works and recordings via CSV, CWR files, or connect directly to your distributor.",
+              },
+              {
+                step: "02",
+                icon: ScanSearch,
+                title: "AI Audits Everything",
+                description: "Our engine cross-references millions of data points across global societies, DSPs, and registration databases.",
+              },
+              {
+                step: "03",
+                icon: TrendingUp,
+                title: "Recover Revenue",
+                description: "Get actionable findings with one-click dispute filing, metadata healing, and recovery tracking.",
+              },
+            ].map((item, i) => (
+              <div key={item.step} className={`relative group animate-slide-up opacity-0 delay-${(i + 1) * 100}`}>
+                <div className="p-8 rounded-2xl bg-white border border-slate-200/50 hover:border-amber-200 transition-all duration-300 hover:shadow-xl hover:-translate-y-1 glass-card h-full">
+                  <div className="flex items-center gap-4 mb-6">
+                    <div className="text-4xl font-black text-gradient-gold opacity-30">{item.step}</div>
+                    <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-amber-500/15 to-yellow-500/10 border border-amber-200/50 flex items-center justify-center">
+                      <item.icon className="h-5 w-5 text-amber-600" />
+                    </div>
+                  </div>
+                  <h3 className="text-xl font-bold text-slate-900 mb-3">{item.title}</h3>
+                  <p className="text-slate-500 leading-relaxed">{item.description}</p>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       </section>
 
@@ -167,12 +214,42 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* CTA Section */}
+      <section className="py-24 relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-br from-amber-500 via-yellow-500 to-amber-600" />
+        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmZmZmYiIGZpbGwtb3BhY2l0eT0iMC4wNSI+PHBhdGggZD0iTTM2IDE0VjBoLTJ2MTRIMFYxNmgzNHYtMnptMCAxNkg2MHYtMkgzNnYxNEgzNHYtMTJ6Ii8+PC9nPjwvZz48L3N2Zz4=')] opacity-50" />
+
+        <div className="container mx-auto max-w-4xl px-6 text-center relative z-10">
+          <h2 className="text-4xl md:text-5xl font-extrabold text-white mb-6">
+            Ready to recover your royalties?
+          </h2>
+          <p className="text-xl text-white/80 max-w-2xl mx-auto mb-10 font-light">
+            Join hundreds of publishers and labels who&apos;ve recovered millions in missing royalties with RoyaltyRadar.
+          </p>
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+            <Link href="/register">
+              <Button size="lg" className="h-14 px-10 text-base bg-white text-slate-900 hover:bg-slate-100 rounded-xl shadow-xl shadow-black/10 hover:scale-105 transition-all font-semibold">
+                Start Free Trial
+                <ArrowRight className="ml-2 w-5 h-5" />
+              </Button>
+            </Link>
+            <Link href="/login">
+              <Button size="lg" variant="outline" className="h-14 px-10 text-base border-white/30 text-white hover:bg-white/10 rounded-xl transition-all">
+                Sign In
+              </Button>
+            </Link>
+          </div>
+        </div>
+      </section>
+
       {/* Trust Section */}
-      <section className="py-20 border-t border-slate-200 bg-slate-50">
+      <section className="py-20 border-t border-slate-200 bg-white">
         <div className="container mx-auto px-6 max-w-5xl">
           <div className="flex flex-col md:flex-row items-center justify-between gap-10">
             <div className="flex items-center gap-4 text-slate-500">
-              <Shield className="w-8 h-8 text-amber-500" />
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500/15 to-yellow-500/10 flex items-center justify-center">
+                <Shield className="w-5 h-5 text-amber-500" />
+              </div>
               <div>
                 <h4 className="font-bold text-slate-900">SOC 2 Type II Certified</h4>
                 <p className="text-sm">Bank-grade security for your catalog data</p>
@@ -180,7 +257,9 @@ export default function LandingPage() {
             </div>
             <div className="w-px h-12 bg-slate-200 hidden md:block" />
             <div className="flex items-center gap-4 text-slate-500">
-              <Zap className="w-8 h-8 text-slate-400" />
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-slate-400/15 to-slate-500/10 flex items-center justify-center">
+                <Zap className="w-5 h-5 text-slate-500" />
+              </div>
               <div>
                 <h4 className="font-bold text-slate-900">Lightning Fast</h4>
                 <p className="text-sm">Process 100k+ rows in under 2 minutes</p>
@@ -188,7 +267,9 @@ export default function LandingPage() {
             </div>
             <div className="w-px h-12 bg-slate-200 hidden md:block" />
             <div className="flex items-center gap-4 text-slate-500">
-              <Music className="w-8 h-8 text-amber-600" />
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500/15 to-yellow-500/10 flex items-center justify-center">
+                <Music className="w-5 h-5 text-amber-600" />
+              </div>
               <div>
                 <h4 className="font-bold text-slate-900">Live DSP Analytics</h4>
                 <p className="text-sm">Direct integration with Spotify & Apple Music</p>
@@ -197,6 +278,81 @@ export default function LandingPage() {
           </div>
         </div>
       </section>
+
+      {/* Footer */}
+      <footer className="bg-slate-900 text-slate-400 pt-16 pb-8 relative overflow-hidden">
+        <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-amber-500/30 to-transparent" />
+        <div className="container mx-auto max-w-6xl px-6">
+          <div className="grid md:grid-cols-4 gap-12 mb-12">
+            {/* Brand */}
+            <div className="md:col-span-1">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-500 to-yellow-600 flex items-center justify-center text-xs font-black text-white shadow-lg shadow-amber-500/20">
+                  RR
+                </div>
+                <span className="text-lg font-bold text-white">RoyaltyRadar</span>
+              </div>
+              <p className="text-sm leading-relaxed">
+                AI-powered music catalog audit & revenue recovery platform.
+              </p>
+              <div className="flex items-center gap-3 mt-6">
+                <a href="#" className="w-8 h-8 rounded-lg bg-slate-800 hover:bg-slate-700 flex items-center justify-center transition-colors">
+                  <Twitter className="w-3.5 h-3.5" />
+                </a>
+                <a href="#" className="w-8 h-8 rounded-lg bg-slate-800 hover:bg-slate-700 flex items-center justify-center transition-colors">
+                  <Linkedin className="w-3.5 h-3.5" />
+                </a>
+                <a href="#" className="w-8 h-8 rounded-lg bg-slate-800 hover:bg-slate-700 flex items-center justify-center transition-colors">
+                  <Github className="w-3.5 h-3.5" />
+                </a>
+              </div>
+            </div>
+
+            {/* Product */}
+            <div>
+              <h4 className="text-sm font-semibold text-white uppercase tracking-wider mb-4">Product</h4>
+              <ul className="space-y-3">
+                <li><Link href="#features" className="text-sm hover:text-white transition-colors">Features</Link></li>
+                <li><Link href="#pricing" className="text-sm hover:text-white transition-colors">Pricing</Link></li>
+                <li><Link href="#how-it-works" className="text-sm hover:text-white transition-colors">How it Works</Link></li>
+                <li><Link href="/register" className="text-sm hover:text-white transition-colors">Free Trial</Link></li>
+              </ul>
+            </div>
+
+            {/* Company */}
+            <div>
+              <h4 className="text-sm font-semibold text-white uppercase tracking-wider mb-4">Company</h4>
+              <ul className="space-y-3">
+                <li><Link href="#" className="text-sm hover:text-white transition-colors">About</Link></li>
+                <li><Link href="#" className="text-sm hover:text-white transition-colors">Blog</Link></li>
+                <li><Link href="#" className="text-sm hover:text-white transition-colors">Careers</Link></li>
+                <li><Link href="#" className="text-sm hover:text-white transition-colors">Contact</Link></li>
+              </ul>
+            </div>
+
+            {/* Legal */}
+            <div>
+              <h4 className="text-sm font-semibold text-white uppercase tracking-wider mb-4">Legal</h4>
+              <ul className="space-y-3">
+                <li><Link href="#" className="text-sm hover:text-white transition-colors">Privacy Policy</Link></li>
+                <li><Link href="#" className="text-sm hover:text-white transition-colors">Terms of Service</Link></li>
+                <li><Link href="#" className="text-sm hover:text-white transition-colors">Security</Link></li>
+                <li><Link href="#" className="text-sm hover:text-white transition-colors">GDPR</Link></li>
+              </ul>
+            </div>
+          </div>
+
+          {/* Bottom bar */}
+          <div className="border-t border-slate-800 pt-8 flex flex-col md:flex-row items-center justify-between gap-4">
+            <p className="text-xs text-slate-500">
+              © {new Date().getFullYear()} RoyaltyRadar. All rights reserved.
+            </p>
+            <p className="text-xs text-slate-500">
+              Built for music publishers, labels & rights holders worldwide.
+            </p>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }
