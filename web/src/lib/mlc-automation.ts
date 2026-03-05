@@ -1,4 +1,7 @@
+// @ts-ignore
 import { chromium, Browser, BrowserContext, Page } from "playwright";
+// @ts-ignore
+import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 
 // Wait between 2-4 seconds to avoid rate-limiting and appear more human
 const randomDelay = () => new Promise(resolve => setTimeout(resolve, 2000 + Math.random() * 2000));

@@ -1,5 +1,7 @@
+// @ts-ignore
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 
+// @ts-ignore
 import { fn } from 'storybook/test';
 
 import { Button } from './Button';

@@ -42,7 +42,7 @@ export const processAuditJob = async (job: Job<AuditJobData>) => {
         let findingsCount = 0;
 
         // Build lookup sets for cross-referencing
-        const catalogISRCs = new Set(recordings.filter(r => r.isrc).map(r => r.isrc!.toUpperCase()));
+        const catalogISRCs = new Set(recordings.filter((r: any) => r.isrc).map((r: any) => r.isrc!.toUpperCase()));
         const catalogTitles = new Map<string, string>(); // normalized title -> work id
         for (const w of works) {
             catalogTitles.set(w.title.toLowerCase().trim(), w.id);

@@ -54,7 +54,7 @@ export async function GET() {
 
         // Recovery funnel
         const statusCounts = findings.reduce(
-            (acc, f) => {
+            (acc: any, f: any) => {
                 acc[f.status] = (acc[f.status] || 0) + 1;
                 return acc;
             },
@@ -70,7 +70,7 @@ export async function GET() {
 
         // Severity breakdown
         const severityCounts = findings.reduce(
-            (acc, f) => {
+            (acc: any, f: any) => {
                 acc[f.severity] = (acc[f.severity] || 0) + 1;
                 return acc;
             },

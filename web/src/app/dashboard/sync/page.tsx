@@ -69,7 +69,7 @@ export default async function SyncLicensingPage() {
                                             </td>
                                         </tr>
                                     ) : (
-                                        quotes.map(q => (
+                                        quotes.map((q: any) => (
                                             <tr key={q.id}>
                                                 <td className="px-4 py-3 font-medium text-slate-900">{q.work.title}</td>
                                                 <td className="px-4 py-3 text-slate-600">{q.projectName}</td>
@@ -102,7 +102,7 @@ export default async function SyncLicensingPage() {
                                     No placements tracked yet.
                                 </div>
                             ) : (
-                                placements.map(p => (
+                                placements.map((p: any) => (
                                     <div key={p.id} className="flex items-center gap-4 p-3 border border-slate-100 rounded-lg bg-white shadow-sm hover:border-slate-200 transition-colors">
                                         <div className="w-10 h-10 rounded-full bg-amber-50 border border-amber-100 flex items-center justify-center shrink-0">
                                             <Play className="h-4 w-4 text-amber-600 ml-0.5" />

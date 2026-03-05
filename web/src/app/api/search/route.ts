@@ -55,19 +55,19 @@ export async function GET(req: Request) {
         ]);
 
         const results = [
-            ...works.map((w) => ({
+            ...works.map((w: any) => ({
                 id: w.id,
                 title: w.title,
                 type: "Work" as const,
                 identifier: w.iswc || undefined,
             })),
-            ...recordings.map((r) => ({
+            ...recordings.map((r: any) => ({
                 id: r.id,
                 title: r.title,
                 type: "Recording" as const,
                 identifier: r.isrc || undefined,
             })),
-            ...findings.map((f) => ({
+            ...findings.map((f: any) => ({
                 id: f.id,
                 title: `${f.type.replace(/_/g, " ")} (${f.severity})`,
                 type: "Finding" as const,

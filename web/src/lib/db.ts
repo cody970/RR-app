@@ -1,4 +1,7 @@
+// @ts-ignore
 import { PrismaClient } from "@prisma/client";
+// @ts-ignore
+import { useToast } from "@/components/ui/toast-provider";
 
 const globalForPrisma = globalThis as unknown as {
     prisma: PrismaClient | undefined;

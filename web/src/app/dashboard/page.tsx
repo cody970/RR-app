@@ -36,8 +36,8 @@ export default async function DashboardPage() {
         where: { orgId, severity: "HIGH" }
     });
 
-    const totalLeakage = findings.reduce((acc, f) => acc + (f.estimatedImpact || 0), 0);
-    const totalRecovered = findings.reduce((acc, f) => acc + (f.recoveredAmount || 0), 0);
+    const totalLeakage = findings.reduce((acc: number, f: any) => acc + (f.estimatedImpact || 0), 0);
+    const totalRecovered = findings.reduce((acc: number, f: any) => acc + (f.recoveredAmount || 0), 0);
     const recoveryRate = totalLeakage > 0 ? (totalRecovered / totalLeakage) * 100 : 0;
 
     // 2. Prepare Analytics Data
@@ -49,7 +49,7 @@ export default async function DashboardPage() {
     const itemsWithId = worksWithIswc + recordsWithIsrc;
     const healthScore = totalItems > 0 ? Math.round((itemsWithId / totalItems) * 100) : 100;
 
-    const impactByType = findings.reduce((acc: any, f) => {
+    const impactByType = findings.reduce((acc: any, f: any) => {
         acc[f.type] = (acc[f.type] || 0) + (f.estimatedImpact || 0);
         return acc;
     }, {});
@@ -59,12 +59,12 @@ export default async function DashboardPage() {
         value,
     }));
 
-    const severityData = findings.reduce((acc: any, f) => {
+    const severityData = findings.reduce((acc: any, f: any) => {
         acc[f.severity] = (acc[f.severity] || 0) + 1;
         return acc;
     }, {});
 
-    const statusData = findings.reduce((acc: any, f) => {
+    const statusData = findings.reduce((acc: any, f: any) => {
         acc[f.status] = (acc[f.status] || 0) + 1;
         return acc;
     }, {});

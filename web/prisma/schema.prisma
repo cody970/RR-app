@@ -86,6 +86,8 @@ model User {
   notifications Notification[]
   writerId      String?
   writer        Writer?        @relation(fields: [writerId], references: [id])
+  publisherId   String?
+  publisher     Publisher?     @relation(fields: [publisherId], references: [id])
 }
 
 model Writer {
@@ -110,6 +112,7 @@ model Publisher {
   ipiCae        String?
   organization  Organization   @relation(fields: [orgId], references: [id])
   orgId         String
+  users         User[]
   payeeLedgers  PayeeLedger[]
   payouts       Payout[]
   createdAt     DateTime       @default(now())

@@ -70,7 +70,7 @@ export default async function RegistrationsPage() {
                                         </td>
                                     </tr>
                                 ) : (
-                                    registrations.map(reg => (
+                                    registrations.map((reg: any) => (
                                         <tr key={reg.id} className="hover:bg-slate-50/50 transition-colors">
                                             <td className="px-4 py-3 font-medium text-slate-900">{reg.work.title}</td>
                                             <td className="px-4 py-3 text-slate-500 font-mono text-xs">{reg.work.iswc || 'N/A'}</td>

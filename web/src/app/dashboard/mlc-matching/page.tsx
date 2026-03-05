@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { DashboardShell } from "@/components/layout/dashboard-shell";
+import DashboardShell from "@/components/layout/dashboard-shell";
 import { DashboardHeader } from "@/components/layout/dashboard-header";
 import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Play, Loader2, Search, CheckCircle2, XCircle } from "lucide-react";
-import { useToast } from "@/hooks/use-toast"; // Assuming this exists from shadcn
+import { useToast } from "@/components/ui/toast-provider";
 
 interface MLCMatchJob {
     id: string;
@@ -29,7 +29,7 @@ export default function MLCMatchingPage() {
     const [jobs, setJobs] = useState<MLCMatchJob[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isTriggering, setIsTriggering] = useState(false);
-    const { toast } = useToast();
+    const toast = useToast();
 
     useEffect(() => {
         fetchJobs();
@@ -58,17 +58,10 @@ export default function MLCMatchingPage() {
             const res = await fetch("/api/mlc-matching", { method: "POST" });
             if (!res.ok) throw new Error("Failed to trigger job");
 
-            toast({
-                title: "Job Started",
-                description: "MLC Matching automation has been queued.",
-            });
+            toast.success("MLC Matching automation has been queued.");
             await fetchJobs();
         } catch (error) {
-            toast({
-                title: "Error",
-                description: "Failed to trigger the matching job.",
-                variant: "destructive"
-            });
+            toast.error("Failed to trigger the matching job.");
         } finally {
             setIsTriggering(false);
         }

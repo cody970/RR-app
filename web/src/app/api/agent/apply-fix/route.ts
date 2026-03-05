@@ -24,7 +24,7 @@ export async function POST(req: Request) {
         const evidenceHash = crypto.createHash("sha256").update(contentToHash).digest("hex");
 
         // Persist changes
-        await db.$transaction(async (tx) => {
+        await db.$transaction(async (tx: any) => {
             // 1. Mark Task Resolved
             await tx.task.update({
                 where: { id: taskId },

@@ -25,7 +25,7 @@ export async function POST(req: Request) {
         const passwordHash = await bcrypt.hash(password, 10);
 
         // Create the organization and user in a transaction
-        const user = await db.$transaction(async (tx) => {
+        const user = await db.$transaction(async (tx: any) => {
             const org = await tx.organization.create({
                 data: {
                     name: organizationName,

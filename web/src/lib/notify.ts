@@ -37,7 +37,7 @@ export async function notifyOrg(opts: Omit<CreateNotificationOptions, "userId">)
     });
 
     return db.notification.createMany({
-        data: users.map((u) => ({
+        data: users.map((u: any) => ({
             orgId: opts.orgId,
             userId: u.id,
             title: opts.title,

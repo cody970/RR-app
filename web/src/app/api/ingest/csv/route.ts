@@ -78,7 +78,7 @@ export async function POST(req: Request) {
         // Ingest what's valid
         try {
             if (validRows.length > 0) {
-                await db.$transaction(async (tx) => {
+                await db.$transaction(async (tx: any) => {
                     if (type === "Works") {
                         for (const row of validRows) {
                             await tx.work.upsert({
