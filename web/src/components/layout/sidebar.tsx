@@ -14,6 +14,7 @@ import {
     Users,
     CreditCard,
     LogOut,
+    X,
 } from "lucide-react";
 import { signOut } from "next-auth/react";
 
@@ -35,14 +36,24 @@ export function Sidebar({ isOpen, onClose }: { isOpen?: boolean; onClose?: () =>
 
     return (
         <div className="flex h-full w-64 flex-col bg-white border-r border-slate-200/80">
-            {/* Logo */}
-            <div className="flex h-16 shrink-0 items-center gap-3 px-6 border-b border-slate-200/80">
-                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-500 to-yellow-600 flex items-center justify-center text-xs font-black text-white shadow-md shadow-amber-500/20">
-                    RR
+            {/* Logo + Mobile Close */}
+            <div className="flex h-16 shrink-0 items-center justify-between px-6 border-b border-slate-200/80">
+                <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-500 to-yellow-600 flex items-center justify-center text-xs font-black text-white shadow-md shadow-amber-500/20">
+                        RR
+                    </div>
+                    <h1 className="text-lg font-bold bg-gradient-to-r from-amber-600 via-yellow-600 to-amber-600 bg-clip-text text-transparent">
+                        RoyaltyRadar
+                    </h1>
                 </div>
-                <h1 className="text-lg font-bold bg-gradient-to-r from-amber-600 via-yellow-600 to-amber-600 bg-clip-text text-transparent">
-                    RoyaltyRadar
-                </h1>
+                {onClose && (
+                    <button
+                        onClick={onClose}
+                        className="lg:hidden p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-all"
+                    >
+                        <X className="h-5 w-5" />
+                    </button>
+                )}
             </div>
 
             {/* Nav */}
@@ -54,6 +65,7 @@ export function Sidebar({ isOpen, onClose }: { isOpen?: boolean; onClose?: () =>
                             <Link
                                 key={item.name}
                                 href={item.href}
+                                onClick={onClose}
                                 className={`group relative flex items-center rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200 ${isActive
                                     ? "bg-amber-50 text-amber-700 shadow-sm"
                                     : "text-slate-500 hover:bg-slate-50 hover:text-slate-900"

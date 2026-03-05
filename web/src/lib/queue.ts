@@ -13,3 +13,16 @@ export const auditQueue = new Queue('audit-queue', {
         removeOnFail: 1000,
     },
 });
+
+export const mlcMatchingQueue = new Queue('mlc-matching-queue', {
+    connection: redis as any,
+    defaultJobOptions: {
+        attempts: 2,
+        backoff: {
+            type: 'exponential',
+            delay: 5000,
+        },
+        removeOnComplete: 100,
+        removeOnFail: 1000,
+    },
+});

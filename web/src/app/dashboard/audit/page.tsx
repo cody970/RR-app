@@ -279,7 +279,7 @@ export default function AuditEnginePage() {
         <div className="space-y-6">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div>
-                    <h1 className="text-3xl font-bold tracking-tight text-slate-900 mb-2 px-2">Audit Engine</h1>
+                    <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 mb-2 px-2">Audit Engine</h1>
                     <p className="text-slate-500 px-2">
                         Detect unregistered publishing, metadata conflicts, and calculate leakage.
                     </p>
@@ -335,9 +335,9 @@ export default function AuditEnginePage() {
                             onClick={downloadPDF}
                             disabled={findings.length === 0}
                         >
-                            <Download className="h-3 w-3 mr-2" /> Download PDF Report
+                            <Download className="h-3 w-3 sm:mr-2" /> <span className="hidden sm:inline">Download PDF Report</span>
                         </Button>
-                        <div className="flex items-center gap-1 bg-slate-100 rounded-lg p-0.5 border border-slate-200">
+                        <div className="hidden sm:flex items-center gap-1 bg-slate-100 rounded-lg p-0.5 border border-slate-200">
                             <Button
                                 variant="ghost"
                                 size="sm"

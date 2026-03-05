@@ -1,4 +1,5 @@
 import { searchByISRC, searchByTitle } from "./spotify";
+import { enrichRecordingCredits, findWriterIPI, type MusoCredit } from "./muso-client";
 
 export interface EnrichmentMatch {
     found: boolean;
@@ -8,6 +9,7 @@ export interface EnrichmentMatch {
     matchScore: number;
     provider: string;
     spotifyUri?: string;
+    credits?: { name: string; role: string; ipiNameNumber?: string }[];
     suggestions?: {
         field: string;
         value: string | number;
@@ -48,7 +50,41 @@ export async function enrichMetadata(title: string, currentId?: string | null): 
         }
     }
 
-    // 2. Real Enrichment via MusicBrainz API
+    // 2. Try Muso.ai for verified credits (writers, producers, IPI numbers)
+    if (process.env.MUSO_API_KEY) {
+        try {
+            // If we have an ISRC, look up credits via Muso
+            const isrcToCheck =
+                currentId && !currentId.startsWith("T-") ? currentId : undefined;
+            if (isrcToCheck) {
+                const musoResult = await enrichRecordingCredits(isrcToCheck);
+                if (musoResult?.found && musoResult.credits.length > 0) {
+                    const creditSuggestions = musoResult.credits.map((c) => ({
+                        field: "credit",
+                        value: `${c.name} (${c.role})`,
+                        reason: `Verified credit from Muso.ai${c.ipiNameNumber ? ` — IPI: ${c.ipiNameNumber}` : ""}`,
+                    }));
+
+                    return {
+                        found: true,
+                        externalIsrc: isrcToCheck,
+                        matchScore: 95,
+                        provider: "Muso.ai",
+                        credits: musoResult.credits.map((c) => ({
+                            name: c.name,
+                            role: c.role,
+                            ipiNameNumber: c.ipiNameNumber || undefined,
+                        })),
+                        suggestions: creditSuggestions,
+                    };
+                }
+            }
+        } catch (e) {
+            console.error("Muso.ai enrichment error:", e);
+        }
+    }
+
+    // 3. Real Enrichment via MusicBrainz API
     try {
         const queryType = currentId?.startsWith("T-") || (!currentId && title) ? 'work' : 'recording';
         const url = `https://musicbrainz.org/ws/2/${queryType}/?query=${queryType}:${encodeURIComponent(title)}&fmt=json`;

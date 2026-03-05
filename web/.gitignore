@@ -1,3 +1,6 @@
 \n.pnpm-store
 .next
 node_modules
+
+*storybook.log
+storybook-static

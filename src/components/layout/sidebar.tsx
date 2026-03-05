@@ -9,6 +9,8 @@ import {
     ScanSearch,
     SearchCheck,
     FileCheck2,
+    DollarSign,
+    Briefcase,
     Workflow,
     Bot,
     FileText,
@@ -16,6 +18,7 @@ import {
     Users,
     CreditCard,
     LogOut,
+    Wallet,
 } from "lucide-react";
 import { signOut } from "next-auth/react";
 
@@ -26,6 +29,9 @@ const navigation = [
     { name: "Audit Engine", href: "/dashboard/audit", icon: ScanSearch },
     { name: "Catalog Scanner", href: "/dashboard/catalog-scan", icon: SearchCheck },
     { name: "Registrations", href: "/dashboard/registrations", icon: FileCheck2 },
+    { name: "Revenue", href: "/dashboard/revenue", icon: DollarSign },
+    { name: "Accounting Hub", href: "/dashboard/accounting", icon: Wallet },
+    { name: "Licensing Hub", href: "/dashboard/licensing", icon: Briefcase },
     { name: "Tasks", href: "/dashboard/tasks", icon: Workflow },
     { name: "Agent Demo", href: "/dashboard/agent", icon: Bot },
     { name: "Reports", href: "/dashboard/reports", icon: FileText },

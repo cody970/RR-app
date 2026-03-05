@@ -79,19 +79,19 @@ export default function SettingsPage() {
 
     return (
         <div className="space-y-8 max-w-5xl mx-auto py-4 px-2">
-            <div className="flex items-center justify-between mb-2">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-2">
                 <div>
-                    <h1 className="text-3xl font-bold tracking-tight text-slate-900 flex items-center gap-3">
-                        <Settings className="h-8 w-8 text-amber-500" />
+                    <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 flex items-center gap-3">
+                        <Settings className="h-7 w-7 sm:h-8 sm:w-8 text-amber-500" />
                         Settings
                     </h1>
-                    <p className="text-slate-500 mt-1">Manage your organization's global preferences and external integrations.</p>
+                    <p className="text-slate-500 mt-1 text-sm">Manage your organization's global preferences and external integrations.</p>
                 </div>
-                <Link href="/dashboard/settings/api-docs">
+                <Link href="/dashboard/settings/api-docs" className="self-start sm:self-auto">
                     <Button variant="outline" className="border-slate-200 bg-white text-slate-600 hover:bg-slate-50 hover:text-slate-900 shadow-sm">
-                        <BookOpen className="h-4 w-4 mr-2" />
-                        API Documentation
-                        <ArrowRight className="h-3 w-3 ml-2 opacity-50" />
+                        <BookOpen className="h-4 w-4 sm:mr-2" />
+                        <span className="hidden sm:inline">API Documentation</span>
+                        <ArrowRight className="h-3 w-3 ml-1 sm:ml-2 opacity-50" />
                     </Button>
                 </Link>
             </div>

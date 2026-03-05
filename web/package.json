@@ -37,7 +37,9 @@
     "swagger-ui-react": "^5.32.0",
     "tailwind-merge": "^3.5.0",
     "three": "^0.183.2",
-    "zod": "^4.3.6"
+    "zod": "^4.3.6",
+    "playwright": "^1.49.1",
+    "playwright-core": "^1.49.1"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
