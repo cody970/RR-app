@@ -1,36 +1,79 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 🎵 RoyaltyRadar
 
-## Getting Started
+**RoyaltyRadar** is an AI-powered music catalog audit and revenue recovery platform. It helps rights holders (publishers, writers, labels) identify metadata gaps, detect missing royalties, and automate the recovery process across PROs and DSPs.
 
-First, run the development server:
+## 🚀 Key Features
 
+- **Automated Ingestion**: Support for CWR, CSV, and Excel metadata imports with robust security and validation.
+- **Audit Engine**: Background workers process catalogs to find discrepancies in ISWCs, ISRCs, and royalty distributions.
+- **Enrichment**: Integrated with Spotify, MusicBrainz, and Muso.ai to normalize and enhance catalog metadata.
+- **Registration Automation**: Automates matching and registration gaps for MLC, ASCAP, BMI, and SoundExchange.
+- **Financial Dashboard**: Comprehensive revenue analytics, multi-currency support, and Stripe-integrated billing.
+- **Workspace Portals**: Dedicated portals for external stakeholders (writers/publishers) to monitor their catalogs.
+
+## 🛠 Tech Stack
+
+- **Framework**: [Next.js 16](https://nextjs.org/) (App Router, React 19)
+- **Database**: [Prisma](https://www.prisma.io/) + PostgreSQL
+- **Background Jobs**: [BullMQ](https://docs.bullmq.io/) + Redis
+- **Authentication**: [NextAuth.js](https://next-auth.js.org/)
+- **Payments**: [Stripe](https://stripe.com/)
+- **UI/UX**: Tailwind CSS v4, shadcn/ui, Framer Motion, Recharts
+- **Testing**: Vitest
+
+## 📦 Getting Started
+
+### Prerequisites
+
+- Node.js 18+
+- PostgreSQL
+- Redis
+
+### Installation
+
+1. **Clone the repository**:
+   ```bash
+   git clone https://github.com/your-org/royalty-radar.git
+   cd royalty-radar
+   ```
+
+2. **Install dependencies**:
+   ```bash
+   npm install
+   ```
+
+3. **Set up Environment Variables**:
+   Copy `.env.example` to `.env` and fill in your credentials for Stripe, Google/Github OAuth, and external music APIs.
+
+4. **Initialize Database**:
+   ```bash
+   npx prisma migrate dev
+   ```
+
+5. **Start Development Server**:
+   ```bash
+   npm run dev
+   ```
+
+6. **Start Background Worker**:
+   ```bash
+   npm run worker
+   ```
+
+## 🔐 Security & Scalability
+
+- **CSP Hardening**: Strict Content Security Policy implemented in `next.config.ts`.
+- **RBAC**: granular Role-Based Access Control for Organizations and Portals.
+- **API Pagination**: Standardized `limit`/`offset` pagination across core data endpoints.
+- **NextAuth Type Extension**: Full type safety for custom session and JWT fields.
+
+## 🧪 Testing
+
+Run the test suite using Vitest:
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm test
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## 📄 License
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
-
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Proprietary. All rights reserved.

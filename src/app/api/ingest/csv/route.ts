@@ -6,6 +6,7 @@ import { fileSchemas, TemplateType } from "@/lib/templates";
 import Papa from "papaparse";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { validatePermission } from "@/lib/rbac";
+import { logger } from "@/lib/logger";
 
 export async function POST(req: Request) {
     try {
@@ -13,7 +14,7 @@ export async function POST(req: Request) {
         if (!session?.user) return new Response("Unauthorized", { status: 401 });
 
         const orgId = session.user.orgId;
-        const role = (session.user as any).role;
+        const role = session.user.role;
 
         // RBAC Check
         try {
@@ -35,11 +36,28 @@ export async function POST(req: Request) {
 
         const { type, csvData } = await req.json() as { type: TemplateType; csvData: string };
 
+        // Limit CSV data size (approx 10MB assuming UTF-8)
+        if (csvData.length > 10 * 1024 * 1024) {
+            return new Response("CSV data too large (max 10MB)", { status: 400 });
+        }
+
         if (!fileSchemas[type]) {
             return new Response("Invalid template type", { status: 400 });
         }
 
-        const { data, errors } = Papa.parse(csvData, { header: true, skipEmptyLines: true });
+        // Basic CSV Injection Protection
+        // Sanitizes cells starting with =, +, -, or @ by prefixing with a single quote
+        const sanitizedCsv = csvData.split('\n').map(line =>
+            line.split(',').map(cell => {
+                const trimmed = cell.trim();
+                if (['=', '+', '-', '@'].some(char => trimmed.startsWith(char))) {
+                    return `'${cell}`;
+                }
+                return cell;
+            }).join(',')
+        ).join('\n');
+
+        const { data, errors } = Papa.parse(sanitizedCsv, { header: true, skipEmptyLines: true });
 
         const validRows: any[] = [];
         const validationErrors: any[] = [];
@@ -69,7 +87,7 @@ export async function POST(req: Request) {
             data: {
                 type,
                 orgId,
-                userId: (session.user as any).id,
+                userId: session.user.id,
                 status: "PROCESSING",
                 totalRows: data.length,
             }
@@ -78,7 +96,7 @@ export async function POST(req: Request) {
         // Ingest what's valid
         try {
             if (validRows.length > 0) {
-                await db.$transaction(async (tx) => {
+                await db.$transaction(async (tx: any) => {
                     if (type === "Works") {
                         for (const row of validRows) {
                             await tx.work.upsert({
@@ -195,7 +213,7 @@ export async function POST(req: Request) {
                             action: `CATALOG_IMPORTED`,
                             details: `Imported ${validRows.length} ${type} records (Job: ${ingestJob.id})`,
                             orgId,
-                            userId: (session.user as any).id,
+                            userId: session.user.id,
                             resourceType: "Catalog",
                         }
                     });
@@ -206,7 +224,7 @@ export async function POST(req: Request) {
                             details: JSON.stringify({ valid: validRows.length, errors: validationErrors.length, jobId: ingestJob.id }),
                             evidenceHash: "import-job-" + ingestJob.id,
                             orgId,
-                            userId: (session.user as any).id
+                            userId: session.user.id
                         }
                     });
                 });
@@ -231,6 +249,7 @@ export async function POST(req: Request) {
             });
 
         } catch (txnError: any) {
+            logger.error({ err: txnError, jobId: ingestJob.id }, "Ingestion transaction failed");
             await db.ingestJob.update({
                 where: { id: ingestJob.id },
                 data: { status: "FAILED", errors: txnError.message }
@@ -239,6 +258,7 @@ export async function POST(req: Request) {
         }
 
     } catch (err: any) {
+        logger.error({ err }, "Ingestion route error");
         return new Response(err.message, { status: 500 });
     }
 }

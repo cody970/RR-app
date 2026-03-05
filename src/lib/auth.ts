@@ -80,12 +80,12 @@ export const authOptions: NextAuthOptions = {
                             orgId: org.id
                         }
                     });
-                    (user as any).orgId = newUser.orgId;
-                    (user as any).role = newUser.role;
+                    user.orgId = newUser.orgId;
+                    user.role = newUser.role;
                     user.id = newUser.id;
                 } else {
-                    (user as any).orgId = existingUser.orgId;
-                    (user as any).role = existingUser.role;
+                    user.orgId = existingUser.orgId;
+                    user.role = existingUser.role;
                     user.id = existingUser.id;
                 }
             }
@@ -94,8 +94,8 @@ export const authOptions: NextAuthOptions = {
         async jwt({ token, user, account }) {
             if (user) {
                 token.id = user.id;
-                token.orgId = (user as any).orgId;
-                token.role = (user as any).role;
+                token.orgId = user.orgId;
+                token.role = user.role;
             }
             return token;
         },

@@ -7,6 +7,7 @@
  */
 
 import { db } from "./db";
+import { logger } from "./logger";
 import { searchByTitle as songviewSearch, searchByISWC } from "./songview-client";
 import {
     lookupRecordingByISRC,
@@ -176,7 +177,7 @@ export async function runCatalogScan(
                 }
             }
         } catch (e) {
-            console.error(`Error scanning work ${work.id}:`, e);
+            logger.error({ err: e, workId: work.id }, "Error scanning work");
         }
 
         scannedItems++;
@@ -225,7 +226,7 @@ export async function runCatalogScan(
                 }
             }
         } catch (e) {
-            console.error(`Error scanning recording ${recording.id}:`, e);
+            logger.error({ err: e, recordingId: recording.id }, "Error scanning recording");
         }
 
         scannedItems++;

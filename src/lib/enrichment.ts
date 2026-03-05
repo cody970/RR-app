@@ -1,5 +1,6 @@
 import { searchByISRC, searchByTitle } from "./spotify";
-import { enrichRecordingCredits, findWriterIPI, type MusoCredit } from "./muso-client";
+import { enrichRecordingCredits, type MusoCredit } from "./muso-client";
+import { logger } from "./logger";
 
 export interface EnrichmentMatch {
     found: boolean;
@@ -46,7 +47,7 @@ export async function enrichMetadata(title: string, currentId?: string | null): 
                 };
             }
         } catch (e) {
-            console.error("Spotify enrichment error:", e);
+            logger.error({ err: e }, "Spotify enrichment error");
         }
     }
 
@@ -80,7 +81,8 @@ export async function enrichMetadata(title: string, currentId?: string | null): 
                 }
             }
         } catch (e) {
-            console.error("Muso.ai enrichment error:", e);
+            const isrcError = currentId && !currentId.startsWith("T-") ? currentId : undefined;
+            logger.error({ err: e, isrc: isrcError }, "Muso.ai enrichment error");
         }
     }
 
@@ -140,7 +142,7 @@ export async function enrichMetadata(title: string, currentId?: string | null): 
             }
         }
     } catch (e) {
-        console.error("MusicBrainz enrichment error:", e);
+        logger.error({ err: e, title }, "MusicBrainz enrichment error");
     }
 
     // 3. Last fallback nothing found

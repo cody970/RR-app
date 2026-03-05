@@ -2,6 +2,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import DashboardShell from "@/components/layout/dashboard-shell";
+import { ErrorBoundary } from "@/components/error-boundary";
 
 export default async function DashboardLayout({
     children,
@@ -14,5 +15,11 @@ export default async function DashboardLayout({
         redirect("/login");
     }
 
-    return <DashboardShell>{children}</DashboardShell>;
+    return (
+        <DashboardShell>
+            <ErrorBoundary>
+                {children}
+            </ErrorBoundary>
+        </DashboardShell>
+    );
 }
