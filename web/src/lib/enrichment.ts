@@ -1,4 +1,10 @@
 import { searchByISRC, searchByTitle } from "./spotify";
+import {
+    searchWorks,
+    searchRecordings,
+    lookupByISRC,
+    lookupByISWC,
+} from "./musicbrainz";
 
 export interface EnrichmentMatch {
     found: boolean;
@@ -16,11 +22,10 @@ export interface EnrichmentMatch {
 }
 
 export async function enrichMetadata(title: string, currentId?: string | null): Promise<EnrichmentMatch> {
-    // 1. Try Spotify for Recordigs if we have potential ISRC or Title
+    // 1. Try Spotify for Recordings if we have potential ISRC or Title
     if (process.env.SPOTIFY_CLIENT_ID) {
         try {
             let spotifyTrack = null;
-            // If currentId doesn't look like ISWC (T-), assume it's ISRC or missing
             if (currentId && !currentId.startsWith("T-")) {
                 spotifyTrack = await searchByISRC(currentId);
             } else if (!currentId) {
@@ -48,58 +53,96 @@ export async function enrichMetadata(title: string, currentId?: string | null): 
         }
     }
 
-    // 2. Real Enrichment via MusicBrainz API
+    // 2. MusicBrainz enrichment via dedicated client
     try {
-        const queryType = currentId?.startsWith("T-") || (!currentId && title) ? 'work' : 'recording';
-        const url = `https://musicbrainz.org/ws/2/${queryType}/?query=${queryType}:${encodeURIComponent(title)}&fmt=json`;
-
-        const res = await fetch(url, {
-            headers: {
-                'User-Agent': 'RoyaltyRadar/1.0.0 ( cody@royaltyradar.com )',
-                'Accept': 'application/json'
-            }
-        });
-
-        if (res.ok) {
-            const data = await res.json();
-            const items = data[`${queryType}s`];
-
-            if (items && items.length > 0) {
-                const bestMatch = items[0];
-                const matchScore = bestMatch.score || 85;
-
+        // If we have an ISWC, look it up directly
+        if (currentId?.startsWith("T-")) {
+            const works = await lookupByISWC(currentId);
+            if (works.length > 0) {
+                const best = works[0];
                 const suggestions = [];
-                let externalIswc = currentId && currentId.startsWith("T-") ? currentId : undefined;
-                let externalIsrc = currentId && !currentId.startsWith("T-") ? currentId : undefined;
-
-                if (queryType === 'work') {
-                    if (bestMatch.iswcs && bestMatch.iswcs.length > 0) {
-                        externalIswc = bestMatch.iswcs[0];
-                        if (externalIswc !== currentId) {
-                            suggestions.push({ field: "iswc", value: externalIswc, reason: "ISWC retrieved from MusicBrainz" });
-                        }
-                    }
-                } else if (queryType === 'recording') {
-                    if (bestMatch.isrcs && bestMatch.isrcs.length > 0) {
-                        externalIsrc = bestMatch.isrcs[0].id || bestMatch.isrcs[0];
-                        if (externalIsrc !== currentId) {
-                            suggestions.push({ field: "isrc", value: externalIsrc, reason: "ISRC retrieved from MusicBrainz" });
-                        }
-                    }
+                if (best.title && best.title.toLowerCase() !== title.toLowerCase()) {
+                    suggestions.push({ field: "title", value: best.title, reason: "Canonical title from MusicBrainz" });
                 }
+                return {
+                    found: true,
+                    externalIswc: currentId,
+                    globalSharePercent: 100,
+                    matchScore: 100,
+                    provider: "MusicBrainz",
+                    suggestions: suggestions.length > 0 ? suggestions : undefined,
+                };
+            }
+        }
 
-                if (bestMatch.title && bestMatch.title.toLowerCase() !== title.toLowerCase()) {
-                    suggestions.push({ field: "title", value: bestMatch.title, reason: "Canonical title from MusicBrainz" });
+        // If we have an ISRC, look it up directly
+        if (currentId && !currentId.startsWith("T-")) {
+            const recordings = await lookupByISRC(currentId);
+            if (recordings.length > 0) {
+                const best = recordings[0];
+                const suggestions = [];
+                if (best.title && best.title.toLowerCase() !== title.toLowerCase()) {
+                    suggestions.push({ field: "title", value: best.title, reason: "Canonical title from MusicBrainz" });
+                }
+                return {
+                    found: true,
+                    externalIsrc: currentId,
+                    globalSharePercent: 100,
+                    matchScore: 100,
+                    provider: "MusicBrainz",
+                    suggestions: suggestions.length > 0 ? suggestions : undefined,
+                };
+            }
+        }
+
+        // Fallback: search by title
+        const isWorkSearch = currentId?.startsWith("T-") || !currentId;
+        if (isWorkSearch) {
+            const result = await searchWorks(title, 1);
+            if (result.items.length > 0) {
+                const best = result.items[0];
+                const matchScore = best.score || 85;
+                const suggestions = [];
+                const externalIswc = best.iswcs?.[0];
+
+                if (externalIswc && externalIswc !== currentId) {
+                    suggestions.push({ field: "iswc", value: externalIswc, reason: "ISWC retrieved from MusicBrainz" });
+                }
+                if (best.title && best.title.toLowerCase() !== title.toLowerCase()) {
+                    suggestions.push({ field: "title", value: best.title, reason: "Canonical title from MusicBrainz" });
                 }
 
                 return {
                     found: true,
-                    externalIswc,
-                    externalIsrc,
+                    externalIswc: externalIswc || (currentId?.startsWith("T-") ? currentId : undefined),
                     globalSharePercent: 100,
                     matchScore,
                     provider: "MusicBrainz",
-                    suggestions: suggestions.length > 0 ? suggestions : undefined
+                    suggestions: suggestions.length > 0 ? suggestions : undefined,
+                };
+            }
+        } else {
+            const result = await searchRecordings(title, 1);
+            if (result.items.length > 0) {
+                const best = result.items[0];
+                const matchScore = best.score || 85;
+                const suggestions = [];
+                const externalIsrc = best.isrcs?.[0];
+
+                if (externalIsrc && externalIsrc !== currentId) {
+                    suggestions.push({ field: "isrc", value: externalIsrc, reason: "ISRC retrieved from MusicBrainz" });
+                }
+                if (best.title && best.title.toLowerCase() !== title.toLowerCase()) {
+                    suggestions.push({ field: "title", value: best.title, reason: "Canonical title from MusicBrainz" });
+                }
+
+                return {
+                    found: true,
+                    externalIsrc: externalIsrc || currentId,
+                    globalSharePercent: 100,
+                    matchScore,
+                    provider: "MusicBrainz",
+                    suggestions: suggestions.length > 0 ? suggestions : undefined,
                 };
             }
         }
@@ -107,6 +150,6 @@ export async function enrichMetadata(title: string, currentId?: string | null): 
         console.error("MusicBrainz enrichment error:", e);
     }
 
-    // 3. Last fallback nothing found
+    // 3. Last fallback — nothing found
     return { found: false, matchScore: 0, provider: "None" };
 }
