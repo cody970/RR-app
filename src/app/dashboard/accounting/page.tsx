@@ -14,7 +14,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { generatePayoutStatementPDF } from "@/lib/accounting-pdf";
+import { generatePayoutStatementPDF } from "@/lib/finance/accounting-pdf";
 
 interface Balance {
     id: string;

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { enrichMetadata } from '@/lib/enrichment';
+import { enrichMetadata } from '@/lib/music/enrichment';
 
 // Mock the global fetch
 global.fetch = vi.fn();

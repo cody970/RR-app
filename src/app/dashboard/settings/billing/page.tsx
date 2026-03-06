@@ -1,6 +1,6 @@
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
-import { db as prisma } from "@/lib/db";
+import { authOptions } from "@/lib/auth/auth";
+import { db as prisma } from "@/lib/infra/db";
 import { PricingCards } from "@/components/billing/pricing-cards";
 import { Button } from "@/components/ui/button";
 import { redirect } from "next/navigation";

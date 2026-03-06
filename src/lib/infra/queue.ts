@@ -1,5 +1,5 @@
 import { Queue } from 'bullmq';
-import { redis } from './redis';
+import { redis } from "@/lib/infra/redis";
 
 export const auditQueue = new Queue('audit-queue', {
     connection: redis as any,

@@ -1,4 +1,4 @@
-import { redis } from './redis';
+import { redis } from "@/lib/infra/redis";
 
 export class RedisCache {
     async set<T>(key: string, value: T, ttlMs: number): Promise<void> {

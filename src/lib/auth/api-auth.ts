@@ -1,4 +1,4 @@
-import { db } from "@/lib/db";
+import { db } from "@/lib/infra/db";
 
 export async function validateApiKey(key: string | null) {
     if (!key) return null;

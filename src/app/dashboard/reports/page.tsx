@@ -3,7 +3,7 @@
 import { Button } from "@/components/ui/button";
 import { DownloadCloud, FileText, Loader2 } from "lucide-react";
 import { useToast } from "@/components/ui/toast-provider";
-import { exportToCSV } from "@/lib/export-utils";
+import { exportToCSV } from "@/lib/reports/export-utils";
 import { useState } from "react";
 
 export default function ReportsPage() {

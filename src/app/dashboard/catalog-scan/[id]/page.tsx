@@ -32,6 +32,7 @@ interface Gap {
     estimatedImpact: number | null;
     status: string;
     musicbrainzId: string | null;
+    songviewMatch: any | null;
     createdAt: string;
 }
 
@@ -171,6 +172,54 @@ export default function ScanResultsPage() {
         URL.revokeObjectURL(url);
     };
 
+    const generateLOD = async () => {
+        if (selectedGaps.size === 0) return;
+        setLoading(true);
+        try {
+            let successCount = 0;
+            for (const gapId of Array.from(selectedGaps)) {
+                // Find gap society to suggest as target
+                const gap = gaps.find(g => g.id === gapId);
+                const targetSociety = gap?.society || "Relevant Society";
+
+                const res = await fetch(`/api/catalog-scan/${scanId}/gaps/${gapId}/lod`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ targetSociety })
+                });
+
+                if (res.ok) successCount++;
+            }
+            alert(`Successfully generated ${successCount} Retroactive Claims (LODs)!`);
+        } catch (error) {
+            console.error(error);
+            alert("Error generating claims.");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const exportCWR = async () => {
+        try {
+            const res = await fetch(`/api/catalog-scan/${scanId}/export-cwr`);
+            if (!res.ok) {
+                const data = await res.json();
+                alert(data.error || "Failed to export CWR");
+                return;
+            }
+
+            const blob = await res.blob();
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = `RoyaltyRadar_Scan_${scanId}.cwr`;
+            a.click();
+            URL.revokeObjectURL(url);
+        } catch (e) {
+            alert("An error occurred during CWR export");
+        }
+    };
+
     const gapTypeLabel = (type: string) => {
         switch (type) {
             case "NO_REGISTRATION": return "No Registration";
@@ -240,6 +289,9 @@ export default function ScanResultsPage() {
                 <div className="flex gap-2">
                     <Button variant="outline" onClick={exportCSV} className="border-slate-200">
                         <Download className="w-4 h-4 mr-2" /> Export CSV
+                    </Button>
+                    <Button variant="outline" onClick={exportCWR} className="border-indigo-200 text-indigo-700 hover:bg-indigo-50">
+                        <FileText className="w-4 h-4 mr-2" /> Export CWR
                     </Button>
                 </div>
             </div>
@@ -322,6 +374,9 @@ export default function ScanResultsPage() {
                     <span className="text-sm font-medium text-amber-800">{selectedGaps.size} selected</span>
                     <Button size="sm" variant="outline" onClick={submitToTuneRegistry} className="border-indigo-300 text-indigo-700 hover:bg-indigo-100">
                         <Send className="w-3.5 h-3.5 mr-1" /> Register via TuneRegistry
+                    </Button>
+                    <Button size="sm" variant="outline" onClick={generateLOD} className="border-blue-300 text-blue-700 hover:bg-blue-100">
+                        <FileText className="w-3.5 h-3.5 mr-1" /> Generate Claim (LOD)
                     </Button>
                     <Button size="sm" variant="outline" onClick={() => batchUpdate("REGISTERING")} className="border-amber-300 text-amber-700 hover:bg-amber-100">
                         Mark as Registering
@@ -427,7 +482,14 @@ export default function ScanResultsPage() {
                                                 {gap.isrc || gap.iswc || "—"}
                                             </td>
                                             <td className="px-4 py-3 text-slate-600">
-                                                {gap.artistName || "—"}
+                                                <div className="flex flex-col">
+                                                    <span>{gap.artistName || "—"}</span>
+                                                    {gap.songviewMatch?.musoEnrichment && (
+                                                        <Badge variant="outline" className="w-fit text-[10px] h-4 px-1 mt-1 bg-indigo-50 text-indigo-600 border-indigo-200">
+                                                            Muso Verified
+                                                        </Badge>
+                                                    )}
+                                                </div>
                                             </td>
                                             <td className="px-4 py-3">
                                                 <Badge variant="outline" className="text-amber-700 bg-amber-50 border-amber-200">

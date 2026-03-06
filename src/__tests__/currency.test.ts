@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { convertToUSD, convertFromUSD, formatCurrency } from "../lib/currency";
+import { convertToUSD, convertFromUSD, formatCurrency } from "../lib/finance/currency";
 
 describe("Currency Logic", () => {
     describe("convertToUSD", () => {

@@ -1,4 +1,4 @@
-import { db } from "./db";
+import { db } from "@/lib/infra/db";
 
 /**
  * Pure calculation for royalty splits.

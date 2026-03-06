@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { hasPermission, validatePermission } from "../lib/rbac";
+import { hasPermission, validatePermission } from "../lib/auth/rbac";
 
 describe("RBAC Logic", () => {
     describe("hasPermission", () => {

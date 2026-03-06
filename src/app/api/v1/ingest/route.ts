@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { validateApiKey } from "@/lib/api-auth";
-import { db } from "@/lib/db";
+import { validateApiKey } from "@/lib/auth/api-auth";
+import { db } from "@/lib/infra/db";
 
 export async function POST(req: Request) {
     const authHeader = req.headers.get("Authorization");

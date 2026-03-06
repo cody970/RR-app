@@ -6,10 +6,10 @@
  */
 
 import { Worker, Job } from "bullmq";
-import { redis } from "../lib/redis";
-import { db } from "../lib/db";
-import { runCatalogScan } from "../lib/catalog-scanner";
-import { notifyOrg } from "../lib/notify";
+import { redis } from "@/lib/infra/redis";
+import { db } from "@/lib/infra/db";
+import { runCatalogScan } from "@/lib/music/catalog-scanner";
+import { notifyOrg } from "@/lib/infra/notify";
 
 interface ScanJobData {
     scanId: string;
@@ -47,7 +47,8 @@ export async function processScanJob(job: Job<ScanJobData>) {
         });
 
         // Notify the user
-        await notifyOrg(orgId, userId, {
+        await notifyOrg({
+            orgId,
             title: "Catalog Scan Complete",
             message: `Found ${result.totalGaps} unregistered catalog ${result.totalGaps === 1 ? "item" : "items"}. Review the results to claim missing royalties.`,
             type: result.totalGaps > 0 ? "WARNING" : "SUCCESS",
@@ -66,7 +67,8 @@ export async function processScanJob(job: Job<ScanJobData>) {
             data: { status: "FAILED", error: message },
         });
 
-        await notifyOrg(orgId, userId, {
+        await notifyOrg({
+            orgId,
             title: "Catalog Scan Failed",
             message: `Scan encountered an error: ${message}`,
             type: "ERROR",

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { normalizeTitle, similarity, levenshteinDistance, isValidISWC, isValidISRC } from "../lib/music";
+import { normalizeTitle, similarity, levenshteinDistance, isValidISWC, isValidISRC } from "../lib/music/music";
 
 describe("Music Logic Utils", () => {
     describe("normalizeTitle", () => {

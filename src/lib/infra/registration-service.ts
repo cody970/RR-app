@@ -5,19 +5,19 @@
  * Routes to TuneRegistry API or CWR file generation depending on method.
  */
 
-import { db } from "@/lib/db";
+import { db } from "@/lib/infra/db";
 import {
     submitWorkRegistration,
     submitRecordingRegistration,
     convertGapToRegistration,
     checkSubmissionStatus,
-} from "@/lib/tuneregistry-client";
+} from "@/lib/clients/tuneregistry-client";
 import {
     generateCwrFile,
     generateCwrWithCoPublisher,
     type CwrWorkInput,
     type CwrFileOptions,
-} from "@/lib/cwr-generator";
+} from "@/lib/cwr/cwr-generator";
 
 // ---------- Types ----------
 

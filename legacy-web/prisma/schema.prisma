@@ -506,6 +506,24 @@ model SyncPlacement {
   @@index([workId])
 }
 
+model Finding {
+  id              String           @id @default(cuid())
+  organizationId  String
+  type            FindingType      @default(STATEMENT_UNMATCHED_WORK)
+  status          FindingStatus    @default(OPEN)
+  severity        FindingSeverity  @default(MEDIUM)
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  description     String?
+  estimatedImpact Float?           @default(0)
+  metadataFix     String?
+  source          String?
+  organization    Organization     @relation(fields: [organizationId], references: [id])
+  tasks           Task[]
+  registrationGap RegistrationGap? @relation(fields: [gapId], references: [id])
+  gapId           String?
+}
+
 model CatalogScan {
   id                String            @id @default(cuid())
   orgId             String
@@ -544,10 +562,46 @@ model RegistrationGap {
   updatedAt       DateTime     @updatedAt
 
   scan            CatalogScan  @relation(fields: [scanId], references: [id])
+  findings        Finding[]
+  claims          RetroactiveClaim[]
 
   @@index([scanId])
   @@index([status])
   @@index([gapType])
+}
+
+model RetroactiveClaim {
+  id              String           @id @default(cuid())
+  gapId           String
+  organizationId  String
+  targetSociety   String
+  yearsClaimed    Int              @default(2)
+  estimatedValue  Float?           @default(0)
+  status          String           @default("GENERATED") // GENERATED, SUBMITTED, PAID, REJECTED
+  lodContent      String?          @db.Text
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  gap             RegistrationGap  @relation(fields: [gapId], references: [id])
+  organization    Organization     @relation(fields: [organizationId], references: [id])
+}
+
+model SplitSignoff {
+  id              String       @id @default(cuid())
+  workId          String
+  organizationId  String
+  targetEmail     String
+  writerName      String
+  proposedSplit   Float
+  token           String       @unique
+  status          String       @default("PENDING") // PENDING, APPROVED, DISPUTED
+  disputeReason   String?
+  ipAddress       String?
+  signedAt        DateTime?
+  expiresAt       DateTime
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+  work            Work         @relation(fields: [workId], references: [id])
+  organization    Organization @relation(fields: [organizationId], references: [id])
 }
 
 model MLCMatchJob {

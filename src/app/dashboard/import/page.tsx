@@ -3,9 +3,9 @@
 import { useState } from "react";
 import { useSession } from "next-auth/react";
 import { UploadCloud, File, AlertCircle, CheckCircle2, Download } from "lucide-react";
-import { TemplateTypes, TemplateType, getTemplateHeaders } from "@/lib/templates";
+import { TemplateTypes, TemplateType, getTemplateHeaders } from "@/lib/reports/templates";
 import { Button } from "@/components/ui/button";
-import { downloadTemplate } from "@/lib/export-utils";
+import { downloadTemplate } from "@/lib/reports/export-utils";
 import { IngestHistory } from "@/components/dashboard/ingest-history";
 
 export default function ImportPage() {

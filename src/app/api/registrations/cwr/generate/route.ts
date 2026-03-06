@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
-import { generateCwrForDownload } from "@/lib/registration-service";
+import { authOptions } from "@/lib/auth/auth";
+import { generateCwrForDownload } from "@/lib/infra/registration-service";
 
 export async function POST(req: Request) {
     try {

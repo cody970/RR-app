@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { db } from "@/lib/db";
+import { db } from "@/lib/infra/db";
 import bcrypt from "bcrypt";
 import { z } from "zod";
 

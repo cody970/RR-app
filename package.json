@@ -8,6 +8,8 @@
     "start": "next start",
     "worker": "tsx src/jobs/audit-worker.ts",
     "dev:worker": "tsx watch src/jobs/audit-worker.ts",
+    "worker:scan": "tsx src/jobs/scan-worker.ts",
+    "dev:worker:scan": "tsx watch src/jobs/scan-worker.ts",
     "lint": "eslint",
     "test": "vitest run"
   },

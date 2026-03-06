@@ -1,9 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { checkRateLimit } from "../lib/rate-limit";
-import { redis } from "../lib/redis";
+import { checkRateLimit } from "../lib/infra/rate-limit";
+import { redis } from "../lib/infra/redis";
 
 // Mock the redis client
-vi.mock("../lib/redis", () => ({
+vi.mock("../lib/infra/redis", () => ({
     redis: {
         incr: vi.fn(),
         pexpire: vi.fn(),

@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
-import { db } from "@/lib/db";
-import { validatePermission } from "@/lib/rbac";
+import { authOptions } from "@/lib/auth/auth";
+import { db } from "@/lib/infra/db";
+import { validatePermission } from "@/lib/auth/rbac";
 
 export async function PATCH(
     req: Request,

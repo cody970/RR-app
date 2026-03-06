@@ -5,7 +5,7 @@
  * normalizing them into StatementLine records with work matching.
  */
 
-import { db } from "./db";
+import { db } from "@/lib/infra/db";
 
 // ---------- Types ----------
 

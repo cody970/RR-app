@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
-import { db } from "@/lib/db";
-import { checkRateLimit } from "@/lib/rate-limit";
-import { validatePermission } from "@/lib/rbac";
-import { createEvidenceHash } from "@/lib/hash";
-import { auditQueue } from "@/lib/queue";
-import { requireAuth, AuthError } from "@/lib/get-session";
+import { db } from "@/lib/infra/db";
+import { checkRateLimit } from "@/lib/infra/rate-limit";
+import { validatePermission } from "@/lib/auth/rbac";
+import { createEvidenceHash } from "@/lib/infra/hash";
+import { auditQueue } from "@/lib/infra/queue";
+import { requireAuth, AuthError } from "@/lib/auth/get-session";
 
 export async function POST() {
     try {

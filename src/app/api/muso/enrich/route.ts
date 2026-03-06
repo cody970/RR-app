@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { authOptions } from "@/lib/auth/auth";
 import {
     search,
     getTrackByISRC,
@@ -10,7 +10,7 @@ import {
     enrichRecordingCredits,
     bulkEnrichCredits,
     findWriterIPI,
-} from "@/lib/muso-client";
+} from "@/lib/clients/muso-client";
 
 /**
  * POST /api/muso/enrich

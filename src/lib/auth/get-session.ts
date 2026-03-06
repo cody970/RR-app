@@ -7,7 +7,7 @@
  */
 
 import { getServerSession } from "next-auth";
-import { authOptions } from "./auth";
+import { authOptions } from "@/lib/auth/auth";
 
 export class AuthError extends Error {
     status: number;

@@ -6,17 +6,18 @@
  * and cross-references ISRCs↔ISWCs via MusicBrainz to find gaps.
  */
 
-import { db } from "./db";
-import { logger } from "./logger";
-import { searchByTitle as songviewSearch, searchByISWC } from "./songview-client";
+import { db } from "@/lib/infra/db";
+import { logger } from "@/lib/infra/logger";
+import { searchByTitle as songviewSearch, searchByISWC } from "@/lib/clients/songview-client";
 import {
     lookupRecordingByISRC,
     isrcToISWC,
     searchWorkByTitle,
-} from "./musicbrainz-client";
-import { searchByISRC as spotifySearchByISRC } from "./spotify";
-import { searchMLCByTitle } from "./mlc-client";
-import { searchByISRC as seSearchByISRC } from "./soundexchange-client";
+} from "@/lib/clients/musicbrainz-client";
+import { searchByISRC as spotifySearchByISRC } from "@/lib/clients/spotify";
+import { searchMLCByTitle } from "@/lib/clients/mlc-client";
+import { searchByISRC as seSearchByISRC } from "@/lib/clients/soundexchange-client";
+import { enrichRecordingCredits, findWriterIPI } from "@/lib/clients/muso-client";
 
 export interface ScanProgress {
     scanId: string;
@@ -309,6 +310,84 @@ export async function runCatalogScan(
             } catch (e) {
                 console.error(`SoundExchange check error for recording ${recording.id}:`, e);
             }
+        }
+    }
+
+    // ---------- Phase 4: Enrichment & Revenue Matching ----------
+
+    const scanGaps = await db.registrationGap.findMany({
+        where: { scanId },
+    });
+
+    const workFindings = await db.finding.findMany({
+        where: { orgId, type: "STATEMENT_UNMATCHED_WORK" },
+    });
+
+    for (const gap of scanGaps) {
+        try {
+            let updatedImpact = gap.estimatedImpact || 0;
+            let needsUpdate = false;
+
+            // 1. Muso.ai Enrichment
+            if (gap.isrc) {
+                const musoData = await enrichRecordingCredits(gap.isrc);
+                if (musoData?.found && musoData.credits.length > 0) {
+                    // Enrich artist name if missing
+                    if (!gap.artistName) {
+                        gap.artistName = musoData.credits[0].name;
+                        needsUpdate = true;
+                    }
+
+                    // Look for missing writer IPIs
+                    if (gap.gapType === "MISSING_SPLIT" || gap.gapType === "NO_REGISTRATION") {
+                        // Find writers for this work
+                        const work = works.find((w: any) => w.id === gap.workId);
+                        if (work) {
+                            for (const ww of work.writers) {
+                                if (!ww.writer.ipiCae) {
+                                    const musoWriter = await findWriterIPI(ww.writer.name);
+                                    if (musoWriter.ipiNameNumber) {
+                                        // Update the gap metadata (using songviewMatch for now as a catch-all)
+                                        const matchData = (gap.songviewMatch as any) || {};
+                                        matchData.musoEnrichment = {
+                                            writerName: ww.writer.name,
+                                            foundIpi: musoWriter.ipiNameNumber,
+                                            musoProfileId: musoWriter.musoProfileId
+                                        };
+                                        gap.songviewMatch = matchData;
+                                        needsUpdate = true;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // 2. Revenue Matching
+            const matchingFinding = workFindings.find((f: any) =>
+                (f.metadataFix?.toLowerCase().includes(gap.title.toLowerCase())) ||
+                (gap.isrc && f.metadataFix?.includes(gap.isrc))
+            );
+
+            if (matchingFinding) {
+                updatedImpact += (matchingFinding.estimatedImpact || 0);
+                gap.estimatedImpact = updatedImpact;
+                needsUpdate = true;
+            }
+
+            if (needsUpdate) {
+                await db.registrationGap.update({
+                    where: { id: gap.id },
+                    data: {
+                        artistName: gap.artistName,
+                        estimatedImpact: gap.estimatedImpact,
+                        songviewMatch: gap.songviewMatch as any
+                    }
+                });
+            }
+        } catch (e) {
+            logger.error({ err: e, gapId: gap.id }, "Error enriching gap");
         }
     }
 

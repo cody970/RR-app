@@ -1,8 +1,8 @@
 import { NextResponse, NextRequest } from "next/server";
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
-import { parseStatement, importStatement } from "@/lib/statement-parser";
-import { runDiscrepancyChecks } from "@/lib/discrepancy-engine";
+import { authOptions } from "@/lib/auth/auth";
+import { parseStatement, importStatement } from "@/lib/finance/statement-parser";
+import { runDiscrepancyChecks } from "@/lib/music/discrepancy-engine";
 
 export async function POST(req: NextRequest) {
     try {

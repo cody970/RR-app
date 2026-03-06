@@ -6,7 +6,7 @@
  * Results are cached in Redis for 24 hours to respect rate limits.
  */
 
-import { redis } from "./redis";
+import { redis } from "@/lib/infra/redis";
 
 const ACE_SEARCH_URL = "https://www.ascap.com/api/wservice/MasterData/Search";
 const BMI_SEARCH_URL = "https://repertoire.bmi.com/Search/Search";

@@ -1,6 +1,6 @@
-import { searchByISRC, searchByTitle } from "./spotify";
-import { enrichRecordingCredits, type MusoCredit } from "./muso-client";
-import { logger } from "./logger";
+import { searchByISRC, searchByTitle } from "@/lib/clients/spotify";
+import { enrichRecordingCredits, type MusoCredit } from "@/lib/clients/muso-client";
+import { logger } from "@/lib/infra/logger";
 
 export interface EnrichmentMatch {
     found: boolean;

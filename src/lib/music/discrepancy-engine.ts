@@ -8,7 +8,7 @@
  * - Unmatched lines: statement lines with no catalog match
  */
 
-import { db } from "./db";
+import { db } from "@/lib/infra/db";
 
 // ---------- Types ----------
 

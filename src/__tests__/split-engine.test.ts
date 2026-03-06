@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { calculateSplits, validateSplitOwnership } from "../lib/split-engine";
+import { calculateSplits, validateSplitOwnership } from "../lib/music/split-engine";
 
 describe("Split Engine", () => {
     describe("calculateSplits", () => {

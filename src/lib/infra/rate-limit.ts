@@ -1,4 +1,4 @@
-import { redis } from './redis';
+import { redis } from "@/lib/infra/redis";
 
 export interface RateLimitOptions {
     key: string;

@@ -1,8 +1,8 @@
 import { headers } from "next/headers";
 import { NextResponse } from "next/server";
-import { stripe } from "@/lib/stripe";
-import { db as prisma } from "@/lib/db";
-import { logger } from "@/lib/logger";
+import { stripe } from "@/lib/infra/stripe";
+import { db as prisma } from "@/lib/infra/db";
+import { logger } from "@/lib/infra/logger";
 import Stripe from "stripe";
 
 export async function POST(req: Request) {

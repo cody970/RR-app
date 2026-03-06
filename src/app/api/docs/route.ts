@@ -1,4 +1,4 @@
-import { getApiDocs } from "@/lib/swagger";
+import { getApiDocs } from "@/lib/reports/swagger";
 import { NextResponse } from "next/server";
 
 export async function GET() {

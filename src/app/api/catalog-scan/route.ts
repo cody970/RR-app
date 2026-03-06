@@ -5,10 +5,10 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
-import { db } from "@/lib/db";
+import { authOptions } from "@/lib/auth/auth";
+import { db } from "@/lib/infra/db";
 import { Queue } from "bullmq";
-import { redis } from "@/lib/redis";
+import { redis } from "@/lib/infra/redis";
 
 const scanQueue = new Queue("catalog-scan-queue", {
     connection: redis as any,

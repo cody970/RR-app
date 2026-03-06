@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { useToast } from "@/components/ui/toast-provider";
-import { formatCurrency } from "@/lib/currency";
+import { formatCurrency } from "@/lib/finance/currency";
 import { Finding } from "@/types";
 import { AlertTriangle, CheckCircle2, CircleDashed, Filter, MoreHorizontal, ShieldAlert, Sparkles } from "lucide-react";
 

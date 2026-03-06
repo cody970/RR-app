@@ -1,4 +1,4 @@
-import { db } from "./db";
+import { db } from "@/lib/infra/db";
 
 export type NotificationType = "INFO" | "SUCCESS" | "WARNING" | "ERROR";
 

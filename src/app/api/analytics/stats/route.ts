@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
-import { db } from "@/lib/db";
-import { globalCache } from "@/lib/cache";
-import { convertFromUSD, formatCurrency } from "@/lib/currency";
+import { authOptions } from "@/lib/auth/auth";
+import { db } from "@/lib/infra/db";
+import { globalCache } from "@/lib/infra/cache";
+import { convertFromUSD, formatCurrency } from "@/lib/finance/currency";
 
 export async function GET() {
     try {

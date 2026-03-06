@@ -1,8 +1,8 @@
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { authOptions } from "@/lib/auth/auth";
 import { redirect } from "next/navigation";
 import { SidebarProvider } from "@/components/ui/sidebar";
-import { PortalSidebar } from "@/components/portal-sidebar";
+import { PortalSidebar } from "@/components/layout/portal-sidebar";
 
 export default async function PortalLayout({
     children,
