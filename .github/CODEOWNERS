@@ -1,0 +1,10 @@
+# CODEOWNERS
+
+# Specify the code owners for the main directories and configuration files
+
+# Configuration files
+/config/ @cody970
+
+# Main directories
+/src/ @cody970
+/tests/ @cody970
