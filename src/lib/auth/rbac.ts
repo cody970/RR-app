@@ -12,6 +12,9 @@ export const PERMISSIONS = {
     EXPORT_DATA: ["OWNER", "ADMIN", "EDITOR", "VIEWER"],
     VIEW_ANALYTICS: ["OWNER", "ADMIN", "EDITOR", "VIEWER"],
     ORG_MANAGE: ["OWNER"],
+    FINANCE_EDIT: ["OWNER", "ADMIN"],
+    BILLING_MANAGE: ["OWNER"],
+    SETTINGS_EDIT: ["OWNER", "ADMIN"],
 } as const;
 
 export type Permission = keyof typeof PERMISSIONS;
