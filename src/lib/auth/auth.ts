@@ -7,7 +7,17 @@ import { db } from "@/lib/infra/db";
 import { logger } from "@/lib/infra/logger";
 import crypto from "crypto";
 
+// CRIT-7: Enforce NEXTAUTH_SECRET is set in production to prevent JWT forgery
+if (!process.env.NEXTAUTH_SECRET && process.env.NODE_ENV === "production") {
+    throw new Error(
+        "NEXTAUTH_SECRET environment variable is required in production. " +
+        "JWT tokens cannot be securely signed without it."
+    );
+}
+
 export const authOptions: NextAuthOptions = {
+    // Explicitly set the secret for JWT signing
+    secret: process.env.NEXTAUTH_SECRET,
     providers: [
         GoogleProvider({
             clientId: process.env.GOOGLE_ID || "",

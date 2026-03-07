@@ -118,35 +118,36 @@ export async function refreshRates(): Promise<void> {
             }
         }
 
-        // Fallback to simulated rates for dev/staging
-        console.log("[Currency] Using simulated rates (dev/staging mode)");
-        const jitter = (base: number, pct: number = 0.01) =>
-            base + base * (Math.random() * pct * 2 - pct);
-
+        // Fallback to static rates for dev/staging when no API key is provided.
+        // IMPORTANT: Do NOT add jitter/randomness to financial rates - this makes
+        // calculations non-reproducible (CRIT-6).
+        console.log("[Currency] Using static fallback rates (dev/staging mode)");
+        
+        // Static fallback rates - use a live API in production
         CURRENT_RATES = {
             USD: 1.0,
-            EUR: jitter(0.92),
-            GBP: jitter(0.79),
-            JPY: jitter(151.0, 0.005),
-            CAD: jitter(1.36),
-            AUD: jitter(1.53),
-            CHF: jitter(0.88),
-            SEK: jitter(10.45),
-            NOK: jitter(10.65),
-            DKK: jitter(6.87),
-            NZD: jitter(1.64),
-            MXN: jitter(17.15),
-            BRL: jitter(4.97),
-            KRW: jitter(1320.0, 0.005),
-            ZAR: jitter(18.65),
-            INR: jitter(83.12),
-            SGD: jitter(1.34),
-            HKD: jitter(7.82),
+            EUR: 0.92,
+            GBP: 0.79,
+            JPY: 151.0,
+            CAD: 1.36,
+            AUD: 1.53,
+            CHF: 0.88,
+            SEK: 10.45,
+            NOK: 10.65,
+            DKK: 6.87,
+            NZD: 1.64,
+            MXN: 17.15,
+            BRL: 4.97,
+            KRW: 1320.0,
+            ZAR: 18.65,
+            INR: 83.12,
+            SGD: 1.34,
+            HKD: 7.82,
         };
 
         rateTimestamp = new Date().toISOString();
         lastFetch = now;
-console.log("[Currency] Rates refreshed with simulated values");
+        console.log("[Currency] Rates set to static fallback values");
     } catch (error) {
         console.error("[Currency] Failed to fetch live rates, using previous defaults:", error);
         // Don't update lastFetch so we retry on next call
