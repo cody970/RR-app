@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
-import { Bell, Check, ExternalLink } from "lucide-react";
+import { Bell, Check, ExternalLink, Wifi, WifiOff } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { useRealtimeNotifications, type StreamEvent } from "@/hooks/useEventStream";
 
 interface Notification {
     id: string;
@@ -14,6 +15,48 @@ interface Notification {
     createdAt: string;
 }
 
+/**
+ * Map SSE event types to user-friendly notification titles.
+ */
+function eventToNotification(event: StreamEvent): { title: string; message: string; type: string; link?: string } {
+    switch (event.type) {
+        case "scan.completed":
+            return {
+                title: "Catalog Scan Complete",
+                message: `Scan finished — ${event.data.totalGaps || 0} registration gaps found.`,
+                type: "SUCCESS",
+                link: `/dashboard/catalog-scan/${event.data.scanId}`,
+            };
+        case "audit.completed":
+            return {
+                title: "Audit Complete",
+                message: `Audit finished — ${event.data.findingsCount || 0} findings detected.`,
+                type: "SUCCESS",
+                link: "/dashboard",
+            };
+        case "statement.imported":
+            return {
+                title: "Statement Imported",
+                message: `${event.data.source} statement: ${event.data.matched} matched, ${event.data.unmatched} unmatched lines.`,
+                type: "INFO",
+                link: "/dashboard/revenue",
+            };
+        case "finding.created":
+            return {
+                title: "New Finding",
+                message: `${event.data.severity} severity ${event.data.type} finding detected.`,
+                type: event.data.severity === "HIGH" ? "WARNING" : "INFO",
+                link: "/dashboard",
+            };
+        default:
+            return {
+                title: "Update",
+                message: `${event.type}: ${JSON.stringify(event.data).slice(0, 100)}`,
+                type: "INFO",
+            };
+    }
+}
+
 export function NotificationBell() {
     const [notifications, setNotifications] = useState<Notification[]>([]);
     const [unreadCount, setUnreadCount] = useState(0);
@@ -21,20 +64,50 @@ export function NotificationBell() {
     const dropdownRef = useRef<HTMLDivElement>(null);
     const router = useRouter();
 
+    // Real-time notifications via SSE
+    const { events: realtimeEvents, unreadCount: realtimeUnread } = useRealtimeNotifications(
+        (event) => {
+            // Convert SSE event to notification format and prepend
+            const notif = eventToNotification(event);
+            const newNotification: Notification = {
+                id: `rt-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+                title: notif.title,
+                message: notif.message,
+                type: notif.type,
+                read: false,
+                link: notif.link,
+                createdAt: event.timestamp,
+            };
+            setNotifications((prev) => [newNotification, ...prev].slice(0, 20));
+            setUnreadCount((prev) => prev + 1);
+        }
+    );
+
+    // Fetch persisted notifications on mount and as fallback
     const fetchNotifications = async () => {
         try {
             const res = await fetch("/api/notifications?limit=10");
             if (res.ok) {
                 const data = await res.json();
-                setNotifications(data.notifications);
-                setUnreadCount(data.unreadCount);
+                setNotifications((prev) => {
+                    // Merge: keep realtime notifications, add persisted ones that aren't duplicates
+                    const realtimeIds = new Set(prev.filter(n => n.id.startsWith("rt-")).map(n => n.id));
+                    const persisted = data.notifications.filter(
+                        (n: Notification) => !realtimeIds.has(n.id)
+                    );
+                    // Realtime first, then persisted
+                    const merged = [...prev.filter(n => n.id.startsWith("rt-")), ...persisted];
+                    return merged.slice(0, 20);
+                });
+                setUnreadCount((prev) => Math.max(prev, data.unreadCount));
             }
         } catch { }
     };
 
     useEffect(() => {
         fetchNotifications();
-        const interval = setInterval(fetchNotifications, 30000); // Poll every 30s
+        // Fallback polling at 60s (reduced from 30s since SSE handles real-time)
+        const interval = setInterval(fetchNotifications, 60000);
         return () => clearInterval(interval);
     }, []);
 
@@ -60,11 +133,14 @@ export function NotificationBell() {
 
     const handleClick = async (n: Notification) => {
         if (!n.read) {
-            await fetch("/api/notifications", {
-                method: "PATCH",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ id: n.id }),
-            });
+            // Only call API for persisted notifications
+            if (!n.id.startsWith("rt-")) {
+                await fetch("/api/notifications", {
+                    method: "PATCH",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ id: n.id }),
+                });
+            }
             setUnreadCount(prev => Math.max(0, prev - 1));
             setNotifications(prev => prev.map(x => x.id === n.id ? { ...x, read: true } : x));
         }
@@ -112,15 +188,17 @@ export function NotificationBell() {
                 <div className="absolute right-0 mt-2 w-80 md:w-96 rounded-xl border border-slate-200 bg-white shadow-xl shadow-slate-200/50 z-50 overflow-hidden">
                     <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100 bg-slate-50/50">
                         <h4 className="text-sm font-semibold text-slate-900">Notifications</h4>
-                        {unreadCount > 0 && (
-                            <button
-                                onClick={markAllRead}
-                                className="flex items-center gap-1 text-xs text-amber-600 hover:text-amber-700 transition-colors"
-                            >
-                                <Check className="h-3 w-3" />
-                                Mark all read
-                            </button>
-                        )}
+                        <div className="flex items-center gap-2">
+                            {unreadCount > 0 && (
+                                <button
+                                    onClick={markAllRead}
+                                    className="flex items-center gap-1 text-xs text-amber-600 hover:text-amber-700 transition-colors"
+                                >
+                                    <Check className="h-3 w-3" />
+                                    Mark all read
+                                </button>
+                            )}
+                        </div>
                     </div>
 
                     <div className="max-h-80 overflow-y-auto">

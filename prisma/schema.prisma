@@ -1,0 +1,760 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Organization {
+  id            String         @id @default(cuid())
+  name          String
+  users         User[]
+  writers       Writer[]
+  publishers    Publisher[]
+  works         Work[]
+  recordings    Recording[]
+  statements    Statement[]
+  findings      Finding[]
+  tasks         Task[]
+  retroactiveClaims RetroactiveClaim[]
+  splitSignoffs SplitSignoff[]
+  royaltyPeriods RoyaltyPeriod[]
+  auditLogs     AuditLog[]
+  activities    Activity[]
+  auditJobs     AuditJob[]
+  apiKeys       ApiKey[]
+  ingestJobs    IngestJob[]
+  notifications Notification[]
+  dspReports    DspReport[]
+  cwrRegistrations CwrRegistration[]
+  catalogScans  CatalogScan[]
+  registrationBatches RegistrationBatch[]
+  syncQuotes    SyncQuote[]
+  syncLicenses  SyncLicense[]
+  syncPlacements SyncPlacement[]
+  mlcMatchJobs  MLCMatchJob[]
+  opportunities    LicenseOpportunity[]
+  licenseRequests  LicenseRequest[]
+  licenses         License[]
+  payeeLedgers     PayeeLedger[]
+  payouts          Payout[]
+  currency      String         @default("USD")
+  
+  // Stripe Billing Fields
+  stripeCustomerId       String?   @unique
+  stripeSubscriptionId   String?   @unique
+  stripePriceId          String?
+  stripeCurrentPeriodEnd DateTime?
+  subscriptionStatus     String    @default("freemium")
+
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+}
+
+model IngestJob {
+  id           String   @id @default(cuid())
+  type         String
+  status       String   @default("COMPLETED")
+  filename     String?
+  totalRows    Int      @default(0)
+  importedRows Int      @default(0)
+  failedRows   Int      @default(0)
+  errors       String?
+  orgId        String
+  userId       String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  organization Organization @relation(fields: [orgId], references: [id])
+  user         User         @relation(fields: [userId], references: [id])
+
+  @@index([orgId, createdAt])
+}
+
+model User {
+  id            String         @id @default(cuid())
+  email         String         @unique
+  passwordHash  String
+  role          String         @default("OWNER")
+  organization  Organization   @relation(fields: [orgId], references: [id])
+  orgId         String
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  auditLogs     AuditLog[]
+  activities    Activity[]
+  ingestJobs    IngestJob[]
+  notifications Notification[]
+  writerId      String?
+  writer        Writer?        @relation(fields: [writerId], references: [id])
+  publisherId   String?
+  publisher     Publisher?     @relation(fields: [publisherId], references: [id])
+}
+
+model Writer {
+  id            String         @id @default(cuid())
+  name          String
+  ipiCae        String?
+  organization  Organization   @relation(fields: [orgId], references: [id])
+  orgId         String
+  works         WorkWriter[]
+  users         User[]
+  payeeLedgers  PayeeLedger[]
+  payouts       Payout[]
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  @@unique([ipiCae, orgId])
+}
+
+model Publisher {
+  id            String         @id @default(cuid())
+  name          String
+  ipiCae        String?
+  organization  Organization   @relation(fields: [orgId], references: [id])
+  orgId         String
+  users         User[]
+  payeeLedgers  PayeeLedger[]
+  payouts       Payout[]
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  @@unique([ipiCae, orgId])
+}
+
+model Work {
+  id            String         @id @default(cuid())
+  title         String
+  iswc          String?
+  organization  Organization   @relation(fields: [orgId], references: [id])
+  orgId         String
+  writers       WorkWriter[]
+  recordings    Recording[]
+  registrations Registration[]
+  syncQuotes    SyncQuote[]
+  syncLicenses  SyncLicense[]
+  syncPlacements SyncPlacement[]
+  opportunities LicenseOpportunity[]
+  licenseRequests LicenseRequest[]
+  licenses      License[]
+  splitSignoffs SplitSignoff[]
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  @@unique([iswc, orgId])
+  @@index([orgId])
+  @@index([iswc])
+  @@index([title, orgId])
+}
+
+model WorkWriter {
+  work          Work           @relation(fields: [workId], references: [id])
+  workId        String
+  writer        Writer         @relation(fields: [writerId], references: [id])
+  writerId      String
+  splitPercent  Float
+  role          String?
+
+  @@id([workId, writerId])
+}
+
+model Recording {
+  id            String         @id @default(cuid())
+  title         String
+  isrc          String?
+  durationSec   Int?
+  work          Work?          @relation(fields: [workId], references: [id])
+  workId        String?
+  organization  Organization   @relation(fields: [orgId], references: [id])
+  orgId         String
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  @@unique([isrc, orgId])
+  @@index([orgId])
+  @@index([isrc])
+  @@index([title, orgId])
+}
+
+model Registration {
+  id                   String    @id @default(cuid())
+  work                 Work      @relation(fields: [workId], references: [id])
+  workId               String
+  society              String
+  status               String
+  totalSplitRegistered Float
+  submissionId         String?
+  confirmationId       String?
+  submittedAt          DateTime?
+  acknowledgedAt       DateTime?
+  submittedVia         String?   // TUNEREGISTRY, CWR_UPLOAD, MANUAL
+  errors               String?
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+
+  @@index([workId])
+  @@index([society])
+}
+
+model RegistrationBatch {
+  id             String   @id @default(cuid())
+  orgId          String
+  status         String   @default("PENDING") // PENDING, PROCESSING, COMPLETE, FAILED
+  totalWorks     Int      @default(0)
+  submitted      Int      @default(0)
+  accepted       Int      @default(0)
+  rejected       Int      @default(0)
+  societies      String[] // ["ASCAP", "BMI", "MLC", ...]
+  submittedVia   String   // TUNEREGISTRY, CWR_GENERATE
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization   Organization @relation(fields: [orgId], references: [id])
+
+  @@index([orgId])
+}
+
+model Statement {
+  id            String         @id @default(cuid())
+  source        String         // ASCAP, BMI, MLC, SOUNDEXCHANGE
+  period        String         // YYYY-Q# or YYYY-MM
+  fileName      String?
+  fileType      String?        // ASCAP_CSV, BMI_CSV, MLC_CSV, SOUNDEXCHANGE_CSV
+  totalAmount   Float          @default(0)
+  lineCount     Int            @default(0)
+  status        String         @default("PROCESSED") // PROCESSING, PROCESSED, FAILED
+  organization  Organization   @relation(fields: [orgId], references: [id])
+  orgId         String
+  lines         StatementLine[]
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  @@index([orgId, period])
+  @@index([source])
+}
+
+model StatementLine {
+  id             String         @id @default(cuid())
+  statement      Statement      @relation(fields: [statementId], references: [id])
+  statementId    String
+  isrc           String?
+  iswc           String?
+  uses           Int
+  amount         Float
+  amountOriginal Float?
+  currency       String         @default("USD")
+  title          String?
+  artist         String?
+  society        String?        // ASCAP, BMI, MLC, SOUNDEXCHANGE
+  territory      String?
+  useType        String?        // PERFORMANCE, MECHANICAL, DIGITAL, SYNC
+  rate           Float?
+  workId         String?
+  createdAt      DateTime       @default(now())
+
+  @@index([statementId])
+  @@index([isrc])
+  @@index([iswc])
+  @@index([title])
+  @@index([workId])
+}
+
+model RoyaltyPeriod {
+  id              String       @id @default(cuid())
+  orgId           String
+  workId          String?
+  society         String       // ASCAP, BMI, MLC, SOUNDEXCHANGE
+  period          String       // YYYY-Q# e.g. 2025-Q1
+  totalAmount     Float        @default(0)
+  totalUses       Int          @default(0)
+  avgRate         Float?       // avg per-use rate
+  useType         String?      // PERFORMANCE, MECHANICAL, DIGITAL
+  previousAmount  Float?       // prior period amount for trend
+  changePercent   Float?       // period-over-period % change
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  organization    Organization @relation(fields: [orgId], references: [id])
+
+  @@unique([orgId, workId, society, period])
+  @@index([orgId, period])
+  @@index([orgId, society])
+  @@index([workId])
+}
+
+model Finding {
+  id              String       @id @default(cuid())
+  type            String
+  severity        String
+  status          String       @default("OPEN")
+  confidence      Int
+  estimatedImpact Float?
+  recoveredAmount Float?
+  amountOriginal  Float?
+  currency        String       @default("USD")
+  resourceType    String?
+  resourceId      String
+  metadataFix     String?
+  organization    Organization @relation(fields: [orgId], references: [id])
+  orgId           String
+  tasks           Task[]
+  registrationGap RegistrationGap? @relation(fields: [gapId], references: [id])
+  gapId           String?
+  createdAt       DateTime     @default(now())
+
+  @@index([orgId, estimatedImpact])
+  @@index([orgId, status])
+  @@index([orgId, severity])
+  @@index([orgId, createdAt])
+  @@index([orgId, type])
+}
+
+model Task {
+  id            String         @id @default(cuid())
+  finding       Finding        @relation(fields: [findingId], references: [id])
+  findingId     String
+  assigneeEmail String?
+  status        String         @default("OPEN")
+  notes         String?
+  organization  Organization   @relation(fields: [orgId], references: [id])
+  orgId         String
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+}
+
+model AuditLog {
+  id            String         @id @default(cuid())
+  action        String
+  details       String
+  evidenceHash  String
+  user          User?          @relation(fields: [userId], references: [id])
+  userId        String?
+  organization  Organization   @relation(fields: [orgId], references: [id])
+  orgId         String
+  timestamp     DateTime       @default(now())
+}
+
+model RateLimit {
+  key           String         @id
+  count         Int            @default(0)
+  expiresAt     DateTime
+}
+
+model Activity {
+  id           String   @id @default(cuid())
+  orgId        String
+  userId       String
+  action       String
+  resourceId   String?
+  resourceType String?
+  details      String?
+  createdAt    DateTime @default(now())
+
+  organization Organization @relation(fields: [orgId], references: [id])
+  user         User         @relation(fields: [userId], references: [id])
+
+  @@index([orgId, createdAt])
+}
+
+model AuditJob {
+  id           String   @id @default(cuid())
+  orgId        String
+  status       String   @default("PENDING")
+  findingsCount Int      @default(0)
+  error        String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  organization Organization @relation(fields: [orgId], references: [id])
+
+  @@index([orgId])
+}
+
+model ApiKey {
+  id           String   @id @default(cuid())
+  key          String   @unique
+  name         String?
+  orgId        String
+  createdAt    DateTime @default(now())
+  lastUsedAt   DateTime?
+  revokedAt    DateTime?
+
+  organization Organization @relation(fields: [orgId], references: [id])
+
+  @@index([orgId])
+}
+
+model WebhookEvent {
+  id        String   @id // Stripe event ID
+  type      String
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+}
+
+model Notification {
+  id           String   @id @default(cuid())
+  orgId        String
+  userId       String
+  title        String
+  message      String
+  type         String   @default("INFO") // INFO, SUCCESS, WARNING, ERROR
+  read         Boolean  @default(false)
+  link         String?  // Optional navigation link
+  createdAt    DateTime @default(now())
+
+  organization Organization @relation(fields: [orgId], references: [id])
+  user         User         @relation(fields: [userId], references: [id])
+
+  @@index([userId, read])
+  @@index([orgId, createdAt])
+}
+
+model DspReport {
+  id             String   @id @default(cuid())
+  source         String
+  period         String
+  territory      String?
+  isrc           String
+  title          String
+  artist         String?
+  streams        Int
+  revenue        Float
+  perStreamRate  Float
+  orgId          String
+  createdAt      DateTime @default(now())
+
+  organization   Organization @relation(fields: [orgId], references: [id])
+
+  @@index([orgId])
+  @@index([isrc])
+}
+
+model CwrRegistration {
+  id             String   @id @default(cuid())
+  workTitle      String
+  iswc           String?
+  society        String?
+  territory      String?
+  publisherName  String?
+  publisherIpi   String?
+  writerName     String?
+  writerIpi      String?
+  shares         Float?
+  recordType     String?
+  rawRecord      String?
+  orgId          String
+  createdAt      DateTime @default(now())
+
+  organization   Organization @relation(fields: [orgId], references: [id])
+
+  @@index([orgId])
+}
+
+model SyncQuote {
+  id           String   @id @default(cuid())
+  workId       String
+  orgId        String
+  clientName   String
+  projectName  String
+  proposedFee  Float
+  status       String   @default("PENDING") // PENDING, ACCEPTED, REJECTED
+  notes        String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  work         Work         @relation(fields: [workId], references: [id])
+  organization Organization @relation(fields: [orgId], references: [id])
+
+  @@index([orgId])
+  @@index([workId])
+}
+
+model SyncLicense {
+  id           String   @id @default(cuid())
+  quoteId      String?  @unique
+  workId       String
+  orgId        String
+  licenseeName String
+  projectName  String
+  fee          Float
+  terms        String?
+  status       String   @default("ACTIVE") // ACTIVE, EXPIRED, TERMINATED
+  validFrom    DateTime?
+  validUntil   DateTime?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  work         Work         @relation(fields: [workId], references: [id])
+  organization Organization @relation(fields: [orgId], references: [id])
+
+  @@index([orgId])
+  @@index([workId])
+}
+
+model SyncPlacement {
+  id             String   @id @default(cuid())
+  workId         String
+  orgId          String
+  mediaType      String   // TV, FILM, AD, GAME
+  productionName String
+  episodeOrScene String?
+  airDate        DateTime?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  work           Work         @relation(fields: [workId], references: [id])
+  organization   Organization @relation(fields: [orgId], references: [id])
+
+  @@index([orgId])
+  @@index([workId])
+}
+
+model CatalogScan {
+  id                String            @id @default(cuid())
+  orgId             String
+  status            String            @default("PENDING") // PENDING, SCANNING, COMPLETE, FAILED
+  totalWorks        Int               @default(0)
+  totalRecordings   Int               @default(0)
+  unregisteredCount Int               @default(0)
+  scannedCount      Int               @default(0)
+  error             String?
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+
+  organization      Organization      @relation(fields: [orgId], references: [id])
+  gaps              RegistrationGap[]
+
+  @@index([orgId])
+}
+
+model RegistrationGap {
+  id              String       @id @default(cuid())
+  scanId          String
+  workId          String?
+  recordingId     String?
+  title           String
+  isrc            String?
+  iswc            String?
+  artistName      String?
+  society         String       // ASCAP, BMI, SESAC, MLC, SoundExchange
+  gapType         String       // MISSING_WORK, MISSING_RECORDING, MISSING_SPLIT, NO_REGISTRATION
+  confidence      Int          // 0-100 matching confidence
+  estimatedImpact Float?
+  status          String       @default("OPEN") // OPEN, REGISTERING, REGISTERED, DISMISSED
+  songviewMatch   Json?
+  musicbrainzId   String?
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  scan            CatalogScan  @relation(fields: [scanId], references: [id])
+  findings        Finding[]
+  claims          RetroactiveClaim[]
+
+  @@index([scanId])
+  @@index([status])
+  @@index([gapType])
+}
+
+model RetroactiveClaim {
+  id              String           @id @default(cuid())
+  gapId           String
+  organizationId  String
+  targetSociety   String
+  yearsClaimed    Int              @default(2)
+  estimatedValue  Float?           @default(0)
+  status          String           @default("GENERATED") // GENERATED, SUBMITTED, PAID, REJECTED
+  lodContent      String?          @db.Text
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  gap             RegistrationGap  @relation(fields: [gapId], references: [id])
+  organization    Organization     @relation(fields: [organizationId], references: [id])
+}
+
+model SplitSignoff {
+  id              String       @id @default(cuid())
+  workId          String
+  organizationId  String
+  targetEmail     String
+  writerName      String
+  proposedSplit   Float
+  token           String       @unique
+  status          String       @default("PENDING") // PENDING, APPROVED, DISPUTED
+  disputeReason   String?
+  ipAddress       String?
+  signedAt        DateTime?
+  expiresAt       DateTime
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+  work            Work         @relation(fields: [workId], references: [id])
+  organization    Organization @relation(fields: [organizationId], references: [id])
+}
+
+model MLCMatchJob {
+  id              String   @id @default(cuid())
+  orgId           String
+  status          String   @default("PENDING") // PENDING, RUNNING, COMPLETED, FAILED
+  totalWorks      Int      @default(0)
+  matchesFound    Int      @default(0)
+  matchesProposed Int      @default(0)
+  error           String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  organization    Organization @relation(fields: [orgId], references: [id])
+  results         MLCMatchResult[]
+
+  @@index([orgId])
+}
+
+model MLCMatchResult {
+  id              String   @id @default(cuid())
+  jobId           String
+  workTitle       String
+  workId          String?
+  recordingTitle  String?
+  recordingISRC   String?
+  recordingArtist String?
+  status          String   @default("FOUND") // FOUND, PROPOSED, ACCEPTED, REJECTED, NO_MATCH
+  confidence      Int?
+  mlcRecordingId  String?
+  createdAt       DateTime @default(now())
+
+  job             MLCMatchJob @relation(fields: [jobId], references: [id])
+
+  @@index([jobId])
+  @@index([status])
+}
+
+// -----------------------------------------------------------------------------
+// Licensing & Sync
+// -----------------------------------------------------------------------------
+
+model LicenseOpportunity {
+  id          String   @id @default(cuid())
+  orgId       String
+  title       String
+  description String?
+  budget      String?
+  deadline    DateTime?
+  media       String?
+  territory   String?
+  status      String   @default("OPEN") // OPEN, CLOSED, FULFILLED
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  organization Organization @relation(fields: [orgId], references: [id])
+  work         Work?        @relation(fields: [workId], references: [id])
+  workId       String?
+
+  @@index([orgId])
+  @@index([status])
+}
+
+model LicenseRequest {
+  id               String   @id @default(cuid())
+  orgId            String
+  workId           String
+  requesterName    String
+  requesterEmail   String
+  requesterCompany String?
+  projectType      String
+  projectTitle     String?
+  media            String?
+  territory        String?
+  term             String?
+  budget           Float?
+  status           String   @default("PENDING") // PENDING, REVIEWING, APPROVED, REJECTED
+  notes            String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  organization Organization @relation(fields: [orgId], references: [id])
+  work         Work         @relation(fields: [workId], references: [id])
+  License      License?
+
+  @@index([orgId])
+  @@index([workId])
+  @@index([status])
+}
+
+model License {
+  id           String   @id @default(cuid())
+  orgId        String
+  workId       String
+  requestId    String?  @unique
+  licenseType  String
+  licenseeName String
+  fee          Float
+  startDate    DateTime?
+  endDate      DateTime?
+  territory    String?
+  media        String?
+  documentUrl  String?
+  status       String   @default("ACTIVE") // EXECUTED, ACTIVE, EXPIRED, TERMINATED
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  organization Organization    @relation(fields: [orgId], references: [id])
+  work         Work            @relation(fields: [workId], references: [id])
+  request      LicenseRequest? @relation(fields: [requestId], references: [id])
+
+  @@index([orgId])
+  @@index([workId])
+  @@index([status])
+}
+
+// -----------------------------------------------------------------------------
+// Financial Accounting & Payouts
+// -----------------------------------------------------------------------------
+
+model PayeeLedger {
+  id              String   @id @default(cuid())
+  orgId           String
+  writerId        String?
+  publisherId     String?
+  statementLineId String?  // Source: statement ingest
+  licenseId       String?  // Source: sync license
+  amount          Float    // Payee portion (revenue * splitPercent)
+  currency        String   @default("USD")
+  type            String   // EARNING, ADVANCE_RECOUPMENT, FEE
+  status          String   @default("UNPAID") // UNPAID, PAID, CARRIED_FORWARD
+  payoutId        String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  organization    Organization @relation(fields: [orgId], references: [id])
+  writer          Writer?      @relation(fields: [writerId], references: [id])
+  publisher       Publisher?   @relation(fields: [publisherId], references: [id])
+  payout          Payout?      @relation(fields: [payoutId], references: [id])
+
+  @@index([orgId])
+  @@index([writerId])
+  @@index([publisherId])
+  @@index([payoutId])
+  @@index([status])
+}
+
+model Payout {
+  id              String   @id @default(cuid())
+  orgId           String
+  writerId        String?
+  publisherId     String?
+  period          String   // e.g., "2026-Q1"
+  totalAmount     Float
+  status          String   @default("PROCESSING") // PROCESSING, ISSUED, FAILED
+  statementUrl    String?  // PDF accounting statement link
+  paidAt          DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  organization    Organization    @relation(fields: [orgId], references: [id])
+  writer          Writer?         @relation(fields: [writerId], references: [id])
+  publisher       Publisher?      @relation(fields: [publisherId], references: [id])
+  ledgerEntries   PayeeLedger[]
+
+  @@index([orgId])
+  @@index([writerId])
+  @@index([publisherId])
+}

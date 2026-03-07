@@ -9,6 +9,7 @@ import { exportToCSV, exportToJSON, generateDisputeLetter } from "@/lib/reports/
 import { generateAuditPDF } from "@/lib/reports/pdf-utils";
 import { useSession } from "next-auth/react";
 import { TaskBoard } from "@/components/dashboard/task-board";
+import { BulkActionBar, findingsBulkActions } from "@/components/dashboard/bulk-action-bar";
 import { LayoutGrid, List as ListIcon, Sparkles } from "lucide-react";
 
 // ---------- Types ----------
@@ -58,22 +59,73 @@ export default function AuditEnginePage() {
         }
     };
 
-    const bulkAction = async (action: string, status?: string) => {
-        const ids = Array.from(selected);
+    const handleBulkAction = async (actionKey: string, ids: string[]) => {
         if (ids.length === 0) return;
         try {
-            const res = await fetch("/api/findings/bulk", {
-                method: "PATCH",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ ids, action, status }),
-            });
+            let res: Response;
+
+            switch (actionKey) {
+                case "recover":
+                    res = await fetch("/api/findings/bulk", {
+                        method: "PATCH",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ ids, action: "updateStatus", status: "RECOVERED" }),
+                    });
+                    break;
+                case "dispute":
+                    res = await fetch("/api/findings/bulk", {
+                        method: "PATCH",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ ids, action: "updateStatus", status: "DISPUTED" }),
+                    });
+                    break;
+                case "createTasks":
+                    res = await fetch("/api/findings/bulk", {
+                        method: "PATCH",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ ids, action: "createTasks" }),
+                    });
+                    break;
+                case "enrich":
+                    res = await fetch("/api/enrich/bulk", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ findingIds: ids }),
+                    });
+                    break;
+                case "register":
+                    res = await fetch("/api/registrations/bulk", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ findingIds: ids }),
+                    });
+                    break;
+                case "ignore":
+                    res = await fetch("/api/findings/bulk", {
+                        method: "PATCH",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ ids, action: "updateStatus", status: "IGNORED" }),
+                    });
+                    break;
+                default:
+                    toast.error(`Unknown action: ${actionKey}`);
+                    return;
+            }
+
             if (res.ok) {
-                toast.success(`Bulk action completed on ${ids.length} findings`);
+                const data = await res.json();
+                if (actionKey === "enrich") {
+                    toast.success(`Enriched ${data.enriched} of ${data.total} items (${data.noMatch} no match)`);
+                } else if (actionKey === "register") {
+                    toast.success(`Registration submitted for ${data.totalRequested || ids.length} works`);
+                } else {
+                    toast.success(`Bulk ${actionKey} completed on ${ids.length} findings`);
+                }
                 setSelected(new Set());
                 await fetchFindings();
             } else {
                 const data = await res.json().catch(() => ({}));
-                toast.error(data.error || "Bulk action failed");
+                toast.error(data.error || `Bulk ${actionKey} failed`);
             }
         } catch (e) {
             console.error(e);
@@ -444,54 +496,16 @@ export default function AuditEnginePage() {
                 </div>
 
                 {/* Bulk Actions Toolbar */}
-                {selected.size > 0 && (
-                    <div className="px-6 py-2 border-b border-slate-200 bg-amber-50 flex items-center gap-3 animate-toast-in">
-                        <CheckSquare className="h-4 w-4 text-amber-600" />
-                        <span className="text-sm text-amber-700 font-medium">{selected.size} selected</span>
-                        <div className="flex gap-2 ml-auto">
-                            <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-7 text-xs text-emerald-600 hover:bg-emerald-100"
-                                onClick={() => bulkAction("updateStatus", "RECOVERED")}
-                            >
-                                <Coins className="h-3 w-3 mr-1" /> Bulk Recover
-                            </Button>
-                            <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-7 text-xs text-red-600 hover:bg-red-100"
-                                onClick={() => bulkAction("updateStatus", "DISPUTED")}
-                            >
-                                <ShieldAlert className="h-3 w-3 mr-1" /> Bulk Dispute
-                            </Button>
-                            <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-7 text-xs text-amber-700 hover:bg-amber-100"
-                                onClick={() => bulkAction("createTasks")}
-                            >
-                                <HistoryIcon className="h-3 w-3 mr-1" /> Create Tasks
-                            </Button>
-                            <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-7 text-xs text-slate-500 hover:bg-slate-200"
-                                onClick={() => bulkAction("updateStatus", "IGNORED")}
-                            >
-                                Ignore
-                            </Button>
-                            <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-7 text-xs text-slate-500 hover:text-slate-900"
-                                onClick={() => setSelected(new Set())}
-                            >
-                                <X className="h-3 w-3" />
-                            </Button>
-                        </div>
-                    </div>
-                )}
+                <BulkActionBar
+                    selectedIds={selected}
+                    totalItems={findings.length}
+                    onAction={handleBulkAction}
+                    onClearSelection={() => setSelected(new Set())}
+                    onSelectAll={toggleSelectAll}
+                    actions={findingsBulkActions()}
+                    itemNoun="findings"
+                    accentColor="amber"
+                />
 
                 {loading ? (
                     <div className="p-12 text-center text-slate-500">Loading findings...</div>
