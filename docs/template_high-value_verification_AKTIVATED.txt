@@ -1,0 +1,164 @@
+
+================================================================================
+TEMPLATE #10: HIGH-VALUE WORK VERIFICATION
+================================================================================
+
+WORK: AKTIVATED
+ISWC: T9320276333
+SOURCE: BMI
+PRIORITY: CRITICAL
+IN BMI: YES
+IN MLC: YES
+
+--------------------------------------------------------------------------------
+WORK PROFILE
+--------------------------------------------------------------------------------
+
+CERTIFICATION STATUS:
+- RIAA Certification: [Check RIAA.com for certification]
+- Certification Date: [If certified, obtain date]
+- Certification Level: [Gold/Platinum/Multi-Platinum]
+
+STREAMING METRICS:
+- Spotify Streams: [Check Spotify for Artists]
+- Apple Music Streams: [Check Apple Music for Artists]
+- YouTube Views: [Check YouTube Studio]
+- Total Estimated Streams: [Aggregate from all platforms]
+
+COLLABORATORS:
+- [List all featured artists and producers]
+- [Verify each collaborator is registered]
+
+--------------------------------------------------------------------------------
+REGISTRATION STATUS CHECK
+--------------------------------------------------------------------------------
+
+BMI REGISTRATION:
+- Work Title: AKTIVATED
+- BMI Work Number: [Search Songview]
+- ISWC: T9320276333
+- Songview Status: [From Songview]
+- Writer Count: [From Songview]
+- Publisher Count: [From Songview]
+- Registration Date: [From Songview]
+
+CHECKLIST:
+[ ] Work is registered in BMI
+[ ] Status shows "Reconciled" (not "Pending Society Review")
+[ ] No share conflicts
+[ ] No participant conflicts
+[ ] All collaborators have correct PRO affiliations
+[ ] ISWC is assigned and matches MLC
+
+MLC REGISTRATION:
+- MLC Song Code: [Search MLC Public Database]
+- ISWC: T9320276333
+- Registration Status: [From MLC Database]
+- Writer Count: [From MLC Database]
+- Publisher Count: [From MLC Database]
+- Chain of Title: [From MLC Database]
+
+CHECKLIST:
+[ ] Work is registered in MLC
+[ ] Writers match BMI registration
+[ ] Publishers match BMI registration
+[ ] ISWC matches BMI
+[ ] No share conflicts
+[ ] No chain of title issues
+
+--------------------------------------------------------------------------------
+COMMON ISSUES FOR HIGH-VALUE WORKS
+--------------------------------------------------------------------------------
+
+ISSUE #1: SHARE CONFLICTS
+- Symptom: Total writer share > 100%
+- Cause: Over-claim by collaborators or publishers
+- Resolution:
+  1. Identify conflicting shares
+  2. Contact collaborators/publishers
+  3. Submit correction to BMI
+  4. Verify MLC update
+  5. Re-submit MLC claim if needed
+
+ISSUE #2: PRO AFFILIATION ERRORS
+- Symptom: Writer listed as "NA" or wrong PRO
+- Cause: Incorrect PRO data in registration
+- Resolution:
+  1. Verify writer's actual PRO affiliation
+  2. Submit PRO correction to BMI
+  3. Verify MLC update
+  4. Collaborator must correct at their PRO
+
+ISSUE #3: ISWC MISMATCH
+- Symptom: Different ISWCs in BMI vs MLC vs DSPs
+- Cause: Multiple ISWC assignments or data entry errors
+- Resolution:
+  1. Identify correct ISWC from original release
+  2. Submit ISWC correction to BMI
+  3. Verify MLC update
+  4. Contact DSPs to update ISRC-ISWC linkage
+
+ISSUE #4: PENDING SOCIETY REVIEW
+- Symptom: Work shows "Pending Society Review" for extended period
+- Cause: Conflict between PROs or missing data
+- Resolution:
+  1. Submit inquiry to BMI
+  2. Request expedited review for high-value work
+  3. Provide all supporting documentation
+  4. Follow up weekly until resolved
+
+--------------------------------------------------------------------------------
+ACTIONS REQUIRED
+--------------------------------------------------------------------------------
+
+STATUS: Verify MLC registration; if not registered, register immediately
+
+IMMEDIATE ACTIONS (This Week):
+[ ] Verify BMI registration is complete and accurate
+[ ] Verify MLC registration is complete and accurate
+[ ] Check for share conflicts
+[ ] Check for PRO affiliation errors
+[ ] Verify ISWC assignment and consistency
+[ ] If issues found, initiate correction process
+
+FOLLOW-UP ACTIONS:
+[ ] Monitor for resolution of any issues
+[ ] Verify royalty payments are received
+[ ] Cross-check royalty statements across platforms
+[ ] Report any discrepancies to support teams
+
+--------------------------------------------------------------------------------
+SPECIAL NOTES FOR THIS WORK
+--------------------------------------------------------------------------------
+
+Work: AKTIVATED
+
+Notes:
+- This is a high-value work requiring careful verification
+- Any registration issues will impact significant royalty revenue
+- Prioritize corrections over other works
+- Escalate support tickets if not resolved within 10 business days
+
+Expected Revenue Impact:
+- Given high-value nature, single registration issue could result in $10K-$100K+ in lost revenue
+- Prompt resolution is critical
+
+--------------------------------------------------------------------------------
+CONTACT INFORMATION
+--------------------------------------------------------------------------------
+
+BMI High-Value Support:
+- Phone: 1-800-331-6008
+- Email: info@bmi.com
+- Request: Escalate for high-value work
+
+MLC High-Value Support:
+- Email: support@themlc.com
+- Subject: HIGH-VALUE WORK VERIFICATION
+- Include: Work title, ISWC, issue description
+
+RIAA Certification Verification:
+- Website: https://www.riaa.com
+- Search: AKTIVATED
+
+================================================================================
