@@ -36,7 +36,7 @@ export default function RegisterPage() {
                 const text = await res.text();
                 setError(text || "An error occurred");
             }
-        } catch (err) {
+        } catch {
             setError("An unexpected error occurred");
         } finally {
             setLoading(false);

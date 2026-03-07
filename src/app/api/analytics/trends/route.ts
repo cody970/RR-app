@@ -19,7 +19,7 @@ import { authOptions } from "@/lib/auth/auth";
 import { db } from "@/lib/infra/db";
 import { ApiErrors } from "@/lib/api/error-response";
 import { withCache, generateCacheKey } from "@/lib/infra/cache-utils";
-import { linearRegression, forecastNextPeriods, round, roundMoney } from "@/lib/finance/math-utils";
+import { forecastNextPeriods, round, roundMoney } from "@/lib/finance/math-utils";
 
 export async function GET(req: Request) {
     try {

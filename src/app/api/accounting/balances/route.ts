@@ -4,7 +4,7 @@ import { authOptions } from "@/lib/auth/auth";
 import { db } from "@/lib/infra/db";
 
 // GET: Retrieve unpaid balances grouped by Writer / Publisher
-export async function GET(req: NextRequest) {
+export async function GET(_req: NextRequest) {
     try {
         const session = await getServerSession(authOptions);
         if (!session?.user) return new Response("Unauthorized", { status: 401 });
@@ -47,7 +47,8 @@ export async function GET(req: NextRequest) {
         }
 
         return NextResponse.json(Array.from(balances.values()));
-    } catch (err: any) {
-        return NextResponse.json({ error: err.message }, { status: 500 });
+    } catch (err: unknown) {
+        const errorMessage = err instanceof Error ? err.message : "Unknown error";
+        return NextResponse.json({ error: errorMessage }, { status: 500 });
     }
 }
