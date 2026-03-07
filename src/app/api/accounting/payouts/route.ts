@@ -2,6 +2,7 @@ import { NextResponse, NextRequest } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth/auth";
 import { db } from "@/lib/infra/db";
+import { Prisma, PayeeLedger } from "@prisma/client";
 
 export async function GET(_req: NextRequest) {
     try {
@@ -40,7 +41,7 @@ export async function POST(req: NextRequest) {
         }
 
         // We use a transaction to safely mark ledgers as PAID and create the Payout
-        const tx = await db.$transaction(async (prisma: any) => {
+        const tx = await db.$transaction(async (prisma: Prisma.TransactionClient) => {
             // 1. Find the writer or publisher
             const writer = await prisma.writer.findUnique({ where: { id: payeeId, orgId } });
             const publisher = !writer ? await prisma.publisher.findUnique({ where: { id: payeeId, orgId } }) : null;
@@ -66,7 +67,7 @@ export async function POST(req: NextRequest) {
             }
 
             // Calculate total
-            const totalAmount = ledgers.reduce((acc: number, l: any) => acc + l.amount, 0);
+            const totalAmount = ledgers.reduce((acc: number, l: PayeeLedger) => acc + l.amount, 0);
 
             // 3. Create Payout
             const payout = await prisma.payout.create({
@@ -82,7 +83,7 @@ export async function POST(req: NextRequest) {
             });
 
             // 4. Update ledgers to PAID and link payout
-            const ledgerIds = ledgers.map((l: any) => l.id);
+            const ledgerIds = ledgers.map((l: PayeeLedger) => l.id);
             await prisma.payeeLedger.updateMany({
                 where: { id: { in: ledgerIds } },
                 data: {
