@@ -21,10 +21,21 @@ export async function GET(req: Request) {
                 include: {
                     writers: {
                         include: {
-                            writer: true
-                        }
+                            writer: {
+                                select: { id: true, name: true, ipi: true },
+                            },
+                        },
                     },
-                    recordings: true
+                    recordings: {
+                        select: {
+                            id: true,
+                            title: true,
+                            isrc: true,
+                            artist: true,
+                            durationSec: true,
+                            workId: true,
+                        },
+                    },
                 },
                 take: limit,
                 skip: skip,
