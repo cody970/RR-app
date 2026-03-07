@@ -31,12 +31,28 @@ export async function refreshRates(): Promise<void> {
     if (now - lastFetch < CACHE_DURATION) return;
 
     try {
-        // Mocking a real API response
-        // const response = await fetch(`https://openexchangerates.org/api/latest.json?app_id=${process.env.ORE_API_KEY}`);
-        // const data = await response.json();
-        // CURRENT_RATES = data.rates;
+        // Try to fetch live rates if API key is provided
+        const apiKey = process.env.OPENEXCHANGERATES_API_KEY || process.env.ORE_API_KEY;
+        
+        if (apiKey) {
+            console.log("[Currency] Fetching live rates from Open Exchange Rates");
+            const response = await fetch(`https://openexchangerates.org/api/latest.json?app_id=${apiKey}`);
+            if (response.ok) {
+                const data = await response.json();
+                CURRENT_RATES = {
+                    USD: 1.0,
+                    EUR: data.rates.EUR || 0.92,
+                    GBP: data.rates.GBP || 0.79,
+                    JPY: data.rates.JPY || 151.0,
+                };
+                lastFetch = now;
+                console.log("[Currency] Live rates updated successfully");
+                return;
+            }
+        }
 
-        // Simulating jitter for "live" feel in dev/staging
+        // Fallback to simulated rates for dev/staging
+        console.log("[Currency] Using simulated rates (dev/staging mode)");
         const jitter = () => (Math.random() * 0.02) - 0.01; // +/- 1%
         CURRENT_RATES = {
             USD: 1.0,
@@ -46,9 +62,10 @@ export async function refreshRates(): Promise<void> {
         };
 
         lastFetch = now;
-        console.log("[Currency] Rates refreshed tracking live markets");
+        console.log("[Currency] Rates refreshed with simulated values");
     } catch (error) {
-        console.error("[Currency] Failed to fetch live rates, using defaults:", error);
+        console.error("[Currency] Failed to fetch live rates, using previous defaults:", error);
+        // Don't update lastFetch so we retry on next call
     }
 }
 
