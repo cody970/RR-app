@@ -24,7 +24,7 @@ export interface ParsedStatementLine {
     useType?: string;
     rate?: number;
     workId?: string;
-    /** How the line was matched: EXACT_ISWC, EXACT_ISRC, EXACT_TITLE, NORMALIZED_TITLE, FUZZY_HIGH, FUZZY_MEDIUM, FUZZY_LOW, CONTAINS, NONE */
+    /** How the line was matched: EXACT_ISWC, EXACT_ISRC, EXACT_TITLE, NORMALIZED_TITLE, FUZZY_HIGH, FUZZY_MEDIUM, FUZZY_LOW, CONTAINS, USER_CORRECTED, USER_REJECTED, NONE */
     matchMethod?: string;
     /** Confidence score 0-100 indicating match quality */
     matchConfidence?: number;
@@ -570,8 +570,10 @@ export async function importStatement(
                     useType: l.useType,
                     rate: l.rate,
                     workId: l.workId,
-                    // Smart matching metadata — stored as JSON in existing fields
-                    // matchMethod and matchConfidence are tracked via the line's metadata
+                    // Smart matching metadata for AI-powered fuzzy matching
+                    matchMethod: l.matchMethod,
+                    matchConfidence: l.matchConfidence,
+                    needsReview: l.needsReview ?? false,
                 })),
             },
         },

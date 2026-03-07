@@ -30,8 +30,7 @@ export async function GET(req: Request) {
         const limit = parseInt(searchParams.get("limit") || "50");
         const offset = parseInt(searchParams.get("offset") || "0");
 
-        // Build where clause for fuzzy-matched lines
-        // Lines with workId set but low confidence are fuzzy matches needing review
+        // Build where clause for fuzzy-matched lines using the needsReview field
         const where: any = {
             statement: { orgId },
             workId: { not: null },
@@ -41,8 +40,14 @@ export async function GET(req: Request) {
             where.statementId = statementId;
         }
 
-        // We identify fuzzy matches by checking if the title doesn't exactly match
-        // the work title (since we don't have a dedicated matchMethod column yet)
+        // Filter based on review status using the stored needsReview field
+        if (status === "pending") {
+            where.needsReview = true;
+            where.reviewedAt = null;
+        } else if (status === "confirmed" || status === "rejected") {
+            where.reviewedAt = { not: null };
+        }
+
         const lines = await db.statementLine.findMany({
             where,
             select: {
@@ -57,6 +62,10 @@ export async function GET(req: Request) {
                 territory: true,
                 workId: true,
                 statementId: true,
+                matchMethod: true,
+                matchConfidence: true,
+                needsReview: true,
+                reviewedAt: true,
                 createdAt: true,
             },
             orderBy: { amount: "desc" },
@@ -64,7 +73,7 @@ export async function GET(req: Request) {
             skip: offset,
         });
 
-        // Fetch the matched works to compare titles
+        // Fetch the matched works
         const workIds = [...new Set(lines.map(l => l.workId).filter(Boolean))] as string[];
         const works = await db.work.findMany({
             where: { id: { in: workIds } },
@@ -72,36 +81,31 @@ export async function GET(req: Request) {
         });
         const workMap = new Map(works.map(w => [w.id, w]));
 
-        // Identify fuzzy matches: lines where title doesn't exactly match work title
-        const fuzzyMatches = lines
-            .filter(line => {
-                if (!line.workId || !line.title) return false;
-                const work = workMap.get(line.workId);
-                if (!work) return false;
-                // If titles match exactly (case-insensitive), it's not a fuzzy match
-                return line.title.toUpperCase().trim() !== work.title.toUpperCase().trim();
-            })
-            .map(line => {
-                const work = workMap.get(line.workId!);
-                return {
-                    lineId: line.id,
-                    statementId: line.statementId,
-                    statementTitle: line.title,
-                    statementArtist: line.artist,
-                    statementIsrc: line.isrc,
-                    statementIswc: line.iswc,
-                    amount: line.amount,
-                    uses: line.uses,
-                    society: line.society,
-                    territory: line.territory,
-                    matchedWorkId: line.workId,
-                    matchedWorkTitle: work?.title || "Unknown",
-                    matchedWorkIswc: work?.iswc || null,
-                    createdAt: line.createdAt,
-                };
-            });
+        // Map lines to response format with match metadata
+        const fuzzyMatches = lines.map(line => {
+            const work = workMap.get(line.workId!);
+            return {
+                lineId: line.id,
+                statementId: line.statementId,
+                statementTitle: line.title,
+                statementArtist: line.artist,
+                statementIsrc: line.isrc,
+                statementIswc: line.iswc,
+                amount: line.amount,
+                uses: line.uses,
+                society: line.society,
+                territory: line.territory,
+                matchedWorkId: line.workId,
+                matchedWorkTitle: work?.title || "Unknown",
+                matchedWorkIswc: work?.iswc || null,
+                matchMethod: line.matchMethod,
+                matchConfidence: line.matchConfidence,
+                createdAt: line.createdAt,
+            };
+        });
 
-        const total = fuzzyMatches.length;
+        // Get total count for pagination
+        const total = await db.statementLine.count({ where });
 
         return NextResponse.json({
             matches: fuzzyMatches,
@@ -141,6 +145,7 @@ export async function POST(req: Request) {
         }
 
         const { actions } = parsed.data;
+        const userId = session.user.id;
         let confirmed = 0;
         let rejected = 0;
         let corrected = 0;
@@ -157,21 +162,43 @@ export async function POST(req: Request) {
             if (!line) continue;
 
             if (action === "confirm") {
-                // Match is confirmed — no changes needed, the workId stays
+                // Match is confirmed — mark as reviewed, workId stays
+                await db.statementLine.update({
+                    where: { id: lineId },
+                    data: {
+                        needsReview: false,
+                        reviewedAt: new Date(),
+                        reviewedBy: userId,
+                    },
+                });
                 confirmed++;
             } else if (action === "reject") {
                 if (correctWorkId) {
-                    // User provided the correct work — update the match
+                    // User provided the correct work — update the match and mark as reviewed
                     await db.statementLine.update({
                         where: { id: lineId },
-                        data: { workId: correctWorkId },
+                        data: {
+                            workId: correctWorkId,
+                            matchMethod: "USER_CORRECTED",
+                            matchConfidence: 100,
+                            needsReview: false,
+                            reviewedAt: new Date(),
+                            reviewedBy: userId,
+                        },
                     });
                     corrected++;
                 } else {
-                    // Reject the match entirely — set workId to null
+                    // Reject the match entirely — set workId to null and mark as reviewed
                     await db.statementLine.update({
                         where: { id: lineId },
-                        data: { workId: null },
+                        data: {
+                            workId: null,
+                            matchMethod: "USER_REJECTED",
+                            matchConfidence: 0,
+                            needsReview: false,
+                            reviewedAt: new Date(),
+                            reviewedBy: userId,
+                        },
                     });
                     rejected++;
                 }

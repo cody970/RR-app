@@ -203,6 +203,8 @@ export type MatchMethod =
     | "FUZZY_MEDIUM"
     | "FUZZY_LOW"
     | "CONTAINS"
+    | "USER_CORRECTED"
+    | "USER_REJECTED"
     | "NONE";
 
 export interface FuzzyMatchResult {
