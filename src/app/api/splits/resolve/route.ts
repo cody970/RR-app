@@ -9,6 +9,8 @@ const resolveSchema = z.object({
     token: z.string().min(1),
     action: z.enum(["APPROVE", "DISPUTE"]),
     reason: z.string().optional(),
+    signatureData: z.string().optional(),
+    signatureHash: z.string().optional(),
 });
 
 export async function POST(req: Request) {
@@ -23,7 +25,7 @@ export async function POST(req: Request) {
             return ApiErrors.BadRequest("Missing or invalid required fields", parsed.error.flatten());
         }
 
-        const { token, action, reason } = parsed.data;
+        const { token, action, reason, signatureData, signatureHash } = parsed.data;
 
         // Rate limit by IP to prevent brute-force token guessing
         const ipAddress = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim()
@@ -72,12 +74,26 @@ export async function POST(req: Request) {
                 status: action === "APPROVE" ? "APPROVED" : "DISPUTED",
                 disputeReason: action === "DISPUTE" ? reason : null,
                 signedAt: new Date(),
-                ipAddress
+                ipAddress,
+                // Store digital signature data for legal compliance
+                signatureData: action === "APPROVE" ? signatureData : null,
+                signatureHash: action === "APPROVE" ? signatureHash : null,
             }
         });
 
+        // Update negotiation status if linked
+        if (signoff.negotiationId && action === "APPROVE") {
+            await db.splitNegotiation.update({
+                where: { id: signoff.negotiationId },
+                data: { status: "SIGNED" },
+            });
+        }
+
         if (action === "APPROVE") {
             console.log(`[Success] Split of ${signoff.proposedSplit}% on work ${signoff.work.title} officially approved by ${signoff.writerName}.`);
+            if (signatureHash) {
+                console.log(`[Signature] Digital signature captured. Hash: ${signatureHash.substring(0, 16)}...`);
+            }
         } else {
             console.log(`[Dispute] ${signoff.writerName} disputed the split. Reason: ${reason}`);
         }

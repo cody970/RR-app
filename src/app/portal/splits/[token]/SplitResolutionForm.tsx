@@ -2,8 +2,10 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Check, Loader2, ArrowRight, MessageSquare } from "lucide-react";
+import { Check, Loader2, MessageSquare, PenTool, MessageCircle } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { SignaturePad, hashSignature } from "@/components/portal/signature-pad";
+import { SplitSlider } from "@/components/portal/split-slider";
 
 interface SplitResolutionFormProps {
     token: string;
@@ -13,13 +15,14 @@ interface SplitResolutionFormProps {
 
 export default function SplitResolutionForm({ token, proposedSplit, writerName }: SplitResolutionFormProps) {
     const [loading, setLoading] = useState(false);
-    const [mode, setMode] = useState<"default" | "dispute" | "counter">("default");
+    const [mode, setMode] = useState<"default" | "dispute" | "counter" | "sign">("default");
     const [reason, setReason] = useState("");
-    const [counterSplit, setCounterSplit] = useState<string>(proposedSplit?.toString() || "");
+    const [counterSplit, setCounterSplit] = useState<number>(proposedSplit || 50);
     const [counterNote, setCounterNote] = useState("");
     const router = useRouter();
 
     const [submitted, setSubmitted] = useState(false);
+    const [signatureData, setSignatureData] = useState<string | null>(null);
 
     const handleResolve = async (action: "APPROVE" | "DISPUTE" | "COUNTER_PROPOSAL") => {
         if (action === "DISPUTE" && !reason.trim()) {
@@ -28,8 +31,7 @@ export default function SplitResolutionForm({ token, proposedSplit, writerName }
         }
 
         if (action === "COUNTER_PROPOSAL") {
-            const val = parseFloat(counterSplit);
-            if (isNaN(val) || val <= 0 || val > 100) {
+            if (counterSplit <= 0 || counterSplit > 100) {
                 alert("Please enter a valid split percentage between 0 and 100.");
                 return;
             }
@@ -37,6 +39,12 @@ export default function SplitResolutionForm({ token, proposedSplit, writerName }
                 alert("Please provide a brief explanation for your counter-proposal.");
                 return;
             }
+        }
+
+        if (action === "APPROVE" && !signatureData) {
+            // Switch to signature mode if trying to approve without signature
+            setMode("sign");
+            return;
         }
 
         if (loading || submitted) return;
@@ -48,9 +56,13 @@ export default function SplitResolutionForm({ token, proposedSplit, writerName }
                 payload.reason = reason;
             } else if (action === "COUNTER_PROPOSAL") {
                 payload.reason = `Counter-proposal: ${counterSplit}% — ${counterNote}`;
-                payload.counterProposedSplit = parseFloat(counterSplit);
+                payload.counterProposedSplit = counterSplit;
                 // Send as DISPUTE with counter-proposal data so existing API handles it
                 payload.action = "DISPUTE";
+            } else if (action === "APPROVE" && signatureData) {
+                // Include signature data for approval
+                payload.signatureData = signatureData;
+                payload.signatureHash = await hashSignature(signatureData);
             }
 
             const res = await fetch("/api/splits/resolve", {
@@ -74,43 +86,63 @@ export default function SplitResolutionForm({ token, proposedSplit, writerName }
         }
     };
 
+    // ---------- Sign Mode ----------
+    if (mode === "sign") {
+        return (
+            <div className="w-full space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3">
+                    <p className="text-xs text-emerald-700">
+                        <strong>Digital Signature:</strong> Sign below to confirm your agreement to the {proposedSplit}% split.
+                    </p>
+                </div>
+
+                <SignaturePad
+                    onSignatureChange={setSignatureData}
+                    width={Math.min(380, typeof window !== 'undefined' ? window.innerWidth - 64 : 380)}
+                    height={160}
+                />
+
+                <div className="flex gap-3">
+                    <Button
+                        variant="outline"
+                        className="w-full bg-slate-50"
+                        onClick={() => setMode("default")}
+                        disabled={loading}
+                    >
+                        Back
+                    </Button>
+                    <Button
+                        className="w-full bg-emerald-600 hover:bg-emerald-700 text-white"
+                        onClick={() => handleResolve("APPROVE")}
+                        disabled={loading || !signatureData}
+                    >
+                        {loading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                        <PenTool className="w-4 h-4 mr-1.5" />
+                        Sign & Approve
+                    </Button>
+                </div>
+            </div>
+        );
+    }
+
     // ---------- Counter-Proposal Mode ----------
     if (mode === "counter") {
         return (
             <div className="w-full space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
                 <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-3">
                     <p className="text-xs text-indigo-700">
-                        <strong>Counter-Proposal:</strong> Suggest a different split percentage.
+                        <strong>Counter-Proposal:</strong> Use the slider to suggest a different split percentage.
                         The publisher will review your proposal and may accept, negotiate, or decline.
                     </p>
                 </div>
 
-                <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">
-                        Your Proposed Split (%)
-                    </label>
-                    <div className="relative">
-                        <input
-                            type="number"
-                            min="0.01"
-                            max="100"
-                            step="0.01"
-                            value={counterSplit}
-                            onChange={(e) => setCounterSplit(e.target.value)}
-                            className="w-full rounded-md border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm p-3 pr-8"
-                            placeholder="e.g., 50"
-                            disabled={loading}
-                        />
-                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">%</span>
-                    </div>
-                    {proposedSplit && counterSplit && parseFloat(counterSplit) !== proposedSplit && (
-                        <p className="text-xs text-slate-500 mt-1 flex items-center gap-1">
-                            <span className="text-slate-400">{proposedSplit}%</span>
-                            <ArrowRight className="h-3 w-3 text-slate-400" />
-                            <span className="font-medium text-indigo-600">{counterSplit}%</span>
-                        </p>
-                    )}
-                </div>
+                {/* Touch-friendly slider */}
+                <SplitSlider
+                    value={counterSplit}
+                    onChange={setCounterSplit}
+                    originalValue={proposedSplit}
+                    disabled={loading}
+                />
 
                 <div>
                     <label className="block text-sm font-medium text-slate-700 mb-1">
@@ -187,7 +219,7 @@ export default function SplitResolutionForm({ token, proposedSplit, writerName }
     return (
         <div className="w-full space-y-3">
             <Button
-                className="w-full h-12 text-base bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm"
+                className="w-full h-12 text-base bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm touch-manipulation"
                 onClick={() => handleResolve("APPROVE")}
                 disabled={loading}
             >
@@ -199,7 +231,7 @@ export default function SplitResolutionForm({ token, proposedSplit, writerName }
             <div className="grid grid-cols-2 gap-3">
                 <Button
                     variant="outline"
-                    className="h-10 text-sm text-indigo-600 border-indigo-200 hover:bg-indigo-50"
+                    className="h-10 text-sm text-indigo-600 border-indigo-200 hover:bg-indigo-50 touch-manipulation"
                     onClick={() => setMode("counter")}
                     disabled={loading}
                 >
@@ -208,7 +240,7 @@ export default function SplitResolutionForm({ token, proposedSplit, writerName }
                 </Button>
                 <Button
                     variant="ghost"
-                    className="h-10 text-sm text-slate-500 hover:text-slate-800 hover:bg-slate-100"
+                    className="h-10 text-sm text-slate-500 hover:text-slate-800 hover:bg-slate-100 touch-manipulation"
                     onClick={() => setMode("dispute")}
                     disabled={loading}
                 >
@@ -216,9 +248,22 @@ export default function SplitResolutionForm({ token, proposedSplit, writerName }
                 </Button>
             </div>
 
+            {/* Link to full negotiation page */}
+            <div className="pt-2">
+                <Button
+                    variant="outline"
+                    className="w-full h-10 text-sm text-slate-600 border-slate-200 hover:bg-slate-50 touch-manipulation"
+                    onClick={() => router.push(`/portal/splits/${token}/negotiate`)}
+                    disabled={loading}
+                >
+                    <MessageCircle className="w-4 h-4 mr-1.5" />
+                    Open Full Negotiation Chat
+                </Button>
+            </div>
+
             <div className="text-center pt-2">
                 <p className="text-[11px] text-slate-400">
-                    By clicking Approve, you legally confirm your publishing share for this work.
+                    By clicking Approve, you&apos;ll be asked to provide a digital signature to legally confirm your publishing share.
                     Your IP address and timestamp will be logged for verification.
                 </p>
             </div>
