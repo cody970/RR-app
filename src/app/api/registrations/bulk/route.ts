@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth/get-session";
+import { validatePermission } from "@/lib/auth/rbac";
 import { db } from "@/lib/infra/db";
 import { ApiErrors } from "@/lib/api/error-response";
 import { registerWorks } from "@/lib/infra/registration-service";
@@ -31,8 +32,12 @@ export async function POST(req: Request) {
     try {
         const { orgId, role } = await requireAuth();
 
-        if (role !== "OWNER" && role !== "ADMIN") {
-            return ApiErrors.Forbidden("You must be an OWNER or ADMIN to perform bulk registration.");
+        // RBAC: require EDITOR or higher for bulk registration
+        try {
+            validatePermission(role, "CATALOG_EDIT");
+        } catch (e: unknown) {
+            const message = e instanceof Error ? e.message : "Forbidden";
+            return ApiErrors.Forbidden(message);
         }
 
         const body = await req.json().catch(() => ({}));

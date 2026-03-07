@@ -6,6 +6,7 @@ import bcrypt from "bcrypt";
 import { db } from "@/lib/infra/db";
 import { logger } from "@/lib/infra/logger";
 import crypto from "crypto";
+import { checkRateLimit } from "@/lib/infra/rate-limit";
 
 export const authOptions: NextAuthOptions = {
     providers: [
@@ -26,6 +27,22 @@ export const authOptions: NextAuthOptions = {
             async authorize(credentials) {
                 if (!credentials?.email || !credentials?.password) {
                     throw new Error("Missing credentials");
+                }
+
+                // Rate limit login attempts by email
+                const rateCheck = await checkRateLimit({
+                    key: `login:${credentials.email.toLowerCase()}`,
+                    limit: 5,
+                    windowMs: 300_000, // 5 minutes
+                });
+
+                if (!rateCheck.success) {
+                    logger.warn({
+                        email: credentials.email,
+                        count: rateCheck.count,
+                        limit: rateCheck.limit,
+                    }, "Rate limit exceeded for login attempt");
+                    throw new Error("Too many login attempts. Please try again in 5 minutes.");
                 }
 
                 const user = await db.user.findUnique({
@@ -67,6 +84,23 @@ export const authOptions: NextAuthOptions = {
             const clientIp = "unknown"; // In a real Next.js app, you'd get this from headers
 
             if (account?.provider === 'google' || account?.provider === 'github') {
+                // Rate limit OAuth attempts by email
+                const rateCheck = await checkRateLimit({
+                    key: `oauth:${account?.provider}:${user.email?.toLowerCase()}`,
+                    limit: 10,
+                    windowMs: 3600_000, // 1 hour
+                });
+
+                if (!rateCheck.success) {
+                    logger.warn({
+                        email: user.email,
+                        provider: account.provider,
+                        count: rateCheck.count,
+                        limit: rateCheck.limit,
+                    }, "Rate limit exceeded for OAuth attempt");
+                    return false;
+                }
+
                 // Ensure the OAuth provider has verified the user's email address
                 const isVerified = profile && ('email_verified' in profile ? (profile as any).email_verified : true);
 

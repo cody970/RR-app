@@ -951,3 +951,52 @@ model Payout {
   @@index([writerId])
   @@index([publisherId])
 }
+
+// -----------------------------------------------------------------------------
+// CWR Metrics & Monitoring
+// -----------------------------------------------------------------------------
+
+model CwrGenerationMetrics {
+  id          String   @id @default(cuid())
+  orgId       String
+  workCount   Int
+  fileSize    Int
+  duration    Int      // Duration in milliseconds
+  version     String   // CWR version (e.g., "2.1", "3.0")
+  timestamp   DateTime @default(now())
+  createdAt   DateTime @default(now())
+
+  @@index([orgId])
+  @@index([timestamp])
+  @@index([version])
+}
+
+model AckImportMetrics {
+  id              String   @id @default(cuid())
+  orgId           String
+  recordCount     Int
+  acceptedCount   Int
+  rejectedCount   Int
+  conflictCount   Int
+  duration        Int      // Duration in milliseconds
+  societyCode     String
+  timestamp       DateTime @default(now())
+  createdAt       DateTime @default(now())
+
+  @@index([orgId])
+  @@index([timestamp])
+  @@index([societyCode])
+}
+
+model ValidationMetrics {
+  id              String   @id @default(cuid())
+  validatorType   String   // Type of validator (e.g., "ISWC", "ISRC", "IPI")
+  successCount    Int      @default(0)
+  failureCount    Int      @default(0)
+  avgDuration     Float    // Average duration in milliseconds
+  timestamp       DateTime @default(now())
+  createdAt       DateTime @default(now())
+
+  @@index([validatorType])
+  @@index([timestamp])
+}

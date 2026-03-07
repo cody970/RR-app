@@ -279,9 +279,11 @@ describe('API Integration Tests', () => {
     describe('PATCH /api/findings/bulk', () => {
         it('should update multiple findings', async () => {
             const { requireAuth } = await import('@/lib/auth/get-session');
+            const { validatePermission } = await import('@/lib/auth/rbac');
             const { db } = await import('@/lib/infra/db');
 
             vi.mocked(requireAuth).mockResolvedValue(mockAuth({ role: 'OWNER' }));
+            vi.mocked(validatePermission).mockReturnValue(undefined);
             vi.mocked(db.finding.updateMany).mockResolvedValue({ count: 5 });
 
             const request = new Request('http://localhost/api/findings/bulk', {
@@ -303,8 +305,12 @@ describe('API Integration Tests', () => {
 
         it('should enforce OWNER/ADMIN role for bulk actions', async () => {
             const { requireAuth } = await import('@/lib/auth/get-session');
+            const { validatePermission } = await import('@/lib/auth/rbac');
 
             vi.mocked(requireAuth).mockResolvedValue(mockAuth({ role: 'VIEWER' }));
+            vi.mocked(validatePermission).mockImplementation(() => {
+                throw new Error('Forbidden');
+            });
 
             const request = new Request('http://localhost/api/findings/bulk', {
                 method: 'PATCH',
@@ -321,9 +327,11 @@ describe('API Integration Tests', () => {
 
         it('should create tasks for multiple findings', async () => {
             const { requireAuth } = await import('@/lib/auth/get-session');
+            const { validatePermission } = await import('@/lib/auth/rbac');
             const { db } = await import('@/lib/infra/db');
 
             vi.mocked(requireAuth).mockResolvedValue(mockAuth());
+            vi.mocked(validatePermission).mockReturnValue(undefined);
             vi.mocked(db.finding.findMany).mockResolvedValue([
                 { id: 'f1' },
                 { id: 'f2' },

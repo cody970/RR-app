@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/infra/db";
 import { requireAuth } from "@/lib/auth/get-session";
+import { validatePermission } from "@/lib/auth/rbac";
 import { z } from "zod";
 import { ApiErrors } from "@/lib/api/error-response";
 
@@ -14,9 +15,12 @@ export async function PATCH(req: Request) {
     try {
         const { orgId, role } = await requireAuth();
 
-        // RBAC: require OWNER or ADMIN for bulk mutations
-        if (role !== "OWNER" && role !== "ADMIN") {
-            return ApiErrors.Forbidden("You must be an OWNER or ADMIN to perform bulk actions.");
+        // RBAC: require EDITOR or higher for bulk mutations
+        try {
+            validatePermission(role, "TASK_MANAGE");
+        } catch (e: unknown) {
+            const message = e instanceof Error ? e.message : "Forbidden";
+            return ApiErrors.Forbidden(message);
         }
 
         const body = await req.json().catch(() => ({}));

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth/get-session";
+import { validatePermission } from "@/lib/auth/rbac";
 import { db } from "@/lib/infra/db";
 import { z } from "zod";
 import crypto from "crypto";
@@ -14,7 +15,15 @@ const splitRequestSchema = z.object({
 
 export async function POST(req: Request) {
     try {
-        const { orgId } = await requireAuth();
+        const { orgId, role } = await requireAuth();
+
+        // RBAC: require EDITOR or higher to request splits
+        try {
+            validatePermission(role, "CATALOG_EDIT");
+        } catch (e: unknown) {
+            const message = e instanceof Error ? e.message : "Forbidden";
+            return apiError(message, 403);
+        }
 
         const body = await req.json().catch(() => ({}));
         const parsed = splitRequestSchema.safeParse(body);

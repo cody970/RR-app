@@ -1,5 +1,5 @@
 /**
- * Redis Cache Layer
+ * Redis Cache Layer with Circuit Breaker
  * 
  * Provides caching for frequently accessed data:
  * - Society lookups
@@ -11,9 +11,11 @@
  * - Cache invalidation on data updates
  * - Performance monitoring
  * - Fallback to in-memory cache if Redis unavailable
+ * - Circuit breaker pattern for fault tolerance
  */
 
 import Redis from 'ioredis';
+import { createCircuitBreaker, CircuitBreakerOpenError } from '../infra/circuit-breaker';
 
 // Types
 export interface CacheOptions {
@@ -27,6 +29,7 @@ export interface CacheStats {
   sets: number;
   deletes: number;
   errors: number;
+  circuitBreakerTrips: number;
 }
 
 // Cache configuration
@@ -37,6 +40,22 @@ const KEY_PREFIX = 'rr:';
 let redisClient: Redis | null = null;
 let redisAvailable = false;
 
+// Circuit breaker for Redis
+let redisCircuitBreaker = createCircuitBreaker('redis-cache', {
+  failureThreshold: 5,
+  timeout: 60000, // 1 minute
+  successThreshold: 2,
+  onStateChange: (state) => {
+    if (state === 'OPEN') {
+      console.warn('[Redis] Circuit breaker tripped - switching to in-memory cache only');
+      redisAvailable = false;
+    } else if (state === 'CLOSED') {
+      console.log('[Redis] Circuit breaker closed - Redis available again');
+      redisAvailable = true;
+    }
+  },
+});
+
 // Cache statistics
 const stats: CacheStats = {
   hits: 0,
@@ -44,6 +63,7 @@ const stats: CacheStats = {
   sets: 0,
   deletes: 0,
   errors: 0,
+  circuitBreakerTrips: 0,
 };
 
 // In-memory fallback cache
@@ -72,7 +92,7 @@ export async function initRedis(): Promise<void> {
 
     redisClient.on('error', (error) => {
       console.error('[Redis] Error:', error);
-      redisAvailable = false;
+      stats.errors++;
     });
 
     redisClient.on('connect', () => {
@@ -80,12 +100,16 @@ export async function initRedis(): Promise<void> {
       redisAvailable = true;
     });
 
-    // Test connection
-    await redisClient.ping();
+    // Test connection through circuit breaker
+    await redisCircuitBreaker.execute(async () => {
+      await redisClient!.ping();
+    });
+    
     redisAvailable = true;
   } catch (error) {
     console.error('[Redis] Initialization failed:', error);
     redisAvailable = false;
+    stats.errors++;
   }
 }
 
@@ -97,7 +121,10 @@ export async function get<T>(key: string): Promise<T | null> {
   
   try {
     if (redisAvailable && redisClient) {
-      const value = await redisClient.get(cacheKey);
+      const value = await redisCircuitBreaker.execute(async () => {
+        return await redisClient!.get(cacheKey);
+      });
+      
       if (value) {
         stats.hits++;
         return JSON.parse(value);
@@ -114,8 +141,20 @@ export async function get<T>(key: string): Promise<T | null> {
     stats.misses++;
     return null;
   } catch (error) {
-    console.error('[Redis] Get error:', error);
-    stats.errors++;
+    if (error instanceof CircuitBreakerOpenError) {
+      stats.circuitBreakerTrips++;
+      // Fallback to memory cache
+      const entry = memoryCache.get(cacheKey);
+      if (entry && entry.expiresAt > Date.now()) {
+        stats.hits++;
+        return entry.value;
+      }
+    } else {
+      console.error('[Redis] Get error:', error);
+      stats.errors++;
+    }
+    
+    stats.misses++;
     return null;
   }
 }
@@ -132,7 +171,9 @@ export async function set(key: string, value: any, options: CacheOptions = {}): 
     const serialized = JSON.stringify(value);
     
     if (redisAvailable && redisClient) {
-      await redisClient.setex(cacheKey, ttl, serialized);
+      await redisCircuitBreaker.execute(async () => {
+        await redisClient!.setex(cacheKey, ttl, serialized);
+      });
     } else {
       // Fallback to memory cache
       memoryCache.set(cacheKey, { value, expiresAt });
@@ -144,8 +185,19 @@ export async function set(key: string, value: any, options: CacheOptions = {}): 
     
     stats.sets++;
   } catch (error) {
-    console.error('[Redis] Set error:', error);
-    stats.errors++;
+    if (error instanceof CircuitBreakerOpenError) {
+      stats.circuitBreakerTrips++;
+      // Fallback to memory cache
+      memoryCache.set(cacheKey, { value, expiresAt });
+      if (memoryCache.size > 1000) {
+        cleanExpiredMemoryEntries();
+      }
+    } else {
+      console.error('[Redis] Set error:', error);
+      stats.errors++;
+      // Fallback to memory cache
+      memoryCache.set(cacheKey, { value, expiresAt });
+    }
   }
 }
 
@@ -157,15 +209,23 @@ export async function del(key: string): Promise<void> {
   
   try {
     if (redisAvailable && redisClient) {
-      await redisClient.del(cacheKey);
+      await redisCircuitBreaker.execute(async () => {
+        await redisClient!.del(cacheKey);
+      });
     } else {
       memoryCache.delete(cacheKey);
     }
     
     stats.deletes++;
   } catch (error) {
-    console.error('[Redis] Delete error:', error);
-    stats.errors++;
+    if (error instanceof CircuitBreakerOpenError) {
+      stats.circuitBreakerTrips++;
+      memoryCache.delete(cacheKey);
+    } else {
+      console.error('[Redis] Delete error:', error);
+      stats.errors++;
+      memoryCache.delete(cacheKey);
+    }
   }
 }
 
@@ -177,9 +237,14 @@ export async function delPattern(pattern: string): Promise<void> {
   
   try {
     if (redisAvailable && redisClient) {
-      const keys = await redisClient.keys(fullPattern);
+      const keys = await redisCircuitBreaker.execute(async () => {
+        return await redisClient!.keys(fullPattern);
+      });
+      
       if (keys.length > 0) {
-        await redisClient.del(...keys);
+        await redisCircuitBreaker.execute(async () => {
+          await redisClient!.del(...keys);
+        });
       }
     } else {
       // Delete matching keys from memory cache
@@ -193,8 +258,26 @@ export async function delPattern(pattern: string): Promise<void> {
     
     stats.deletes += 1;
   } catch (error) {
-    console.error('[Redis] Delete pattern error:', error);
-    stats.errors++;
+    if (error instanceof CircuitBreakerOpenError) {
+      stats.circuitBreakerTrips++;
+      // Delete from memory cache
+      const regex = new RegExp(pattern.replace('*', '.*'));
+      for (const key of memoryCache.keys()) {
+        if (regex.test(key)) {
+          memoryCache.delete(key);
+        }
+      }
+    } else {
+      console.error('[Redis] Delete pattern error:', error);
+      stats.errors++;
+      // Delete from memory cache
+      const regex = new RegExp(pattern.replace('*', '.*'));
+      for (const key of memoryCache.keys()) {
+        if (regex.test(key)) {
+          memoryCache.delete(key);
+        }
+      }
+    }
   }
 }
 
@@ -204,9 +287,14 @@ export async function delPattern(pattern: string): Promise<void> {
 export async function clear(): Promise<void> {
   try {
     if (redisAvailable && redisClient) {
-      const keys = await redisClient.keys(`${KEY_PREFIX}*`);
+      const keys = await redisCircuitBreaker.execute(async () => {
+        return await redisClient!.keys(`${KEY_PREFIX}*`);
+      });
+      
       if (keys.length > 0) {
-        await redisClient.del(...keys);
+        await redisCircuitBreaker.execute(async () => {
+          await redisClient!.del(...keys);
+        });
       }
     } else {
       memoryCache.clear();
@@ -214,8 +302,14 @@ export async function clear(): Promise<void> {
     
     console.log('[Redis] Cache cleared');
   } catch (error) {
-    console.error('[Redis] Clear error:', error);
-    stats.errors++;
+    if (error instanceof CircuitBreakerOpenError) {
+      stats.circuitBreakerTrips++;
+      memoryCache.clear();
+    } else {
+      console.error('[Redis] Clear error:', error);
+      stats.errors++;
+      memoryCache.clear();
+    }
   }
 }
 
@@ -235,6 +329,22 @@ export function resetStats(): void {
   stats.sets = 0;
   stats.deletes = 0;
   stats.errors = 0;
+  stats.circuitBreakerTrips = 0;
+}
+
+/**
+ * Get circuit breaker statistics
+ */
+export function getCircuitBreakerStats() {
+  return redisCircuitBreaker.getStats();
+}
+
+/**
+ * Reset circuit breaker
+ */
+export function resetCircuitBreaker(): void {
+  redisCircuitBreaker.reset();
+  redisAvailable = true;
 }
 
 /**
@@ -254,6 +364,13 @@ function cleanExpiredMemoryEntries(): void {
  */
 export function isRedisAvailable(): boolean {
   return redisAvailable;
+}
+
+/**
+ * Check if circuit breaker is open
+ */
+export function isCircuitBreakerOpen(): boolean {
+  return redisCircuitBreaker.isOpen();
 }
 
 // Auto-initialize Redis on module load
