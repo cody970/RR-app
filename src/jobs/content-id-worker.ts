@@ -8,8 +8,13 @@
 import { Worker, Job } from "bullmq";
 import { redis } from "@/lib/infra/redis";
 import { db } from "@/lib/infra/db";
-import { HaawkClient } from "@/lib/clients/haawk-client";
+import { HaawkClient, CONTENT_ID_PLATFORMS } from "@/lib/clients/haawk-client";
 import { notifyOrg } from "@/lib/infra/notify";
+
+// ---------- Constants ----------
+
+/** Number of platforms - used to determine if recording is fully unregistered */
+const TOTAL_PLATFORMS = CONTENT_ID_PLATFORMS.length;
 
 // ---------- Job Types ----------
 
@@ -155,8 +160,8 @@ export async function processContentIdJob(job: Job<ContentIdJobData>) {
                 }
             });
 
-            if (!existingFinding && unregistered.missedPlatforms.length === 4) {
-                // Only create finding if completely unregistered
+            if (!existingFinding && unregistered.missedPlatforms.length === TOTAL_PLATFORMS) {
+                // Only create finding if completely unregistered on all platforms
                 await db.finding.create({
                     data: {
                         type: "CONTENT_ID_UNREGISTERED",

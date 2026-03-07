@@ -1,4 +1,5 @@
 import { db as prisma } from "@/lib/infra/db";
+import { randomBytes } from "crypto";
 
 /**
  * HAAWK/Content ID API Client
@@ -10,6 +11,10 @@ import { db as prisma } from "@/lib/infra/db";
  * - Pex
  * - Other cross-platform monitoring services
  */
+
+/** All supported Content ID platforms */
+export const CONTENT_ID_PLATFORMS = ["YouTube", "Facebook", "Instagram", "TikTok"] as const;
+export type ContentIdPlatform = typeof CONTENT_ID_PLATFORMS[number];
 
 // Types for Content ID operations
 export interface ContentIdSubmitOptions {
@@ -64,11 +69,13 @@ export class HaawkClient {
 
         if (!recording) throw new Error("Recording not found");
 
-        // Mock audio fingerprint generation
-        const fingerprint = `FP-${recording.isrc || recording.id}-${Date.now().toString(36)}`;
+        // Generate a cryptographically secure fingerprint
+        // In production, this would be actual audio analysis
+        const randomHex = randomBytes(16).toString('hex');
+        const fingerprint = `FP-${recording.isrc || recording.id}-${randomHex}`;
         
-        // Mock successful API response - generate external asset ID
-        const externalAssetId = `HAAWK-${Math.random().toString(36).substring(2, 10).toUpperCase()}`;
+        // Mock successful API response - generate external asset ID using secure random
+        const externalAssetId = `HAAWK-${randomBytes(4).toString('hex').toUpperCase()}`;
 
         const monitors: Array<{ platform: string; monitorId: string }> = [];
 
@@ -285,8 +292,6 @@ export class HaawkClient {
         missedPlatforms: string[];
         estimatedMissedRevenue: number;
     }>> {
-        const allPlatforms = ["YouTube", "Facebook", "Instagram", "TikTok"];
-        
         // Get all recordings for the org
         const recordings = await prisma.recording.findMany({
             where: { orgId },
@@ -309,7 +314,9 @@ export class HaawkClient {
                 .filter(m => m.registrationStatus === "REGISTERED")
                 .map(m => m.platform);
             
-            const missedPlatforms = allPlatforms.filter(p => !registeredPlatforms.includes(p));
+            const missedPlatforms = CONTENT_ID_PLATFORMS.filter(
+                p => !registeredPlatforms.includes(p)
+            );
             
             if (missedPlatforms.length > 0) {
                 // Estimate missed revenue based on similar recordings (mock calculation)
@@ -320,7 +327,7 @@ export class HaawkClient {
                     title: recording.title,
                     isrc: recording.isrc,
                     artistName: recording.artistName,
-                    missedPlatforms,
+                    missedPlatforms: [...missedPlatforms],
                     estimatedMissedRevenue,
                 });
             }
