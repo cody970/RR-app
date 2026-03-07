@@ -17,6 +17,7 @@
 import { NextResponse } from "next/server";
 import { validateApiKey } from "@/lib/auth/api-auth";
 import { db } from "@/lib/infra/db";
+import { logger } from "@/lib/infra/logger";
 
 export async function GET(req: Request) {
     const authHeader = req.headers.get("Authorization");
@@ -114,7 +115,7 @@ export async function GET(req: Request) {
             pages: Math.ceil(total / limit),
         });
     } catch (error: unknown) {
-        console.error("Registrations API error:", error);
+        logger.error({ err: error }, "Registrations API error");
         return NextResponse.json(
             { error: "Internal Server Error" },
             { status: 500 },

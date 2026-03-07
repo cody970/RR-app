@@ -26,11 +26,20 @@ export interface WebhookPayload {
 
 // ---------- Constants ----------
 
-const DELIVERY_TIMEOUT_MS = 10_000; // 10 seconds
-const MAX_RESPONSE_BODY = 1024; // Store first 1KB of response
-const MAX_RETRY_ATTEMPTS = 5; // Maximum retry attempts
-const BASE_RETRY_DELAY_MS = 1000; // 1 second base delay
-const MAX_RETRY_DELAY_MS = 300_000; // 5 minutes max delay
+export const DELIVERY_TIMEOUT_MS = 10_000; // 10 seconds
+export const MAX_RESPONSE_BODY = 1024; // Store first 1KB of response
+export const MAX_RETRY_ATTEMPTS = 5; // Maximum retry attempts
+export const BASE_RETRY_DELAY_MS = 1000; // 1 second base delay
+export const MAX_RETRY_DELAY_MS = 300_000; // 5 minutes max delay
+
+/**
+ * Check if a status code represents a non-retryable client error.
+ * Client errors (4xx) are not retried, except for 429 (rate limited).
+ */
+export function isNonRetryableClientError(statusCode: number | undefined): boolean {
+    if (!statusCode) return false;
+    return statusCode >= 400 && statusCode < 500 && statusCode !== 429;
+}
 
 // ---------- Signing ----------
 
@@ -220,8 +229,8 @@ async function deliverWithRetry(
             return { success: true, attempts: attempt };
         }
 
-        // Don't retry on client errors (4xx) except 429 (rate limit)
-        if (result.statusCode && result.statusCode >= 400 && result.statusCode < 500 && result.statusCode !== 429) {
+        // Don't retry on non-retryable client errors (4xx except 429)
+        if (isNonRetryableClientError(result.statusCode)) {
             logger.info(
                 { webhookId, statusCode: result.statusCode, attempt },
                 "Webhook delivery failed with client error, not retrying",

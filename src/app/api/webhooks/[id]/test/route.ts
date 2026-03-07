@@ -11,11 +11,13 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth/auth";
 import { db } from "@/lib/infra/db";
 import { validatePermission } from "@/lib/auth/rbac";
-import { signPayload, type WebhookPayload } from "@/lib/infra/webhook-delivery";
+import {
+    signPayload,
+    type WebhookPayload,
+    DELIVERY_TIMEOUT_MS,
+    MAX_RESPONSE_BODY,
+} from "@/lib/infra/webhook-delivery";
 import crypto from "crypto";
-
-const DELIVERY_TIMEOUT_MS = 10_000;
-const MAX_RESPONSE_BODY = 1024;
 
 export async function POST(
     _req: Request,
