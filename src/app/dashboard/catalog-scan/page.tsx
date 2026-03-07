@@ -2,10 +2,11 @@
 
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
-import { Search, Loader2, AlertTriangle, CheckCircle2, Clock, DollarSign, FileSearch, ArrowRight } from "lucide-react";
+import { Search, Loader2, AlertTriangle, CheckCircle2, Clock, DollarSign, FileSearch, ArrowRight, Wifi } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { useEventStream } from "@/hooks/useEventStream";
 
 interface CatalogScan {
     id: string;
@@ -23,6 +24,30 @@ export default function CatalogScanPage() {
     const [scans, setScans] = useState<CatalogScan[]>([]);
     const [loading, setLoading] = useState(true);
     const [scanning, setScanning] = useState(false);
+    const [liveProgress, setLiveProgress] = useState<{
+        scannedItems: number;
+        totalItems: number;
+        gapsFound: number;
+        percentComplete: number;
+    } | null>(null);
+
+    // Real-time scan updates via SSE (replaces 5-second polling)
+    const { isConnected } = useEventStream({
+        filter: ["scan.progress", "scan.completed", "scan.failed"],
+        onEvent: (event) => {
+            if (event.type === "scan.progress") {
+                setLiveProgress({
+                    scannedItems: event.data.scannedItems,
+                    totalItems: event.data.totalItems,
+                    gapsFound: event.data.gapsFound,
+                    percentComplete: event.data.percentComplete,
+                });
+            } else if (event.type === "scan.completed" || event.type === "scan.failed") {
+                setLiveProgress(null);
+                fetchScans(); // Refresh the scan list
+            }
+        },
+    });
 
     const fetchScans = useCallback(async () => {
         try {
@@ -38,14 +63,14 @@ export default function CatalogScanPage() {
 
     useEffect(() => {
         fetchScans();
-        // Poll for updates if there's an active scan
+        // Fallback polling only if SSE is not connected (reduced frequency)
         const interval = setInterval(() => {
-            if (scans.some((s) => s.status === "SCANNING" || s.status === "PENDING")) {
+            if (!isConnected && scans.some((s) => s.status === "SCANNING" || s.status === "PENDING")) {
                 fetchScans();
             }
-        }, 5000);
+        }, 15000); // 15s fallback instead of 5s
         return () => clearInterval(interval);
-    }, [fetchScans, scans]);
+    }, [fetchScans, scans, isConnected]);
 
     const startScan = async () => {
         setScanning(true);
@@ -174,19 +199,26 @@ export default function CatalogScanPage() {
                 </Card>
             </div>
 
-            {/* Active Scan Progress */}
+            {/* Active Scan Progress — uses real-time SSE data when available */}
             {latestScan && (latestScan.status === "SCANNING" || latestScan.status === "PENDING") && (
                 <Card className="border-amber-200 bg-amber-50/50 shadow-sm">
                     <CardContent className="pt-6">
                         <div className="flex items-center gap-3 mb-3">
                             <Loader2 className="w-5 h-5 text-amber-600 animate-spin" />
                             <p className="font-semibold text-amber-900">Scan in Progress</p>
+                            {isConnected && (
+                                <Badge variant="outline" className="bg-emerald-50 text-emerald-600 border-emerald-200 text-[10px]">
+                                    <Wifi className="w-2.5 h-2.5 mr-1" /> Live
+                                </Badge>
+                            )}
                         </div>
                         <div className="w-full bg-amber-100 rounded-full h-2.5">
                             <div
-                                className="bg-amber-500 h-2.5 rounded-full transition-all duration-500"
+                                className="bg-amber-500 h-2.5 rounded-full transition-all duration-300"
                                 style={{
-                                    width: `${latestScan.totalWorks + latestScan.totalRecordings > 0
+                                    width: `${liveProgress
+                                        ? liveProgress.percentComplete
+                                        : latestScan.totalWorks + latestScan.totalRecordings > 0
                                             ? (latestScan.scannedCount /
                                                 (latestScan.totalWorks + latestScan.totalRecordings)) *
                                             100
@@ -196,9 +228,9 @@ export default function CatalogScanPage() {
                             />
                         </div>
                         <p className="text-sm text-amber-700 mt-2">
-                            Scanned {latestScan.scannedCount} of{" "}
-                            {latestScan.totalWorks + latestScan.totalRecordings} items •{" "}
-                            {latestScan.unregisteredCount} gaps found so far
+                            Scanned {liveProgress?.scannedItems ?? latestScan.scannedCount} of{" "}
+                            {liveProgress?.totalItems ?? (latestScan.totalWorks + latestScan.totalRecordings)} items •{" "}
+                            {liveProgress?.gapsFound ?? latestScan.unregisteredCount} gaps found so far
                         </p>
                     </CardContent>
                 </Card>

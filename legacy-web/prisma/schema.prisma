@@ -40,6 +40,11 @@ model Organization {
   licenses         License[]
   payeeLedgers     PayeeLedger[]
   payouts          Payout[]
+  auditCheckpoints AuditCheckpoint[]
+  scheduledReports ScheduledReport[]
+  webhooks         Webhook[]
+  ingestionSources IngestionSource[]
+  ingestionLogs    IngestionLog[]
   currency      String         @default("USD")
   
   // Stripe Billing Fields
@@ -757,4 +762,128 @@ model Payout {
   @@index([orgId])
   @@index([writerId])
   @@index([publisherId])
+}
+
+model AuditCheckpoint {
+  id              String       @id @default(cuid())
+  orgId           String
+  merkleRoot      String       // SHA-256 Merkle root of all audit logs in the period
+  logCount        Int          // Number of audit logs included
+  periodStart     DateTime     // Start of the checkpoint period
+  periodEnd       DateTime     // End of the checkpoint period
+  previousHash    String?      // Hash of the previous checkpoint (chain link)
+  anchorTxHash    String?      // Blockchain transaction hash (if anchored)
+  anchorChain     String?      // e.g., "ethereum", "polygon", "bitcoin"
+  anchorStatus    String       @default("PENDING") // PENDING, ANCHORED, FAILED
+  verifiedAt      DateTime?
+  metadata        String?      // JSON: additional metadata
+  createdAt       DateTime     @default(now())
+
+  organization    Organization @relation(fields: [orgId], references: [id])
+
+  @@index([orgId])
+  @@index([orgId, createdAt])
+  @@index([merkleRoot])
+}
+
+model ScheduledReport {
+  id              String       @id @default(cuid())
+  orgId           String
+  name            String
+  type            String       // AUDIT_SUMMARY, REVENUE_BREAKDOWN, CATALOG_HEALTH, RECOVERY_PROGRESS, CUSTOM
+  format          String       @default("PDF") // PDF, CSV, JSON
+  schedule        String       // DAILY, WEEKLY, MONTHLY, QUARTERLY
+  recipients      String[]     // Email addresses
+  filters         String?      // JSON string of report filters
+  enabled         Boolean      @default(true)
+  lastRunAt       DateTime?
+  nextRunAt       DateTime?
+  runCount        Int          @default(0)
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  organization    Organization @relation(fields: [orgId], references: [id])
+
+  @@index([orgId])
+  @@index([nextRunAt, enabled])
+}
+
+model Webhook {
+  id              String       @id @default(cuid())
+  orgId           String
+  url             String       // Delivery URL
+  secret          String       // HMAC signing secret
+  events          String[]     // Array of event types to subscribe to
+  enabled         Boolean      @default(true)
+  description     String?
+  failureCount    Int          @default(0)
+  lastDeliveredAt DateTime?
+  lastFailedAt    DateTime?
+  lastStatusCode  Int?
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  organization    Organization @relation(fields: [orgId], references: [id])
+  deliveries      WebhookDelivery[]
+
+  @@index([orgId])
+  @@index([orgId, enabled])
+}
+
+model WebhookDelivery {
+  id              String       @id @default(cuid())
+  webhookId       String
+  event           String       // Event type that triggered delivery
+  payload         String       // JSON payload sent
+  statusCode      Int?         // HTTP response status code
+  responseBody    String?      // First 1KB of response
+  duration        Int?         // Delivery time in ms
+  success         Boolean      @default(false)
+  attempts        Int          @default(1)
+  createdAt       DateTime     @default(now())
+
+  webhook         Webhook      @relation(fields: [webhookId], references: [id], onDelete: Cascade)
+
+  @@index([webhookId])
+  @@index([webhookId, createdAt])
+}
+
+model IngestionSource {
+  id              String       @id @default(cuid())
+  orgId           String
+  name            String       // e.g., "ASCAP Email", "BMI Auto-Forward"
+  type            String       @default("EMAIL") // EMAIL, API, SFTP
+  ingestEmail     String?      @unique // Unique email address for this source
+  senderFilter    String?      // Comma-separated allowed sender emails
+  societyHint     String?      // ASCAP, BMI, MLC, SOUNDEXCHANGE — helps parser
+  enabled         Boolean      @default(true)
+  lastReceivedAt  DateTime?
+  totalImported   Int          @default(0)
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  organization    Organization @relation(fields: [orgId], references: [id])
+  logs            IngestionLog[]
+
+  @@index([orgId])
+  @@index([ingestEmail])
+}
+
+model IngestionLog {
+  id              String       @id @default(cuid())
+  sourceId        String
+  orgId           String
+  senderEmail     String
+  subject         String?
+  status          String       @default("PENDING") // PENDING, SUCCESS, FAILED, SKIPPED
+  message         String?
+  filesProcessed  Int          @default(0)
+  createdAt       DateTime     @default(now())
+
+  source          IngestionSource @relation(fields: [sourceId], references: [id])
+  organization    Organization    @relation(fields: [orgId], references: [id])
+
+  @@index([sourceId])
+  @@index([orgId])
+  @@index([createdAt])
 }

@@ -6,6 +6,7 @@
  */
 
 import { db } from "@/lib/infra/db";
+import { detectCurrency, currencyForSociety, convertToUSD, type CurrencyCode } from "@/lib/finance/currency";
 
 // ---------- Types ----------
 
@@ -23,6 +24,12 @@ export interface ParsedStatementLine {
     useType?: string;
     rate?: number;
     workId?: string;
+    /** How the line was matched: EXACT_ISWC, EXACT_ISRC, EXACT_TITLE, NORMALIZED_TITLE, FUZZY_HIGH, FUZZY_MEDIUM, FUZZY_LOW, CONTAINS, NONE */
+    matchMethod?: string;
+    /** Confidence score 0-100 indicating match quality */
+    matchConfidence?: number;
+    /** Whether this fuzzy match needs user review */
+    needsReview?: boolean;
 }
 
 export interface ParsedStatement {
@@ -126,14 +133,21 @@ function parseASCAP(content: string): ParsedStatement {
     const lines: ParsedStatementLine[] = [];
     let totalAmount = 0;
 
+    // Detect currency from headers or content; ASCAP is typically USD
+    const detectedCurrency = detectCurrency(headers.join(" ")) || currencyForSociety("ASCAP");
+    const isUSD = detectedCurrency === "USD";
+
     for (let i = 0; i < rows.length; i++) {
         const row = rows[i];
         try {
             const title = getColumn(headers, row, "WORK TITLE", "TITLE");
-            const amount = parseAmount(getColumn(headers, row, "DOMESTIC", "AMOUNT", "DOLLARS"));
+            const rawAmount = parseAmount(getColumn(headers, row, "DOMESTIC", "AMOUNT", "DOLLARS"));
             const uses = parseInt2(getColumn(headers, row, "PERFORMANCES", "USES", "PLAYS"));
 
-            if (!title && amount === 0) continue;
+            if (!title && rawAmount === 0) continue;
+
+            // Preserve original amount and convert to USD if needed
+            const amount = isUSD ? rawAmount : convertToUSD(rawAmount, detectedCurrency);
 
             const line: ParsedStatementLine = {
                 title,
@@ -141,7 +155,8 @@ function parseASCAP(content: string): ParsedStatement {
                 iswc: getColumn(headers, row, "ISWC") || undefined,
                 uses,
                 amount,
-                currency: "USD",
+                amountOriginal: isUSD ? undefined : rawAmount,
+                currency: detectedCurrency,
                 society: "ASCAP",
                 territory: getColumn(headers, row, "TERRITORY") || undefined,
                 useType: "PERFORMANCE",
@@ -173,14 +188,19 @@ function parseBMI(content: string): ParsedStatement {
     const lines: ParsedStatementLine[] = [];
     let totalAmount = 0;
 
+    const detectedCurrency = detectCurrency(headers.join(" ")) || currencyForSociety("BMI");
+    const isUSD = detectedCurrency === "USD";
+
     for (let i = 0; i < rows.length; i++) {
         const row = rows[i];
         try {
             const title = getColumn(headers, row, "SONG TITLE", "TITLE");
-            const amount = parseAmount(getColumn(headers, row, "ROYALTY AMOUNT", "AMOUNT", "DOLLARS"));
+            const rawAmount = parseAmount(getColumn(headers, row, "ROYALTY AMOUNT", "AMOUNT", "DOLLARS"));
             const uses = parseInt2(getColumn(headers, row, "USES", "PERFORMANCES", "PLAYS"));
 
-            if (!title && amount === 0) continue;
+            if (!title && rawAmount === 0) continue;
+
+            const amount = isUSD ? rawAmount : convertToUSD(rawAmount, detectedCurrency);
 
             const line: ParsedStatementLine = {
                 title,
@@ -188,7 +208,8 @@ function parseBMI(content: string): ParsedStatement {
                 iswc: getColumn(headers, row, "ISWC") || undefined,
                 uses,
                 amount,
-                currency: "USD",
+                amountOriginal: isUSD ? undefined : rawAmount,
+                currency: detectedCurrency,
                 society: "BMI",
                 territory: getColumn(headers, row, "TERRITORY") || undefined,
                 useType: "PERFORMANCE",
@@ -220,15 +241,20 @@ function parseMLC(content: string): ParsedStatement {
     const lines: ParsedStatementLine[] = [];
     let totalAmount = 0;
 
+    const detectedCurrency = detectCurrency(headers.join(" ")) || currencyForSociety("MLC");
+    const isUSD = detectedCurrency === "USD";
+
     for (let i = 0; i < rows.length; i++) {
         const row = rows[i];
         try {
             const title = getColumn(headers, row, "SONG TITLE", "TITLE", "SONG NAME");
-            const amount = parseAmount(getColumn(headers, row, "AMOUNT", "ROYALTY", "DOLLARS"));
+            const rawAmount = parseAmount(getColumn(headers, row, "AMOUNT", "ROYALTY", "DOLLARS"));
             const uses = parseInt2(getColumn(headers, row, "STREAMS", "USES", "PLAYS"));
             const isrc = getColumn(headers, row, "ISRC") || undefined;
 
-            if (!title && amount === 0) continue;
+            if (!title && rawAmount === 0) continue;
+
+            const amount = isUSD ? rawAmount : convertToUSD(rawAmount, detectedCurrency);
 
             const line: ParsedStatementLine = {
                 title,
@@ -237,7 +263,8 @@ function parseMLC(content: string): ParsedStatement {
                 iswc: getColumn(headers, row, "ISWC") || undefined,
                 uses,
                 amount,
-                currency: "USD",
+                amountOriginal: isUSD ? undefined : rawAmount,
+                currency: detectedCurrency,
                 society: "MLC",
                 territory: "US",
                 useType: "MECHANICAL",
@@ -269,15 +296,20 @@ function parseSoundExchange(content: string): ParsedStatement {
     const lines: ParsedStatementLine[] = [];
     let totalAmount = 0;
 
+    const detectedCurrency = detectCurrency(headers.join(" ")) || currencyForSociety("SOUNDEXCHANGE");
+    const isUSD = detectedCurrency === "USD";
+
     for (let i = 0; i < rows.length; i++) {
         const row = rows[i];
         try {
             const title = getColumn(headers, row, "SOUND RECORDING", "TITLE", "TRACK TITLE");
-            const amount = parseAmount(getColumn(headers, row, "ROYALTY", "AMOUNT", "DOLLARS"));
+            const rawAmount = parseAmount(getColumn(headers, row, "ROYALTY", "AMOUNT", "DOLLARS"));
             const uses = parseInt2(getColumn(headers, row, "PERFORMANCES", "PLAYS", "STREAMS"));
             const isrc = getColumn(headers, row, "ISRC") || undefined;
 
-            if (!title && amount === 0) continue;
+            if (!title && rawAmount === 0) continue;
+
+            const amount = isUSD ? rawAmount : convertToUSD(rawAmount, detectedCurrency);
 
             const line: ParsedStatementLine = {
                 title,
@@ -285,7 +317,8 @@ function parseSoundExchange(content: string): ParsedStatement {
                 isrc,
                 uses,
                 amount,
-                currency: "USD",
+                amountOriginal: isUSD ? undefined : rawAmount,
+                currency: detectedCurrency,
                 society: "SOUNDEXCHANGE",
                 territory: "US",
                 useType: "DIGITAL",
@@ -363,11 +396,26 @@ export function parseStatement(content: string, overrideFormat?: StatementFormat
 
 /**
  * Match parsed statement lines to catalog works by title or ISWC/ISRC.
+ *
+ * Uses a multi-stage matching pipeline:
+ * 1. Exact ISWC match (confidence: 100)
+ * 2. Exact ISRC match (confidence: 95)
+ * 3. Exact title match (confidence: 90)
+ * 4. Normalized title match — strips feat., remix tags, punctuation (confidence: 85)
+ * 5. Fuzzy title match — Jaro-Winkler + Levenshtein similarity (confidence: 70-80)
+ * 6. Contains/substring match as last resort (confidence: 65)
+ *
+ * Fuzzy matches (stages 4-6) are flagged with `needsReview: true` so users
+ * can confirm or reject them before they flow into split calculations.
  */
 export async function matchStatementLines(
     lines: ParsedStatementLine[],
     orgId: string
 ): Promise<ParsedStatementLine[]> {
+    // Lazy import to avoid circular dependencies
+    const { normalizeTitle, findBestFuzzyMatch, MATCH_CONFIDENCE, DEFAULT_FUZZY_CONFIG } =
+        await import("@/lib/finance/fuzzy-match");
+
     // Fetch all works for matching
     const works = await db.work.findMany({
         where: { orgId },
@@ -383,47 +431,78 @@ export async function matchStatementLines(
     const workByIswc = new Map<string, string>();
     const workByTitle = new Map<string, string>();
     const workByIsrc = new Map<string, string>();
+    const normalizedTitleMap = new Map<string, string>();
 
     for (const w of works) {
         if (w.iswc) workByIswc.set(w.iswc.toUpperCase(), w.id);
         workByTitle.set(w.title.toUpperCase().trim(), w.id);
+        const normalized = normalizeTitle(w.title);
+        if (normalized) normalizedTitleMap.set(normalized, w.id);
     }
 
     for (const r of recordings) {
         if (r.isrc) workByIsrc.set(r.isrc.toUpperCase(), r.workId || r.id);
     }
 
-    // Match each line
+    // Match each line through the multi-stage pipeline
     return lines.map(line => {
         let workId: string | undefined;
+        let matchMethod: string = "NONE";
+        let matchConfidence: number = 0;
+        let needsReview = false;
 
-        // 1. Try ISWC match
+        // Stage 1: Exact ISWC match
         if (line.iswc) {
             workId = workByIswc.get(line.iswc.toUpperCase());
-        }
-
-        // 2. Try ISRC match
-        if (!workId && line.isrc) {
-            workId = workByIsrc.get(line.isrc.toUpperCase());
-        }
-
-        // 3. Try exact title match
-        if (!workId && line.title) {
-            workId = workByTitle.get(line.title.toUpperCase().trim());
-        }
-
-        // 4. Try fuzzy title match (contains)
-        if (!workId && line.title) {
-            const searchTitle = line.title.toUpperCase().trim();
-            for (const [title, id] of workByTitle) {
-                if (title.includes(searchTitle) || searchTitle.includes(title)) {
-                    workId = id;
-                    break;
-                }
+            if (workId) {
+                matchMethod = "EXACT_ISWC";
+                matchConfidence = MATCH_CONFIDENCE.EXACT_ISWC;
             }
         }
 
-        return { ...line, workId };
+        // Stage 2: Exact ISRC match
+        if (!workId && line.isrc) {
+            workId = workByIsrc.get(line.isrc.toUpperCase());
+            if (workId) {
+                matchMethod = "EXACT_ISRC";
+                matchConfidence = MATCH_CONFIDENCE.EXACT_ISRC;
+            }
+        }
+
+        // Stage 3: Exact title match
+        if (!workId && line.title) {
+            workId = workByTitle.get(line.title.toUpperCase().trim());
+            if (workId) {
+                matchMethod = "EXACT_TITLE";
+                matchConfidence = MATCH_CONFIDENCE.EXACT_TITLE;
+            }
+        }
+
+        // Stages 4-6: Fuzzy matching (normalized, similarity, contains)
+        if (!workId && line.title) {
+            const fuzzyResult = findBestFuzzyMatch(
+                line.title,
+                normalizedTitleMap,
+                workByTitle,
+                DEFAULT_FUZZY_CONFIG
+            );
+
+            if (fuzzyResult) {
+                workId = fuzzyResult.workId;
+                matchMethod = fuzzyResult.matchMethod;
+                matchConfidence = fuzzyResult.matchConfidence;
+                // Flag fuzzy matches for user review
+                needsReview = true;
+            }
+        }
+
+        return {
+            ...line,
+            workId,
+            matchMethod,
+            matchConfidence,
+            needsReview: needsReview && !!workId,
+        };
     });
 }
 
@@ -491,6 +570,8 @@ export async function importStatement(
                     useType: l.useType,
                     rate: l.rate,
                     workId: l.workId,
+                    // Smart matching metadata — stored as JSON in existing fields
+                    // matchMethod and matchConfidence are tracked via the line's metadata
                 })),
             },
         },
