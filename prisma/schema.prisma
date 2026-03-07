@@ -22,6 +22,7 @@ model Organization {
   splitSignoffs SplitSignoff[]
   royaltyPeriods RoyaltyPeriod[]
   auditLogs     AuditLog[]
+  auditCheckpoints AuditCheckpoint[]
   activities    Activity[]
   auditJobs     AuditJob[]
   apiKeys       ApiKey[]
@@ -402,6 +403,29 @@ model AuditLog {
   organization  Organization   @relation(fields: [orgId], references: [id])
   orgId         String
   timestamp     DateTime       @default(now())
+}
+
+// Blockchain-anchored audit checkpoint for tamper-proof verification
+model AuditCheckpoint {
+  id              String       @id @default(cuid())
+  orgId           String
+  merkleRoot      String       // SHA-256 Merkle root of all audit logs in the period
+  logCount        Int          // Number of audit logs included
+  periodStart     DateTime     // Start of the checkpoint period
+  periodEnd       DateTime     // End of the checkpoint period
+  previousHash    String?      // Hash of the previous checkpoint (chain link)
+  anchorTxHash    String?      // Blockchain transaction hash (if anchored)
+  anchorChain     String?      // e.g., "ethereum", "polygon", "bitcoin"
+  anchorStatus    String       @default("PENDING") // PENDING, ANCHORED, FAILED
+  verifiedAt      DateTime?
+  metadata        String?      // JSON: additional metadata
+  createdAt       DateTime     @default(now())
+
+  organization    Organization @relation(fields: [orgId], references: [id])
+
+  @@index([orgId])
+  @@index([orgId, createdAt])
+  @@index([merkleRoot])
 }
 
 model RateLimit {
