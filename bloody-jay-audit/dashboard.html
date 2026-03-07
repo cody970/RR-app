@@ -1,0 +1,592 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bloody Jay Royalty Recovery Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            color: #eee;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        header {
+            text-align: center;
+            padding: 30px 0;
+            border-bottom: 2px solid #e94560;
+            margin-bottom: 30px;
+        }
+        header h1 {
+            font-size: 2.5em;
+            color: #e94560;
+            margin-bottom: 10px;
+        }
+        header p {
+            color: #888;
+            font-size: 1.1em;
+        }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        .stat-card {
+            background: rgba(255,255,255,0.05);
+            border-radius: 15px;
+            padding: 25px;
+            text-align: center;
+            border: 1px solid rgba(255,255,255,0.1);
+            transition: transform 0.3s ease;
+        }
+        .stat-card:hover {
+            transform: translateY(-5px);
+            border-color: #e94560;
+        }
+        .stat-card h3 {
+            color: #888;
+            font-size: 0.9em;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+        }
+        .stat-card .value {
+            font-size: 2.5em;
+            font-weight: bold;
+            color: #e94560;
+        }
+        .stat-card .sub {
+            font-size: 0.85em;
+            color: #666;
+            margin-top: 5px;
+        }
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        .tab {
+            padding: 12px 25px;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 25px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .tab:hover, .tab.active {
+            background: #e94560;
+            border-color: #e94560;
+        }
+        .content-section {
+            display: none;
+        }
+        .content-section.active {
+            display: block;
+        }
+        .chart-container {
+            background: rgba(255,255,255,0.05);
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 20px;
+        }
+        .chart-container h3 {
+            margin-bottom: 20px;
+            color: #e94560;
+        }
+        .two-cols {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 20px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+        th, td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        th {
+            background: rgba(233,69,96,0.2);
+            color: #e94560;
+        }
+        tr:hover {
+            background: rgba(255,255,255,0.05);
+        }
+        .priority-critical {
+            color: #ff4757;
+            font-weight: bold;
+        }
+        .priority-high {
+            color: #ffa502;
+        }
+        .priority-medium {
+            color: #2ed573;
+        }
+        .action-btn {
+            padding: 8px 16px;
+            border-radius: 20px;
+            border: none;
+            cursor: pointer;
+            font-size: 0.85em;
+            transition: all 0.3s ease;
+        }
+        .action-register {
+            background: #e94560;
+            color: white;
+        }
+        .action-register:hover {
+            background: #ff6b81;
+        }
+        .revenue-highlight {
+            background: linear-gradient(135deg, #e94560, #ff6b81);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .info-card {
+            background: rgba(255,255,255,0.05);
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 20px;
+        }
+        .info-card h3 {
+            color: #e94560;
+            margin-bottom: 15px;
+        }
+        .info-card ul {
+            list-style: none;
+            padding-left: 0;
+        }
+        .info-card li {
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+        .progress-bar {
+            background: rgba(255,255,255,0.1);
+            border-radius: 10px;
+            height: 20px;
+            overflow: hidden;
+            margin-top: 10px;
+        }
+        .progress-fill {
+            height: 100%;
+            border-radius: 10px;
+            transition: width 0.5s ease;
+        }
+        .progress-critical {
+            background: linear-gradient(90deg, #ff4757, #ff6b81);
+        }
+        .progress-high {
+            background: linear-gradient(90deg, #ffa502, #ffbe76);
+        }
+        .progress-medium {
+            background: linear-gradient(90deg, #2ed573, #7bed9f);
+        }
+        footer {
+            text-align: center;
+            padding: 30px;
+            border-top: 1px solid rgba(255,255,255,0.1);
+            margin-top: 30px;
+            color: #666;
+        }
+    </style>
+<script src="https://sites.super.myninja.ai/_assets/ninja-daytona-script.js"></script>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Bloody Jay Royalty Recovery Dashboard</h1>
+            <p>Artist: Justin Ushery | Atlanta, GA | Total Catalog: 208 Tracks</p>
+        </header>
+
+        <div class="stats-grid">
+            <div class="stat-card">
+                <h3>Total Tracks</h3>
+                <div class="value">208</div>
+                <div class="sub">15 Projects + 8 Singles + 12 Features</div>
+            </div>
+            <div class="stat-card">
+                <h3>Critical Priority</h3>
+                <div class="value">38</div>
+                <div class="sub">Young Thug collabs, label releases</div>
+            </div>
+            <div class="stat-card">
+                <h3>High Priority</h3>
+                <div class="value">84</div>
+                <div class="sub">Recent releases, notable features</div>
+            </div>
+            <div class="stat-card">
+                <h3>Est. Recovery</h3>
+                <div class="value revenue-highlight">$317K-$1.4M</div>
+                <div class="sub">One-time + $47K-$218K/year recurring</div>
+            </div>
+        </div>
+
+        <div class="tabs">
+            <div class="tab active" onclick="showTab('overview')">Overview</div>
+            <div class="tab" onclick="showTab('actions')">Action Plan</div>
+            <div class="tab" onclick="showTab('projects')">Projects</div>
+            <div class="tab" onclick="showTab('templates')">Templates</div>
+        </div>
+
+        <div id="overview" class="content-section active">
+            <div class="two-cols">
+                <div class="chart-container">
+                    <h3>Priority Distribution</h3>
+                    <canvas id="priorityChart"></canvas>
+                </div>
+                <div class="chart-container">
+                    <h3>Registration Status by PRO</h3>
+                    <canvas id="registrationChart"></canvas>
+                </div>
+            </div>
+
+            <div class="two-cols">
+                <div class="chart-container">
+                    <h3>Tracks by Release Year</h3>
+                    <canvas id="yearChart"></canvas>
+                </div>
+                <div class="chart-container">
+                    <h3>Revenue Impact by Priority</h3>
+                    <canvas id="revenueChart"></canvas>
+                </div>
+            </div>
+
+            <div class="info-card">
+                <h3>Artist Information</h3>
+                <ul>
+                    <li><strong>Stage Name:</strong> Bloody Jay</li>
+                    <li><strong>Real Name:</strong> Justin Ushery</li>
+                    <li><strong>Hometown:</strong> Atlanta, GA</li>
+                    <li><strong>Labels:</strong> A1 Records (Rocko), ABG Ent., Good Life Music Group</li>
+                    <li><strong>Spotify ID:</strong> 398uOjIcboA7cfnsTjn2yw</li>
+                    <li><strong>Apple Music ID:</strong> 586018658</li>
+                    <li><strong>Notable Collaborations:</strong> Young Thug, YFN Lucci, Boosie Badazz, Trouble, Lil Baby</li>
+                </ul>
+            </div>
+        </div>
+
+        <div id="actions" class="content-section">
+            <div class="info-card">
+                <h3>Action Plan Summary</h3>
+                <p>All 208 tracks require registration across BMI, SoundExchange, and MLC.</p>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Priority</th>
+                            <th>Tracks</th>
+                            <th>Revenue Impact</th>
+                            <th>Timeline</th>
+                            <th>Progress</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td class="priority-critical">CRITICAL</td>
+                            <td>38</td>
+                            <td>$5K-$25K each</td>
+                            <td>Week 1-2</td>
+                            <td>
+                                <div class="progress-bar">
+                                    <div class="progress-fill progress-critical" style="width: 0%"></div>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td class="priority-high">HIGH</td>
+                            <td>84</td>
+                            <td>$1K-$5K each</td>
+                            <td>Week 3-4</td>
+                            <td>
+                                <div class="progress-bar">
+                                    <div class="progress-fill progress-high" style="width: 0%"></div>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td class="priority-medium">MEDIUM</td>
+                            <td>86</td>
+                            <td>$500-$1K each</td>
+                            <td>Week 5-6</td>
+                            <td>
+                                <div class="progress-bar">
+                                    <div class="progress-fill progress-medium" style="width: 0%"></div>
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="info-card">
+                <h3>Registration Actions Required</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>PRO</th>
+                            <th>Status</th>
+                            <th>Action</th>
+                            <th>Tracks</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>BMI</td>
+                            <td>NOT REGISTERED</td>
+                            <td>Register all works</td>
+                            <td>208</td>
+                        </tr>
+                        <tr>
+                            <td>SoundExchange</td>
+                            <td>NOT REGISTERED</td>
+                            <td>Register as artist</td>
+                            <td>208</td>
+                        </tr>
+                        <tr>
+                            <td>MLC</td>
+                            <td>NOT REGISTERED</td>
+                            <td>Register all works</td>
+                            <td>208</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div id="projects" class="content-section">
+            <div class="info-card">
+                <h3>Discography (15 Projects)</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Project</th>
+                            <th>Year</th>
+                            <th>Type</th>
+                            <th>Tracks</th>
+                            <th>Label</th>
+                            <th>Priority</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Blatlanta (Bigger Than Rap)</td>
+                            <td>2012</td>
+                            <td>Mixtape</td>
+                            <td>16</td>
+                            <td>A1 Recordings / ABG Ent.</td>
+                            <td class="priority-high">HIGH</td>
+                        </tr>
+                        <tr>
+                            <td>Blatlanta II: Brazy</td>
+                            <td>2013</td>
+                            <td>Mixtape</td>
+                            <td>16</td>
+                            <td>ABG Ent.</td>
+                            <td class="priority-high">HIGH</td>
+                        </tr>
+                        <tr>
+                            <td>Get It In Blood</td>
+                            <td>2013</td>
+                            <td>Mixtape</td>
+                            <td>14</td>
+                            <td>A1 Recordings</td>
+                            <td class="priority-critical">CRITICAL</td>
+                        </tr>
+                        <tr>
+                            <td>Black Portland (w/ Young Thug)</td>
+                            <td>2014</td>
+                            <td>Collab Mixtape</td>
+                            <td>11</td>
+                            <td>Propane Media</td>
+                            <td class="priority-critical">CRITICAL</td>
+                        </tr>
+                        <tr>
+                            <td>Real Forever</td>
+                            <td>2019</td>
+                            <td>Album</td>
+                            <td>12</td>
+                            <td>Good Life Music Group</td>
+                            <td class="priority-critical">CRITICAL</td>
+                        </tr>
+                        <tr>
+                            <td>King Bloody</td>
+                            <td>2022</td>
+                            <td>Album</td>
+                            <td>12</td>
+                            <td>Independent</td>
+                            <td class="priority-high">HIGH</td>
+                        </tr>
+                        <tr>
+                            <td>ART (A Real Testimony)</td>
+                            <td>2025</td>
+                            <td>Album</td>
+                            <td>12</td>
+                            <td>Independent</td>
+                            <td class="priority-high">HIGH</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div id="templates" class="content-section">
+            <div class="info-card">
+                <h3>Registration Templates Available</h3>
+                <p>The following templates have been generated for the Bloody Jay catalog:</p>
+                <ul>
+                    <li><strong>docs/registration_templates_consolidated.txt</strong> - Complete templates for all 208 tracks</li>
+                    <li><strong>docs/quick_start_registration_guide.txt</strong> - Quick start for CRITICAL priority tracks</li>
+                    <li><strong>docs/critical_priority_tracks.txt</strong> - List of 38 critical priority tracks</li>
+                    <li><strong>output/action_plan_full_catalog.csv</strong> - Complete action plan spreadsheet</li>
+                </ul>
+            </div>
+
+            <div class="info-card">
+                <h3>Writer Information Template</h3>
+                <ul>
+                    <li><strong>Writer Name:</strong> Justin Ushery</li>
+                    <li><strong>Stage Name:</strong> Bloody Jay</li>
+                    <li><strong>Recommended PRO:</strong> BMI</li>
+                    <li><strong>Publisher Name:</strong> Bloody Jay Publishing</li>
+                    <li><strong>Default Split:</strong> 50% Writer / 50% Publisher</li>
+                </ul>
+            </div>
+        </div>
+
+        <footer>
+            <p>Bloody Jay Royalty Recovery Audit | Generated {datetime} | Assumption: Zero Registrations</p>
+        </footer>
+    </div>
+
+    <script>
+        function showTab(tabId) {
+            document.querySelectorAll('.content-section').forEach(section => {
+                section.classList.remove('active');
+            });
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            document.getElementById(tabId).classList.add('active');
+            event.target.classList.add('active');
+        }
+
+        // Priority Distribution Chart
+        new Chart(document.getElementById('priorityChart'), {
+            type: 'doughnut',
+            data: {
+                labels: ['CRITICAL', 'HIGH', 'MEDIUM'],
+                datasets: [{
+                    data: [38, 84, 86],
+                    backgroundColor: ['#ff4757', '#ffa502', '#2ed573'],
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: { color: '#fff' }
+                    }
+                }
+            }
+        });
+
+        // Registration Status Chart
+        new Chart(document.getElementById('registrationChart'), {
+            type: 'bar',
+            data: {
+                labels: ['BMI', 'SoundExchange', 'MLC'],
+                datasets: [{
+                    label: 'Unregistered',
+                    data: [208, 208, 208],
+                    backgroundColor: '#ff4757'
+                }, {
+                    label: 'Registered',
+                    data: [0, 0, 0],
+                    backgroundColor: '#2ed573'
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    x: { ticks: { color: '#fff' } },
+                    y: { ticks: { color: '#fff' } }
+                },
+                plugins: {
+                    legend: {
+                        labels: { color: '#fff' }
+                    }
+                }
+            }
+        });
+
+        // Year Distribution Chart
+        new Chart(document.getElementById('yearChart'), {
+            type: 'bar',
+            data: {
+                labels: ['2012', '2013', '2014', '2015', '2017', '2019', '2020', '2022', '2024', '2025'],
+                datasets: [{
+                    label: 'Tracks',
+                    data: [16, 30, 24, 28, 7, 16, 14, 12, 30, 31],
+                    backgroundColor: '#e94560'
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    x: { ticks: { color: '#fff' } },
+                    y: { ticks: { color: '#fff' } }
+                },
+                plugins: {
+                    legend: { display: false }
+                }
+            }
+        });
+
+        // Revenue Chart
+        new Chart(document.getElementById('revenueChart'), {
+            type: 'bar',
+            data: {
+                labels: ['CRITICAL', 'HIGH', 'MEDIUM'],
+                datasets: [{
+                    label: 'Min Revenue ($K)',
+                    data: [190, 84, 43],
+                    backgroundColor: '#e94560'
+                }, {
+                    label: 'Max Revenue ($K)',
+                    data: [950, 420, 86],
+                    backgroundColor: '#ff6b81'
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    x: { ticks: { color: '#fff' } },
+                    y: { ticks: { color: '#fff' } }
+                },
+                plugins: {
+                    legend: {
+                        labels: { color: '#fff' }
+                    }
+                }
+            }
+        });
+    </script>
+</body>
+</html>
