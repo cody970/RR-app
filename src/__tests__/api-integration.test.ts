@@ -15,6 +15,9 @@ vi.mock('@/lib/infra/db', () => ({
         task: { createMany: vi.fn() },
         auditLog: { create: vi.fn() },
         activity: { create: vi.fn() },
+        organization: { findUnique: vi.fn() },
+        work: { findUnique: vi.fn() },
+        splitNegotiation: { update: vi.fn() },
     },
 }));
 
@@ -47,6 +50,11 @@ vi.mock('@/lib/infra/redis', () => ({
 
 vi.mock('@/lib/email/send-email', () => ({
     sendEmail: vi.fn().mockResolvedValue({ success: true }),
+}));
+
+vi.mock('@/lib/notifications', () => ({
+    sendSplitProposalEmail: vi.fn().mockResolvedValue({ success: true }),
+    sendSplitProposalSms: vi.fn().mockResolvedValue({ success: true }),
 }));
 
 // Helper to create consistent auth mock
@@ -187,6 +195,14 @@ describe('API Integration Tests', () => {
             const { db } = await import('@/lib/infra/db');
 
             vi.mocked(requireAuth).mockResolvedValue(mockAuth());
+            vi.mocked(db.organization.findUnique).mockResolvedValue({
+                id: 'org-123',
+                name: 'Test Organization',
+            } as any);
+            vi.mocked(db.work.findUnique).mockResolvedValue({
+                id: 'work-123',
+                title: 'Test Work',
+            } as any);
             vi.mocked(db.splitSignoff.create).mockResolvedValue({
                 id: 'signoff-123',
                 token: 'new-token'

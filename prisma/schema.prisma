@@ -682,6 +682,54 @@ model SplitSignoff {
   updatedAt       DateTime     @updatedAt
   work            Work         @relation(fields: [workId], references: [id])
   organization    Organization @relation(fields: [organizationId], references: [id])
+  // Digital signature fields
+  signatureData   String?      // Base64 encoded signature image
+  signatureHash   String?      // SHA-256 hash of signature for verification
+  // Link to negotiation
+  negotiationId   String?
+  negotiation     SplitNegotiation? @relation(fields: [negotiationId], references: [id])
+}
+
+// -----------------------------------------------------------------------------
+// Split Negotiation — Multi-party negotiation with real-time chat
+// -----------------------------------------------------------------------------
+
+model SplitNegotiation {
+  id              String   @id @default(cuid())
+  workId          String
+  organizationId  String
+  status          String   @default("PROPOSED") // PROPOSED, COUNTER, AGREED, SIGNED
+  proposedSplit   Float    // Original proposed split percentage
+  counterProposal Float?   // Latest counter-proposal value
+  currentRound    Int      @default(1)
+  totalParties    Int      @default(2) // Number of parties involved (multi-party support)
+  expiresAt       DateTime
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // Relations
+  signoffs        SplitSignoff[]
+  messages        NegotiationMessage[]
+
+  @@index([workId])
+  @@index([organizationId])
+  @@index([status])
+}
+
+model NegotiationMessage {
+  id              String   @id @default(cuid())
+  negotiationId   String
+  senderName      String   // Name of the message sender
+  senderEmail     String   // Email of the sender
+  senderRole      String   @default("COLLABORATOR") // PUBLISHER, COLLABORATOR
+  message         String
+  proposedValue   Float?   // If this message includes a counter-proposal
+  createdAt       DateTime @default(now())
+
+  negotiation     SplitNegotiation @relation(fields: [negotiationId], references: [id], onDelete: Cascade)
+
+  @@index([negotiationId])
+  @@index([createdAt])
 }
 
 model MLCMatchJob {
