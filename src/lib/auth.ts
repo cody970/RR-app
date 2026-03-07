@@ -50,8 +50,6 @@ export const authOptions: NextAuthOptions = {
                     email: user.email,
                     orgId: user.orgId,
                     role: user.role,
-                    writerId: user.writerId,
-                    publisherId: user.publisherId,
                 };
             },
         }),
@@ -98,18 +96,14 @@ export const authOptions: NextAuthOptions = {
                 token.id = user.id;
                 token.orgId = (user as any).orgId;
                 token.role = (user as any).role;
-                token.writerId = (user as any).writerId;
-                token.publisherId = (user as any).publisherId;
             }
             return token;
         },
         async session({ session, token }) {
             if (session.user) {
-                session.user.id = token.id as string;
-                session.user.orgId = token.orgId as string;
-                session.user.role = token.role as string;
-                if (token.writerId) session.user.writerId = token.writerId as string;
-                if (token.publisherId) session.user.publisherId = token.publisherId as string;
+                session.user.id = token.id;
+                session.user.orgId = token.orgId;
+                session.user.role = token.role;
             }
             return session;
         },

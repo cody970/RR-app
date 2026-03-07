@@ -61,8 +61,15 @@ export const authOptions: NextAuthOptions = {
         strategy: "jwt",
     },
     callbacks: {
-        async signIn({ user, account }) {
+        async signIn({ user, account, profile }) {
             if (account?.provider === 'google' || account?.provider === 'github') {
+                // Ensure the OAuth provider has verified the user's email address
+                const isVerified = profile && ('email_verified' in profile ? profile.email_verified : true); // GitHub doesn't always provide email_verified directly on profile, but if it exists, check it.
+                if (account?.provider === 'google' && !isVerified) {
+                    console.warn(`[Auth] Rejected OAuth sign-in for unverified email: ${user.email}`);
+                    return false;
+                }
+
                 const existingUser = await db.user.findUnique({ where: { email: user.email! } });
                 if (!existingUser) {
                     // Auto-create user and organization for new OAuth logins
