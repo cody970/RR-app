@@ -44,10 +44,19 @@ export async function PATCH(req: Request) {
                 data: { read: true },
             });
         } else if (body.id) {
-            await db.notification.update({
-                where: { id: body.id },
+            // CRIT-3 fix: Scope update to the current user's notifications only
+            // This prevents IDOR where any user could mark any notification as read
+            const result = await db.notification.updateMany({
+                where: { 
+                    id: body.id,
+                    userId // Ensures the notification belongs to the current user
+                },
                 data: { read: true },
             });
+
+            if (result.count === 0) {
+                return NextResponse.json({ error: "Notification not found or access denied" }, { status: 404 });
+            }
         }
 
         return NextResponse.json({ success: true });

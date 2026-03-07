@@ -8,6 +8,11 @@ export default defineConfig({
         globals: true,
         watch: false,
         setupFiles: ['./src/components/__tests__/setup.ts'],
+        exclude: [
+            '**/node_modules/**',
+            '**/dist/**',
+            '**/e2e/**',  // Exclude Playwright e2e tests from Vitest
+        ],
     },
     resolve: {
         alias: {
