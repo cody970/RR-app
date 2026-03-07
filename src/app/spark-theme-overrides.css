@@ -1,0 +1,115 @@
+/**
+ * Spark Design System — RoyaltyRadar Theme Bridge
+ *
+ * Overrides Spark design tokens to match RoyaltyRadar's brand palette
+ * and maps them to the Tailwind CSS custom properties used throughout
+ * the application.
+ *
+ * Usage: imported globally in src/app/layout.tsx
+ */
+
+:root {
+  /* ── Brand colours ─────────────────────────────────────────────────── */
+  --sprk-color-primary:        #d97706;   /* amber-600  */
+  --sprk-color-primary-dark:   #b45309;   /* amber-700  */
+  --sprk-color-primary-light:  #fbbf24;   /* amber-400  */
+  --sprk-color-secondary:      #1e293b;   /* slate-800  */
+  --sprk-color-success:        #059669;   /* emerald-600 */
+  --sprk-color-error:          #dc2626;   /* red-600    */
+  --sprk-color-warning:        #d97706;   /* amber-600  */
+  --sprk-color-info:           #2563eb;   /* blue-600   */
+
+  /* ── Neutral palette ───────────────────────────────────────────────── */
+  --sprk-color-neutral-50:     #f8fafc;
+  --sprk-color-neutral-100:    #f1f5f9;
+  --sprk-color-neutral-200:    #e2e8f0;
+  --sprk-color-neutral-300:    #cbd5e1;
+  --sprk-color-neutral-400:    #94a3b8;
+  --sprk-color-neutral-500:    #64748b;
+  --sprk-color-neutral-600:    #475569;
+  --sprk-color-neutral-700:    #334155;
+  --sprk-color-neutral-800:    #1e293b;
+  --sprk-color-neutral-900:    #0f172a;
+
+  /* ── Typography ────────────────────────────────────────────────────── */
+  --sprk-font-family:          'Inter', system-ui, sans-serif;
+  --sprk-font-size-xs:         0.75rem;
+  --sprk-font-size-sm:         0.875rem;
+  --sprk-font-size-base:       1rem;
+  --sprk-font-size-lg:         1.125rem;
+  --sprk-font-size-xl:         1.25rem;
+  --sprk-font-size-2xl:        1.5rem;
+  --sprk-font-weight-normal:   400;
+  --sprk-font-weight-medium:   500;
+  --sprk-font-weight-semibold: 600;
+  --sprk-font-weight-bold:     700;
+
+  /* ── Spacing ───────────────────────────────────────────────────────── */
+  --sprk-spacing-1:  0.25rem;
+  --sprk-spacing-2:  0.5rem;
+  --sprk-spacing-3:  0.75rem;
+  --sprk-spacing-4:  1rem;
+  --sprk-spacing-5:  1.25rem;
+  --sprk-spacing-6:  1.5rem;
+  --sprk-spacing-8:  2rem;
+  --sprk-spacing-10: 2.5rem;
+  --sprk-spacing-12: 3rem;
+
+  /* ── Borders & radius ──────────────────────────────────────────────── */
+  --sprk-border-radius:        0.75rem;   /* rounded-xl */
+  --sprk-border-radius-sm:     0.5rem;    /* rounded-lg */
+  --sprk-border-radius-lg:     1rem;      /* rounded-2xl */
+  --sprk-border-radius-full:   9999px;    /* rounded-full */
+  --sprk-border-width:         1px;
+  --sprk-border-color:         var(--sprk-color-neutral-200);
+
+  /* ── Shadows ───────────────────────────────────────────────────────── */
+  --sprk-shadow-sm:  0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --sprk-shadow:     0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+  --sprk-shadow-md:  0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  --sprk-shadow-lg:  0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+
+  /* ── Transitions ───────────────────────────────────────────────────── */
+  --sprk-transition-fast:   150ms ease;
+  --sprk-transition-base:   200ms ease;
+  --sprk-transition-slow:   300ms ease;
+
+  /* ── Z-index scale ─────────────────────────────────────────────────── */
+  --sprk-z-dropdown: 1000;
+  --sprk-z-modal:    1050;
+  --sprk-z-toast:    1100;
+}
+
+/* ── Dark-mode token overrides ────────────────────────────────────────── */
+.dark {
+  --sprk-color-neutral-50:     #0f172a;
+  --sprk-color-neutral-100:    #1e293b;
+  --sprk-color-neutral-200:    #334155;
+  --sprk-color-neutral-300:    #475569;
+  --sprk-color-neutral-400:    #64748b;
+  --sprk-color-neutral-500:    #94a3b8;
+  --sprk-color-neutral-600:    #cbd5e1;
+  --sprk-color-neutral-700:    #e2e8f0;
+  --sprk-color-neutral-800:    #f1f5f9;
+  --sprk-color-neutral-900:    #f8fafc;
+  --sprk-border-color:         #334155;
+}
+
+/* ── Skip-to-content link (Phase 5 a11y) ─────────────────────────────── */
+.sprk-skip-link {
+  position: absolute;
+  top: -100%;
+  left: var(--sprk-spacing-4);
+  z-index: var(--sprk-z-toast);
+  padding: var(--sprk-spacing-2) var(--sprk-spacing-4);
+  background: var(--sprk-color-primary);
+  color: #fff;
+  font-weight: var(--sprk-font-weight-semibold);
+  border-radius: var(--sprk-border-radius-sm);
+  text-decoration: none;
+  transition: top var(--sprk-transition-fast);
+}
+
+.sprk-skip-link:focus {
+  top: var(--sprk-spacing-4);
+}
