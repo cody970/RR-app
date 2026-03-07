@@ -350,7 +350,7 @@ export default function AnalyticsPage() {
                                         variant="ghost"
                                         size="sm"
                                         onClick={handleExportTopWorks}
-                                        className="text-xs text-slate-500 hover:text-slate-700"
+                                        className="text-xs text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
                                     >
                                         <Download className="h-3 w-3 mr-1" />
                                         CSV
@@ -383,7 +383,7 @@ export default function AnalyticsPage() {
                                         variant="ghost"
                                         size="sm"
                                         onClick={handleExportTerritories}
-                                        className="text-xs text-slate-500 hover:text-slate-700"
+                                        className="text-xs text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
                                     >
                                         <Download className="h-3 w-3 mr-1" />
                                         CSV
