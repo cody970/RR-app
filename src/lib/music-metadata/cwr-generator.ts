@@ -130,9 +130,10 @@ function hdr21(
 ): string {
   const versionStr = version === "22" ? "02.20" : "01.10";
   // CWR 2.1 rev 8 uses 11-digit IPI without sender type prefix
-  const ipi = padL(ipiNameNumber.slice(-9), 9); // use last 9 digits for 9-char field
+  const safeIpi = ipiNameNumber ?? "";
+  const ipi = padL(safeIpi.slice(-9), 9); // use last 9 digits for 9-char field
   return (
-    `HDRPB${padL(ipiNameNumber, 11).slice(2)}` +
+    `HDRPB${padL(safeIpi, 11).slice(2)}` +
     `${padR(senderName, 45)}${versionStr}` +
     `${cwrDate(creationDate)}${cwrTime(creationDate)}` +
     `${cwrDate(creationDate)}               ` +
@@ -371,8 +372,9 @@ function hdr30(
   version: "30" | "31"
 ): string {
   const versionStr = version === "31" ? "3.1000" : "3.0000";
+  const safeIpi30 = ipiNameNumber ?? "";
   return (
-    `HDRSO${padR(ipiNameNumber.slice(0, 4), 4)}` +
+    `HDRSO${padR(safeIpi30.slice(0, 4), 4)}` +
     `${padR(senderName, 45)}` +
     `${cwrDate(creationDate)}${cwrTime(creationDate)}` +
     `${cwrDate(creationDate)}` +
@@ -614,6 +616,7 @@ export function generateCwr(
   const filename = generateFilename(version, senderCode, sequenceNumber, creationDate);
 
   return {
+    success: true,
     content,
     filename,
     workCount: works.length,

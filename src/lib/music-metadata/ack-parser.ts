@@ -384,9 +384,10 @@ export function detectDuplicateIswcs(
  * @example isValidAckFilename("SOCIETY_ACK.V21") // true
  */
 export function isValidAckFilename(filename: string): boolean {
-  if (filename.length < 18 || filename.length > 19) return false;
-  const ext = filename.slice(-4).toUpperCase();
-  return ext === ".V21" || ext === ".V22";
+  if (!filename || filename.trim().length === 0) return false;
+  // CWR ACK filenames: CW{YY}{NNNN}{SENDER}.V{VER}
+  // Extension can be .V21, .V22, .V30, .V31
+  return /^CW\d{6}.+\.V(21|22|30|31)$/i.test(filename);
 }
 
 // ---------------------------------------------------------------------------
@@ -427,7 +428,11 @@ export function generateAckReport(
   result: AckProcessResult,
   workTitles?: Map<string, string>
 ): string {
-  let report = "";
+  const dateStr = result.metadata.date.toISOString().split("T")[0];
+  let report = `<strong>ACK Import Report</strong><br/>\n`;
+  report += `Society: <strong>${result.metadata.societyName}</strong> (${result.metadata.societyCode})<br/>\n`;
+  report += `Date: ${dateStr} &mdash; CWR Version: ${result.metadata.version}<br/>\n`;
+  report += `Records: ${result.records.length} processed<br/>\n<br/>\n`;
 
   for (const record of result.records) {
     const title = workTitles?.get(record.workId) ?? record.workId;

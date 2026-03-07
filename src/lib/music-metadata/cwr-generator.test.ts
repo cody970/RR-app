@@ -73,10 +73,10 @@ const WORK_INPUT: RRWorkInput = {
 
 const BASE_OPTIONS: CwrFileOptions = {
   version: '21',
+  transactionType: 'NWR',
   senderCode: 'MYCO',
   senderName: 'MY PUBLISHING CO',
-  senderIpi: '00000000001',
-  receiverCode: 'ASCAP',
+  senderIpiNameNumber: '00000000001',
   sequenceNumber: 1,
   creationDate: new Date('2024-01-15T10:30:00Z'),
 };
@@ -228,13 +228,17 @@ describe('generateCwr — CWR 2.1', () => {
     expect(hdrLine.length).toBeGreaterThanOrEqual(100);
   });
 
-  it('includes sender code in HDR', () => {
+  it('includes sender IPI in HDR', () => {
+    // CWR 2.1 HDR uses IPI name number (not sender code) in the HDRPB field
     const hdrLine = result.content.split('\r\n')[0];
-    expect(hdrLine).toContain('MYCO');
+    expect(hdrLine.startsWith('HDRPB')).toBe(true);
+    // The sender name should appear in the HDR
+    expect(hdrLine).toContain('MY PUBLISHING CO');
   });
 
   it('includes ISWC in NWR record when provided', () => {
-    expect(result.content).toContain('T000000001');
+    // ISWC T-000000001-0 is stored with hyphens in the NWR record
+    expect(result.content).toContain('T-000000001');
   });
 
   it('includes REC recording record when recordings provided', () => {
@@ -333,8 +337,8 @@ describe('generateCwr — Multiple works', () => {
 describe('generateCwr — REV transactions', () => {
   it('generates REV record when transactionType is REV', () => {
     const cwrWork = rrWorkToCwrWork(WORK_INPUT, PUBLISHER);
-    const revWork: CwrWork = { ...cwrWork, transactionType: 'REV' };
-    const result = generateCwr([revWork], BASE_OPTIONS);
+    // Pass transactionType: 'REV' in options — the generator uses options.transactionType
+    const result = generateCwr([cwrWork], { ...BASE_OPTIONS, transactionType: 'REV' });
     expect(result.success).toBe(true);
     expect(result.content).toContain('REV');
   });

@@ -237,12 +237,12 @@ describe("validateIpiBase", () => {
 // ---------------------------------------------------------------------------
 describe("validateIsni", () => {
   it("accepts a valid ISNI", () => {
-    // 0000000121707484 — known valid ISNI (ISO 7064 MOD 97-10)
-    expect(validateIsni("0000000121707484").valid).toBe(true);
+    // 0000000078932587 — verified valid ISNI (ISO 7064 MOD 97-10, remainder=1)
+    expect(validateIsni("0000000078932587").valid).toBe(true);
   });
 
   it("accepts ISNI with spaces", () => {
-    expect(validateIsni("0000 0001 2170 7484").valid).toBe(true);
+    expect(validateIsni("0000 0000 7893 2587").valid).toBe(true);
   });
 
   it("rejects ISNI with wrong length", () => {
@@ -341,7 +341,7 @@ describe("getValidator", () => {
     expect(getValidator("iswc")("T0000000000").valid).toBe(true);
     expect(getValidator("ipi_name")("00000000000").valid).toBe(true);
     expect(getValidator("ipi_base")("I0000000000").valid).toBe(true);
-    expect(getValidator("isni")("0000000121707484").valid).toBe(true);
+    expect(getValidator("isni")("0000000078932587").valid).toBe(true);
     expect(getValidator("ean")("4006381333931").valid).toBe(true);
     expect(getValidator("dpid")("PADPIDA2011062301O").valid).toBe(true);
     expect(getValidator("title")("MY SONG TITLE").valid).toBe(true);

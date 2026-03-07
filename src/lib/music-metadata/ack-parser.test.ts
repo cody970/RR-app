@@ -82,8 +82,9 @@ function buildAck30(records: Array<{
   date: string;
   status: string;
 }>): string {
-  // HDR for CWR 3.0 includes version "3.0000"
-  const hdr = `HDRSOASCAP ASCAP                                        20240115093000202401150000000000000003.0000`;
+  // HDR for CWR 3.0: HDRSO + senderCode(4) + senderName(45) + date(8) + time(6) + transmDate(8) + spaces(15) + version(6)
+  // Total: 3 + 2 + 4 + 45 + 8 + 6 + 8 + 15 + 6 = 97 chars
+  const hdr = `HDRSO010 ASCAP                                        20240115093000202401150000000000000003.0000`;
 
   const grh = `GRH0000000100000001WRK0000000000000000`;
 
@@ -330,31 +331,40 @@ describe('detectIswcConflicts', () => {
 
 describe('detectDuplicateIswcs', () => {
   it('returns empty array when no duplicates', () => {
-    const iswcMap = new Map([
-      ['WORK001', 'T-000000001-0'],
-      ['WORK002', 'T-000000002-0'],
+    // existingWorksByIswc: iswc -> workId (already in DB)
+    // extractedIswcs: workId -> iswc (from ACK file)
+    const existingByIswc = new Map([
+      ['t-000000001-0', 'WORK001'],
+      ['t-000000002-0', 'WORK002'],
     ]);
-    const duplicates = detectDuplicateIswcs(iswcMap);
+    const extracted = new Map([
+      ['WORK003', 'T-000000003-0'], // new work, new ISWC — no conflict
+    ]);
+    const duplicates = detectDuplicateIswcs(existingByIswc, extracted);
     expect(duplicates).toHaveLength(0);
   });
 
-  it('detects when two different works have the same ISWC', () => {
-    const iswcMap = new Map([
-      ['WORK001', 'T-000000001-0'],
-      ['WORK002', 'T-000000001-0'], // same ISWC — duplicate!
+  it('detects when extracted ISWC already belongs to a different work', () => {
+    // WORK002 in ACK gets ISWC that already belongs to WORK001 in DB
+    const existingByIswc = new Map([
+      ['t-000000001-0', 'WORK001'],
     ]);
-    const duplicates = detectDuplicateIswcs(iswcMap);
+    const extracted = new Map([
+      ['WORK002', 'T-000000001-0'], // same ISWC as WORK001 — duplicate!
+    ]);
+    const duplicates = detectDuplicateIswcs(existingByIswc, extracted);
     expect(duplicates.length).toBeGreaterThan(0);
   });
 
-  it('handles empty map', () => {
-    const duplicates = detectDuplicateIswcs(new Map());
+  it('handles empty maps', () => {
+    const duplicates = detectDuplicateIswcs(new Map(), new Map());
     expect(duplicates).toHaveLength(0);
   });
 
-  it('handles single entry', () => {
-    const iswcMap = new Map([['WORK001', 'T-000000001-0']]);
-    const duplicates = detectDuplicateIswcs(iswcMap);
+  it('handles single entry with no conflict', () => {
+    const existingByIswc = new Map<string, string>();
+    const extracted = new Map([['WORK001', 'T-000000001-0']]);
+    const duplicates = detectDuplicateIswcs(existingByIswc, extracted);
     expect(duplicates).toHaveLength(0);
   });
 });

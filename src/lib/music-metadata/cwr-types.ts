@@ -254,6 +254,8 @@ export interface CwrFileOptions {
 // ---------------------------------------------------------------------------
 
 export interface CwrGenerationResult {
+  /** Whether generation succeeded */
+  success: boolean;
   /** The full CWR file content (CRLF line endings) */
   content: string;
   /** Filename following CWR naming convention */
@@ -264,6 +266,8 @@ export interface CwrGenerationResult {
   version: CwrVersion;
   /** Transaction type used */
   transactionType: TransactionType;
+  /** Error message if success is false */
+  error?: string;
 }
 
 // ---------------------------------------------------------------------------

@@ -20,49 +20,58 @@ const prisma = new PrismaClient();
 async function main() {
   console.log('🌱 Seeding Society reference data...');
 
-  const societies = getSocietiesForSeed();
-  console.log(`   Found ${societies.length} societies to seed.`);
+  const rawSocieties = getSocietiesForSeed();
+  console.log(`   Found ${rawSocieties.length} societies to seed.`);
 
   let created = 0;
-  let updated = 0;
+  let skipped = 0;
 
-  for (const society of societies) {
-    const result = await prisma.society.upsert({
-      where: { tisN: society.tisN },
+  for (const s of rawSocieties) {
+    // getSocietiesForSeed() returns { code, name, country, label }
+    // Prisma Society model uses tisN as the unique field
+    const tisN = s.code;
+
+    if (!tisN) {
+      skipped++;
+      continue;
+    }
+
+    await prisma.society.upsert({
+      where: { tisN },
       update: {
-        name: society.name,
-        country: society.country ?? null,
-        label: society.label ?? null,
+        name: s.name,
+        country: s.country ?? null,
+        label: s.label ?? null,
       },
       create: {
-        tisN: society.tisN,
-        name: society.name,
-        country: society.country ?? null,
-        label: society.label ?? null,
+        tisN,
+        name: s.name,
+        country: s.country ?? null,
+        label: s.label ?? null,
       },
     });
 
-    // Prisma upsert doesn't directly tell us if it was create or update,
-    // so we track by checking if createdAt === updatedAt (within 1 second)
-    const isNew = Math.abs(result.createdAt.getTime() - result.updatedAt.getTime()) < 1000;
-    if (isNew) {
-      created++;
-    } else {
-      updated++;
-    }
+    created++;
   }
 
-  console.log(`   ✅ Seeded ${created} new societies, updated ${updated} existing.`);
+  console.log(`   ✅ Upserted ${created} societies (skipped ${skipped} with missing code).`);
 
   // Log a few well-known societies for verification
-  const wellKnown = ['010', '013', '172', '281', '282'];
+  const wellKnown = [
+    { code: '010', name: 'ASCAP' },
+    { code: '013', name: 'BMI' },
+    { code: '172', name: 'SESAC' },
+    { code: '281', name: 'MLC' },
+    { code: '282', name: 'SoundExchange' },
+  ];
+
   console.log('\n   Well-known societies verification:');
-  for (const code of wellKnown) {
+  for (const { code, name } of wellKnown) {
     const society = await prisma.society.findUnique({ where: { tisN: code } });
     if (society) {
-      console.log(`   [${society.tisN}] ${society.name} (${society.country ?? 'N/A'})`);
+      console.log(`   ✓ [${society.tisN}] ${society.name} (${society.country ?? 'N/A'})`);
     } else {
-      console.warn(`   ⚠️  Society code ${code} not found after seed!`);
+      console.warn(`   ⚠️  ${name} (code ${code}) not found after seed!`);
     }
   }
 }
