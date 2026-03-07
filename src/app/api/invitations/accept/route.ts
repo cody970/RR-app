@@ -84,7 +84,15 @@ export async function GET(req: Request) {
  */
 export async function POST(req: Request) {
     try {
-        const body = await req.json().catch(() => ({}));
+        let body: unknown;
+        try {
+            body = await req.json();
+        } catch {
+            return NextResponse.json(
+                { error: "Invalid JSON in request body" },
+                { status: 400 }
+            );
+        }
         const parsed = acceptInvitationSchema.safeParse(body);
 
         if (!parsed.success) {

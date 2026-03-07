@@ -76,8 +76,19 @@ export const authOptions: NextAuthOptions = {
         async signIn({ user, account, profile }) {
             if (account?.provider === 'google' || account?.provider === 'github') {
                 // Ensure the OAuth provider has verified the user's email address
-                // Type assertion needed because profile shape varies by provider
-                const isVerified = profile && ('email_verified' in profile ? (profile as { email_verified?: boolean }).email_verified : true);
+                // Google provides email_verified; GitHub verifies emails by default if primary
+                // For security, default to false if the field is missing
+                let isVerified = false;
+                if (profile) {
+                    if ('email_verified' in profile) {
+                        // Google explicitly provides email_verified
+                        isVerified = (profile as { email_verified?: boolean }).email_verified === true;
+                    } else if (account.provider === 'github' && user.email) {
+                        // GitHub only returns email if it's verified on their end
+                        // So having an email from GitHub means it's verified
+                        isVerified = true;
+                    }
+                }
 
                 if (!isVerified) {
                     logger.warn({

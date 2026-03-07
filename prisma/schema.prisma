@@ -78,7 +78,10 @@ model OrgInvitation {
   createdAt     DateTime     @default(now())
   acceptedAt    DateTime?    // When the invitation was accepted
 
-  @@unique([email, orgId]) // One active invitation per email per org
+  // NOTE: This unique constraint prevents duplicate PENDING invitations for the same email/org.
+  // The API layer checks status and expiration before creating new invitations.
+  // Multiple invitations over time are allowed (after acceptance, expiration, or revocation).
+  @@unique([email, orgId])
   @@index([token])
   @@index([orgId, status])
   @@index([email, status])
