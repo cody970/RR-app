@@ -18,6 +18,8 @@ model Organization {
   statements    Statement[]
   findings      Finding[]
   tasks         Task[]
+  retroactiveClaims RetroactiveClaim[]
+  splitSignoffs SplitSignoff[]
   royaltyPeriods RoyaltyPeriod[]
   auditLogs     AuditLog[]
   activities    Activity[]
@@ -136,6 +138,7 @@ model Work {
   opportunities LicenseOpportunity[]
   licenseRequests LicenseRequest[]
   licenses      License[]
+  splitSignoffs SplitSignoff[]
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
 
@@ -296,6 +299,8 @@ model Finding {
   organization    Organization @relation(fields: [orgId], references: [id])
   orgId           String
   tasks           Task[]
+  registrationGap RegistrationGap? @relation(fields: [gapId], references: [id])
+  gapId           String?
   createdAt       DateTime     @default(now())
 
   @@index([orgId, estimatedImpact])
@@ -504,24 +509,6 @@ model SyncPlacement {
 
   @@index([orgId])
   @@index([workId])
-}
-
-model Finding {
-  id              String           @id @default(cuid())
-  organizationId  String
-  type            FindingType      @default(STATEMENT_UNMATCHED_WORK)
-  status          FindingStatus    @default(OPEN)
-  severity        FindingSeverity  @default(MEDIUM)
-  createdAt       DateTime         @default(now())
-  updatedAt       DateTime         @updatedAt
-  description     String?
-  estimatedImpact Float?           @default(0)
-  metadataFix     String?
-  source          String?
-  organization    Organization     @relation(fields: [organizationId], references: [id])
-  tasks           Task[]
-  registrationGap RegistrationGap? @relation(fields: [gapId], references: [id])
-  gapId           String?
 }
 
 model CatalogScan {

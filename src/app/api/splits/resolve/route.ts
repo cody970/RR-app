@@ -1,24 +1,57 @@
 import { NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client";
+import { db } from "@/lib/infra/db";
+import { requireAuth } from "@/lib/auth/get-session";
+import { checkRateLimit } from "@/lib/infra/rate-limit";
+import { z } from "zod";
+import { ApiErrors } from "@/lib/api/error-response";
 
-const prisma = new PrismaClient();
+const resolveSchema = z.object({
+    token: z.string().min(1),
+    action: z.enum(["APPROVE", "DISPUTE"]),
+    reason: z.string().optional(),
+});
 
 export async function POST(req: Request) {
     try {
-        const body = await req.json().catch(() => ({}));
-        const { token, action, reason } = body; // action = "APPROVE" or "DISPUTE"
+        const { session } = await requireAuth();
+        const userEmail = session.user?.email?.toLowerCase();
 
-        if (!token || !action) {
-            return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
+        const body = await req.json().catch(() => ({}));
+        const parsed = resolveSchema.safeParse(body);
+
+        if (!parsed.success) {
+            return ApiErrors.BadRequest("Missing or invalid required fields", parsed.error.flatten());
         }
 
-        const signoff = await prisma.splitSignoff.findUnique({
+        const { token, action, reason } = parsed.data;
+
+        // Rate limit by IP to prevent brute-force token guessing
+        const ipAddress = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim()
+            || req.headers.get("remote-addr")
+            || "unknown";
+
+        const rateCheck = await checkRateLimit({
+            key: `split-resolve:${ipAddress}`,
+            limit: 10,
+            windowMs: 60_000,
+        });
+
+        if (!rateCheck.success) {
+            return NextResponse.json({ error: "Too many requests. Please try again later." }, { status: 429 });
+        }
+
+        const signoff = await db.splitSignoff.findUnique({
             where: { token },
             include: { work: true }
         });
 
         if (!signoff) {
             return NextResponse.json({ error: "Invalid link" }, { status: 404 });
+        }
+
+        // Verify that the logged-in user's email matches the signoff target email
+        if (userEmail !== signoff.targetEmail.toLowerCase()) {
+            return NextResponse.json({ error: "You are not authorized to resolve this split request. Please log in with the correct account." }, { status: 403 });
         }
 
         if (signoff.status !== "PENDING") {
@@ -29,9 +62,11 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: "This link has expired." }, { status: 400 });
         }
 
-        const ipAddress = req.headers.get("x-forwarded-for") || req.headers.get("remote-addr") || "unknown";
+        if (action === "DISPUTE" && !reason?.trim()) {
+            return NextResponse.json({ error: "A reason is required when disputing a split." }, { status: 400 });
+        }
 
-        const updated = await prisma.splitSignoff.update({
+        const updated = await db.splitSignoff.update({
             where: { token },
             data: {
                 status: action === "APPROVE" ? "APPROVED" : "DISPUTED",
@@ -41,7 +76,6 @@ export async function POST(req: Request) {
             }
         });
 
-        // If approved, in the future we might automatically add the WorkWriter to the DB here.
         if (action === "APPROVE") {
             console.log(`[Success] Split of ${signoff.proposedSplit}% on work ${signoff.work.title} officially approved by ${signoff.writerName}.`);
         } else {
@@ -49,11 +83,9 @@ export async function POST(req: Request) {
         }
 
         return NextResponse.json({ success: true, signoff: updated });
-    } catch (error: any) {
+    } catch (error: unknown) {
         console.error("Error resolving split request:", error);
-        return NextResponse.json(
-            { error: error.message || "Failed to resolve split request" },
-            { status: 500 }
-        );
+        const message = error instanceof Error ? error.message : "Failed to resolve split request";
+        return NextResponse.json({ error: message }, { status: 500 });
     }
 }

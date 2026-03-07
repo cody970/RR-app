@@ -76,8 +76,12 @@ function padLeft(str: string, len: number): string {
 
 /** Format a share value (0-100) to 5-char CWR format (implied 2 decimal places) */
 function formatShare(share: number): string {
-    const scaled = Math.round(share * 100);
-    return padLeft(String(scaled), 5);
+    // CWR v2.2 expects shares up to 100.00% (represented as 10000 in a 5-char field).
+    // ASCAP, BMI, and other major societies use a "100/100" or "200% total" system
+    // where writer and publisher shares each sum to 100%.
+    // Since input shares are out of 100% total, we must scale them for CWR output.
+    const scaled = Math.round(share * 2 * 100);
+    return padLeft(String(Math.min(scaled, 10000)), 5);
 }
 
 /** Format date as YYYYMMDD */
@@ -151,16 +155,6 @@ function generateNWR(
 
 /**
  * Generate SPU (Publisher Control) record.
- *   Pos 0-2:   Record Type (3)
- *   Pos 3-5:   Transaction Seq (3)
- *   Pos 6-13:  Record Seq (8)
- *   Pos 14-22: Publisher IP# (9)
- *   Pos 23-67: Publisher Name (45)
- *   Pos 68-76: IPI Name# (9)
- *   Pos 77-79: PR Society (3)
- *   Pos 80-84: PR Share (5, implied 2 decimal)
- *   Pos 85-89: MR Share (5)
- *   Pos 90-91: Publisher Type (2)
  */
 function generateSPU(
     transactionSeq: number,
@@ -181,6 +175,26 @@ function generateSPU(
         formatShare(publisher.prShare) +
         formatShare(publisher.mrShare ?? publisher.prShare) +
         padRight(publisher.role, 2)
+    );
+}
+
+/**
+ * Generate SPT (Publisher Territory) record.
+ */
+function generateSPT(
+    transactionSeq: number,
+    recordSeq: number,
+    publisher: CwrPublisherInput
+): string {
+    return (
+        "SPT" +
+        padLeft(String(transactionSeq), 3) +
+        padLeft(String(recordSeq), 8) +
+        "2136" + // World
+        formatShare(publisher.prShare) +
+        formatShare(publisher.mrShare ?? publisher.prShare) +
+        formatShare(100) + // SR Share
+        "I"
     );
 }
 
@@ -270,10 +284,14 @@ export function generateCwrFile(
         lines.push(generateNWR(transactionSeq, recordSeq, work));
         totalRecords++;
 
-        // SPU records for each publisher
+        // SPU records for each publisher + accompanying SPT
         for (const publisher of work.publishers) {
             recordSeq++;
             lines.push(generateSPU(transactionSeq, recordSeq, publisher));
+            totalRecords++;
+
+            recordSeq++;
+            lines.push(generateSPT(transactionSeq, recordSeq, publisher));
             totalRecords++;
         }
 
@@ -293,47 +311,51 @@ export function generateCwrFile(
 
 /**
  * Generate a CWR file with a default co-publisher setup.
- * Automatically adds the RoyaltyRadar co-publisher entity at the specified split.
- *
- * @param works - Works to register
- * @param publisherName - User's publisher name
- * @param publisherIpi - User's publisher IPI
- * @param coPublisherSplit - Co-publisher share (default 5%)
- * @param options - CWR file options
+ * Automatically adds the RoyaltyRadar co-publisher entity by splitting the specified publisher's share.
  */
 export function generateCwrWithCoPublisher(
     works: CwrWorkInput[],
-    publisherName: string,
-    publisherIpi: string,
+    targetPublisherName: string,
     coPublisherSplit: number = 5,
     options: CwrFileOptions
 ): string {
-    const artistShare = 100 - coPublisherSplit;
+    const enrichedWorks = works.map((work) => {
+        const originalPublishers = work.publishers && work.publishers.length > 0
+            ? work.publishers
+            : [{
+                name: targetPublisherName,
+                ipiNameNumber: "000000000",
+                role: "E",
+                prAffiliation: "ASCAP",
+                prShare: 50.0
+            }];
 
-    const enrichedWorks = works.map((work) => ({
-        ...work,
-        publishers: [
-            // Original publisher (the artist/client)
-            {
-                name: publisherName,
-                ipiNameNumber: publisherIpi,
-                role: "E" as const, // Original publisher
-                prAffiliation: work.publishers[0]?.prAffiliation || "ASCAP",
-                prShare: artistShare / 2, // Publisher gets half of their share
-                mrShare: artistShare / 2,
-            },
-            // Co-publisher (RoyaltyRadar / admin entity)
-            {
-                name: "RoyaltyRadar Publishing",
-                ipiNameNumber: process.env.ROYALTYRADAR_IPI || "",
-                role: "AM" as const, // Admin publisher
-                prAffiliation:
-                    work.publishers[0]?.prAffiliation || "ASCAP",
-                prShare: coPublisherSplit / 2,
-                mrShare: coPublisherSplit / 2,
-            },
-        ],
-    }));
+        const newPublishers: CwrPublisherInput[] = [];
+        for (const p of originalPublishers) {
+            if (p.name === targetPublisherName || originalPublishers.length === 1) {
+                const artistShare = (p.prShare * (100 - coPublisherSplit)) / 100;
+                const radarShare = (p.prShare * coPublisherSplit) / 100;
+
+                newPublishers.push({
+                    ...p,
+                    prShare: artistShare,
+                    mrShare: p.mrShare !== undefined ? (p.mrShare * (100 - coPublisherSplit)) / 100 : artistShare
+                });
+
+                newPublishers.push({
+                    name: "RoyaltyRadar Publishing",
+                    ipiNameNumber: process.env.ROYALTYRADAR_IPI || "000000000",
+                    role: "AM",
+                    prAffiliation: p.prAffiliation,
+                    prShare: radarShare,
+                    mrShare: p.mrShare !== undefined ? (p.mrShare * coPublisherSplit) / 100 : radarShare
+                });
+            } else {
+                newPublishers.push(p);
+            }
+        }
+        return { ...work, publishers: newPublishers };
+    });
 
     return generateCwrFile(enrichedWorks, options);
 }

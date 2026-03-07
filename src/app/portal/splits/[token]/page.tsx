@@ -1,11 +1,8 @@
-import { PrismaClient } from "@prisma/client";
+import { db as prisma } from "@/lib/infra/db";
 import { notFound } from "next/navigation";
 import { Card, CardHeader, CardTitle, CardContent, CardDescription, CardFooter } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Music, CheckCircle2, AlertCircle } from "lucide-react";
 import SplitResolutionForm from "./SplitResolutionForm";
-
-const prisma = new PrismaClient();
 
 export default async function SplitResolutionPage({
     params

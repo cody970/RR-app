@@ -1,6 +1,6 @@
 /**
  * CWR (Common Works Registration) File Parser
- * 
+ *
  * Parses fixed-width CWR text files used by CISAC/PRO societies.
  * Supports CWR v2.1 and v2.2 record types:
  *   - HDR: Header (file metadata)

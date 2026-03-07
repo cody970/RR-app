@@ -76,7 +76,8 @@ export const authOptions: NextAuthOptions = {
                         data: {
                             email: user.email!,
                             passwordHash: "$2b$10$OAUTH_USER_SENTINEL_DO_NOT_USE_FOR_LOGIN",
-                            role: "OWNER",
+                            // Default to VIEWER; can be upgraded to ADMIN/OWNER after verification/setup
+                            role: "VIEWER",
                             orgId: org.id
                         }
                     });

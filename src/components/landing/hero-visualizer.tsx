@@ -2,7 +2,7 @@
 
 import { useRef, useMemo } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
-import { Environment, CameraControls, Float, Sphere, MeshDistortMaterial } from "@react-three/drei";
+import { Environment, Float, Sphere, MeshDistortMaterial } from "@react-three/drei";
 import * as THREE from "three";
 
 function SoundWaves() {

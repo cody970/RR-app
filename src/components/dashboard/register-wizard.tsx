@@ -1,10 +1,7 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
-import {
-    X, Search, ChevronRight, ChevronLeft, Loader2, Download, Send,
-    CheckCircle2, Sparkles, AlertTriangle, Wand2, RefreshCw,
-} from "lucide-react";
+import { useState, useEffect } from "react";
+import { X, Search, ChevronRight, ChevronLeft, Loader2, Download, Send, CheckCircle2, Sparkles, AlertTriangle, Wand2, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";

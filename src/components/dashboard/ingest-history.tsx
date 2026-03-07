@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { FileText, CheckCircle2, XCircle, Clock, ChevronDown, AlertCircle } from "lucide-react";
+import { CheckCircle2, XCircle, Clock, ChevronDown, AlertCircle } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import React from "react";
 

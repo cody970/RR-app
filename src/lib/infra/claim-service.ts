@@ -1,6 +1,4 @@
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import { db as prisma } from "@/lib/infra/db";
 
 export async function generateRetroactiveClaim(gapId: string, orgId: string, targetSociety: string) {
     // Fetch the gap and related data
@@ -40,15 +38,26 @@ export async function generateRetroactiveClaim(gapId: string, orgId: string, tar
 
     const currentDate = new Date().toLocaleDateString('en-US');
 
+    let societyContext = "";
+    if (targetSociety === "ASCAP") {
+        societyContext = "under the ASCAP Member Access agreement for historical performance adjustment.";
+    } else if (targetSociety === "BMI") {
+        societyContext = "pursuant to the BMI royalty distribution schedule and adjustment policy.";
+    } else if (targetSociety === "MLC") {
+        societyContext = "under the Mechanical Licensing Collective (MLC) retroactive distribution rules (Black Box royalties).";
+    } else {
+        societyContext = `permissible by ${targetSociety}.`;
+    }
+
     // Generate a basic LOD (Letter of Direction) template
     const lodContent = `LETTER OF DIRECTION - RETROACTIVE ROYALTY CLAIM
 Date: ${currentDate}
 To: ${targetSociety} Registration & Claims Department
 From: ${orgName}
 
-Subject: Retroactive Royalty Claim for Unregistered Work
+Subject: Retroactive Royalty Allocation Request for Unregistered Work
 
-We are writing to officially claim retroactive royalties for the musical work detailed below, for all available historical periods up to the statutory limit (typically 2-3 years) permissible by ${targetSociety}.
+We are writing to officially claim retroactive royalties for the musical work detailed below, for all available historical periods ${societyContext}
 
 WORK DETAILS:
 Title: ${title}

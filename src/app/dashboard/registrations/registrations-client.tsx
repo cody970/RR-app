@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Download, Upload, Plus, FileText, Clock, CheckCircle, AlertCircle, Building2 } from "lucide-react";
+import { Upload, Plus, FileText, Clock, CheckCircle, Building2 } from "lucide-react";
 import RegisterWizard from "@/components/dashboard/register-wizard";
 
 interface Registration {

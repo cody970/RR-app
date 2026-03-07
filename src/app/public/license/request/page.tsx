@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
-import { Search, Music, Clock, User, Building2, Send, Loader2, FileText, Globe, CheckCircle2 } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Search, Music, User, Send, Loader2, FileText, Globe, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 
@@ -35,7 +35,7 @@ export default function PublicLicenseRequestPage() {
         const timer = setTimeout(async () => {
             setSearching(true);
             try {
-                // Fetch public works (needs a dedicated public endpoint in reality, 
+                // Fetch public works (needs a dedicated public endpoint in reality,
                 // but for demo we can mock this or use an existing one if unprotected)
                 const res = await fetch(`/api/catalog?search=${encodeURIComponent(searchTerm)}`);
                 if (res.ok) {

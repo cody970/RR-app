@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, Music, Shield, Zap, Search, FileCheck, DollarSign, Upload, ScanSearch, TrendingUp, Github, Twitter, Linkedin } from "lucide-react";
+import { ArrowRight, Music, Shield, Zap, FileCheck, Upload, ScanSearch, TrendingUp, Github, Twitter, Linkedin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 import { HeroVisualizer } from "@/components/landing/hero-visualizer";

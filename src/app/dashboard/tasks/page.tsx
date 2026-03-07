@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { CheckCircle2, Clock, Inbox, Play } from "lucide-react";
+import { CheckCircle2, Inbox, Play } from "lucide-react";
 
 export default function TasksPage() {
     const [tasks, setTasks] = useState<any[]>([]);

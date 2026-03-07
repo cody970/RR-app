@@ -6,18 +6,8 @@
  */
 
 import { db } from "@/lib/infra/db";
-import {
-    submitWorkRegistration,
-    submitRecordingRegistration,
-    convertGapToRegistration,
-    checkSubmissionStatus,
-} from "@/lib/clients/tuneregistry-client";
-import {
-    generateCwrFile,
-    generateCwrWithCoPublisher,
-    type CwrWorkInput,
-    type CwrFileOptions,
-} from "@/lib/cwr/cwr-generator";
+import { submitWorkRegistration, convertGapToRegistration, checkSubmissionStatus } from "@/lib/clients/tuneregistry-client";
+import { generateCwrFile, generateCwrWithCoPublisher } from "@/lib/cwr/cwr-generator";
 
 // ---------- Types ----------
 

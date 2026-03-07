@@ -44,8 +44,9 @@ export async function PATCH(
         });
 
         return NextResponse.json(finding);
-    } catch (err: any) {
-        console.error("Recovery update failed:", err);
-        return new Response(err.message, { status: 500 });
+    } catch (error: unknown) {
+        console.error("Recovery update failed:", error);
+        const message = error instanceof Error ? error.message : "Internal Server Error";
+        return NextResponse.json({ error: message }, { status: 500 });
     }
 }

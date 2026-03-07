@@ -2,24 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import {
-    LayoutDashboard,
-    Library,
-    UploadCloud,
-    ScanSearch,
-    SearchCheck,
-    FileCheck2,
-    DollarSign,
-    Briefcase,
-    Workflow,
-    Bot,
-    FileText,
-    Shield,
-    Users,
-    CreditCard,
-    LogOut,
-    Wallet,
-} from "lucide-react";
+import { LayoutDashboard, Library, UploadCloud, ScanSearch, SearchCheck, FileCheck2, DollarSign, Briefcase, Workflow, Bot, FileText, Shield, Users, CreditCard, LogOut, Wallet } from "lucide-react";
 import { signOut } from "next-auth/react";
 
 const navSections = [

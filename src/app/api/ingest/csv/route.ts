@@ -2,25 +2,29 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth/auth";
 import { db } from "@/lib/infra/db";
-import { fileSchemas, TemplateType } from "@/lib/reports/templates";
+import { fileSchemas, TemplateType, industryTemplates, IndustrySource } from "@/lib/reports/templates";
+import { autoMapHeaders, applyMapping } from "@/lib/ingest/mapping-utils";
 import Papa from "papaparse";
 import { checkRateLimit } from "@/lib/infra/rate-limit";
 import { validatePermission } from "@/lib/auth/rbac";
 import { logger } from "@/lib/infra/logger";
+import { ApiErrors } from "@/lib/api/error-response";
 
 export async function POST(req: Request) {
     try {
         const session = await getServerSession(authOptions);
-        if (!session?.user) return new Response("Unauthorized", { status: 401 });
+        if (!session?.user) return ApiErrors.Unauthorized();
 
         const orgId = session.user.orgId;
         const role = session.user.role;
+
+        if (!orgId) return ApiErrors.Forbidden("No organization linked to account");
 
         // RBAC Check
         try {
             validatePermission(role, "CATALOG_EDIT");
         } catch (e: any) {
-            return new NextResponse(e.message, { status: 403 });
+            return ApiErrors.Forbidden(e.message);
         }
 
         // Reusable Rate Limiting
@@ -31,23 +35,32 @@ export async function POST(req: Request) {
         });
 
         if (!limitCheck.success) {
-            return new Response("Too Many Requests - Import Rate Limit Exceeded", { status: 429 });
+            return ApiErrors.TooManyRequests("Import Rate Limit Exceeded");
         }
 
-        const { type, csvData } = await req.json() as { type: TemplateType; csvData: string };
+        const body = await req.json().catch(() => ({}));
+        const { type, csvData, sourceTemplate, customMapping } = body as {
+            type: TemplateType;
+            csvData: string;
+            sourceTemplate?: IndustrySource;
+            customMapping?: Record<string, string>;
+        };
+
+        if (!type || !csvData) {
+            return ApiErrors.BadRequest("Missing required fields: type and csvData");
+        }
 
         // Limit CSV data size (approx 10MB assuming UTF-8)
         if (csvData.length > 10 * 1024 * 1024) {
-            return new Response("CSV data too large (max 10MB)", { status: 400 });
+            return ApiErrors.BadRequest("CSV data too large (max 10MB)");
         }
 
         if (!fileSchemas[type]) {
-            return new Response("Invalid template type", { status: 400 });
+            return ApiErrors.BadRequest("Invalid template type");
         }
 
         // Basic CSV Injection Protection
-        // Sanitizes cells starting with =, +, -, or @ by prefixing with a single quote
-        const sanitizedCsv = csvData.split('\n').map(line =>
+        const sanitizedData = csvData.split('\n').map(line =>
             line.split(',').map(cell => {
                 const trimmed = cell.trim();
                 if (['=', '+', '-', '@'].some(char => trimmed.startsWith(char))) {
@@ -57,20 +70,40 @@ export async function POST(req: Request) {
             }).join(',')
         ).join('\n');
 
-        const { data, errors } = Papa.parse(sanitizedCsv, { header: true, skipEmptyLines: true });
+        // Auto-detect delimiter (CSV or TSV)
+        const { data, errors: parseErrors, meta } = Papa.parse(sanitizedData, {
+            header: true,
+            skipEmptyLines: 'greedy',
+            dynamicTyping: true
+        });
+
+        if (parseErrors.length > 0 && data.length === 0) {
+            return ApiErrors.BadRequest("Failed to parse CSV", parseErrors);
+        }
+
+        // Determine Mapping
+        let mapping = customMapping;
+        if (!mapping && sourceTemplate && industryTemplates[sourceTemplate]) {
+            mapping = industryTemplates[sourceTemplate].mapping;
+        }
+        if (!mapping) {
+            mapping = autoMapHeaders(meta.fields || [], type);
+        }
 
         const validRows: any[] = [];
-        const validationErrors: any[] = [];
+        const validationErrors: { row: number; errors: string[] }[] = [];
 
-        data.forEach((row: any, index) => {
-            // 1. Key Normalization (e.g., "Work Title" -> "WorkTitle")
-            const normalizedRow: any = {};
-            Object.keys(row).forEach(key => {
+        data.forEach((row: any, index: number) => {
+            // Apply Mapping
+            const mappedRow = applyMapping(row, mapping!);
+
+            // Normalize Keys (strip whitespace)
+            const normalizedRow: Record<string, any> = {};
+            Object.keys(mappedRow).forEach(key => {
                 const cleanKey = key.trim().replace(/\s+/g, "");
-                normalizedRow[cleanKey] = row[key];
+                normalizedRow[cleanKey] = mappedRow[key];
             });
 
-            // 2. Perform Zod Schema Validation
             const parsed = fileSchemas[type].safeParse(normalizedRow);
             if (parsed.success) {
                 validRows.push(parsed.data);
@@ -82,7 +115,7 @@ export async function POST(req: Request) {
             }
         });
 
-        // 3. Create IngestJob record (PENDING)
+        // 3. Create IngestJob record
         const ingestJob = await db.ingestJob.create({
             data: {
                 type,
@@ -93,12 +126,15 @@ export async function POST(req: Request) {
             }
         });
 
-        // Ingest what's valid
+        // 4. Ingest with Batching
+        const BATCH_SIZE = 500;
         try {
-            if (validRows.length > 0) {
+            for (let i = 0; i < validRows.length; i += BATCH_SIZE) {
+                const batch = validRows.slice(i, i + BATCH_SIZE);
+
                 await db.$transaction(async (tx: any) => {
                     if (type === "Works") {
-                        for (const row of validRows) {
+                        for (const row of batch) {
                             await tx.work.upsert({
                                 where: { iswc_orgId: { iswc: row.ISWC || `MOCK-${Date.now()}-${Math.random()}`, orgId } },
                                 update: { title: row.Title },
@@ -106,7 +142,7 @@ export async function POST(req: Request) {
                             });
                         }
                     } else if (type === "Recordings") {
-                        for (const row of validRows) {
+                        for (const row of batch) {
                             await tx.recording.upsert({
                                 where: { isrc_orgId: { isrc: row.ISRC || `MOCK-${Date.now()}-${Math.random()}`, orgId } },
                                 update: { title: row.Title, durationSec: row.DurationSec },
@@ -114,45 +150,38 @@ export async function POST(req: Request) {
                             });
                         }
                     } else if (type === "Writers") {
-                        for (const row of validRows) {
+                        for (const row of batch) {
                             const work = await tx.work.findFirst({
                                 where: { title: row.WorkTitle, orgId }
                             });
                             if (work) {
                                 const writer = await tx.writer.upsert({
-                                    where: {
-                                        ipiCae_orgId: { ipiCae: row.IPI || `MOCK-${Date.now()}`, orgId }
-                                    },
+                                    where: { ipiCae_orgId: { ipiCae: row.IPI || `MOCK-${Date.now()}`, orgId } },
                                     update: { name: row.Name },
                                     create: { name: row.Name, ipiCae: row.IPI, orgId },
                                 });
 
                                 await tx.workWriter.upsert({
-                                    where: {
-                                        workId_writerId: { workId: work.id, writerId: writer.id }
-                                    },
-                                    update: {
-                                        splitPercent: row.SplitPercent,
-                                        role: row.Role
-                                    },
-                                    create: {
-                                        workId: work.id,
-                                        writerId: writer.id,
-                                        splitPercent: row.SplitPercent,
-                                        role: row.Role
-                                    },
+                                    where: { workId_writerId: { workId: work.id, writerId: writer.id } },
+                                    update: { splitPercent: row.SplitPercent, role: row.Role },
+                                    create: { workId: work.id, writerId: writer.id, splitPercent: row.SplitPercent, role: row.Role },
                                 });
                             }
                         }
                     } else if (type === "Statement Lines") {
-                        const statementMap = new Map();
-                        for (const row of validRows) {
+                        const statementMap = new Map<string, string>();
+                        for (const row of batch) {
                             const key = `${row.Source}-${row.Period}`;
                             if (!statementMap.has(key)) {
-                                const statement = await tx.statement.create({
-                                    data: { source: row.Source, period: row.Period, orgId }
+                                let statement = await tx.statement.findFirst({
+                                    where: { source: row.Source, period: row.Period, orgId }
                                 });
-                                statementMap.set(key, statement.id);
+                                if (!statement) {
+                                    statement = await tx.statement.create({
+                                        data: { source: row.Source, period: row.Period, orgId }
+                                    });
+                                }
+                                statementMap.set(key, statement!.id);
                             }
                             const statementId = statementMap.get(key);
                             await tx.statementLine.create({
@@ -167,8 +196,13 @@ export async function POST(req: Request) {
                             });
                         }
                     } else if (type === "DSP Report") {
-                        for (const row of validRows) {
-                            const perStreamRate = row.Streams > 0 ? row.Revenue / row.Streams : 0;
+                        for (const row of batch) {
+                            // Fix financial math: Avoid direct float division where possible
+                            // Store revenue in cents/micros if needed, but here we just ensure a safe calculation
+                            const revenueInMicros = Math.round(row.Revenue * 1000000);
+                            const perStreamRateMicros = row.Streams > 0 ? Math.floor(revenueInMicros / row.Streams) : 0;
+                            const perStreamRate = perStreamRateMicros / 1000000;
+
                             await tx.dspReport.create({
                                 data: {
                                     source: row.Source,
@@ -206,31 +240,30 @@ export async function POST(req: Request) {
                             });
                         }
                     }
-
-                    // Activity & Audit Logs
-                    await tx.activity.create({
-                        data: {
-                            action: `CATALOG_IMPORTED`,
-                            details: `Imported ${validRows.length} ${type} records (Job: ${ingestJob.id})`,
-                            orgId,
-                            userId: session.user.id,
-                            resourceType: "Catalog",
-                        }
-                    });
-
-                    await tx.auditLog.create({
-                        data: {
-                            action: `IMPORTED_${type.toUpperCase()}`,
-                            details: JSON.stringify({ valid: validRows.length, errors: validationErrors.length, jobId: ingestJob.id }),
-                            evidenceHash: "import-job-" + ingestJob.id,
-                            orgId,
-                            userId: session.user.id
-                        }
-                    });
                 });
             }
 
-            // Update Job Status
+            // Post-Ingest
+            await db.activity.create({
+                data: {
+                    action: `CATALOG_IMPORTED`,
+                    details: `Imported ${validRows.length} ${type} records (Job: ${ingestJob.id})`,
+                    orgId,
+                    userId: session.user.id,
+                    resourceType: "Catalog",
+                }
+            });
+
+            await db.auditLog.create({
+                data: {
+                    action: `IMPORTED_${type.toUpperCase()}`,
+                    details: JSON.stringify({ valid: validRows.length, errors: validationErrors.length, jobId: ingestJob.id, mappingUsed: !!mapping }),
+                    evidenceHash: "import-job-" + ingestJob.id,
+                    orgId,
+                    userId: session.user.id
+                }
+            });
+
             await db.ingestJob.update({
                 where: { id: ingestJob.id },
                 data: {
@@ -245,20 +278,22 @@ export async function POST(req: Request) {
                 success: true,
                 jobId: ingestJob.id,
                 imported: validRows.length,
-                errors: validationErrors
+                errors: validationErrors,
+                mappingUsed: mapping
             });
 
         } catch (txnError: any) {
+            const message = txnError?.message || "Internal Server Error during ingestion";
             logger.error({ err: txnError, jobId: ingestJob.id }, "Ingestion transaction failed");
             await db.ingestJob.update({
                 where: { id: ingestJob.id },
-                data: { status: "FAILED", errors: txnError.message }
-            });
-            throw txnError;
+                data: { status: "FAILED", errors: message }
+            }).catch(() => { });
+            return ApiErrors.Internal(message);
         }
 
-    } catch (err: any) {
-        logger.error({ err }, "Ingestion route error");
-        return new Response(err.message, { status: 500 });
+    } catch (error: any) {
+        logger.error({ err: error }, "Ingestion route error");
+        return ApiErrors.Internal(error?.message || "An unexpected error occurred during ingestion");
     }
 }

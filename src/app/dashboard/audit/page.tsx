@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
-import { AlertTriangle, CheckCircle, FileWarning, Play, RefreshCw, Download, Coins, ShieldAlert, CheckCircle2, History as HistoryIcon, Share, Search, Filter, X, CheckSquare } from "lucide-react";
+import { AlertTriangle, CheckCircle, FileWarning, Play, RefreshCw, Download, Coins, ShieldAlert, History as HistoryIcon, Share, Search, Filter, X, CheckSquare } from "lucide-react";
 import { useToast } from "@/components/ui/toast-provider";
 import { Finding } from "@/types";
 import { exportToCSV, exportToJSON, generateDisputeLetter } from "@/lib/reports/export-utils";
@@ -10,6 +10,13 @@ import { generateAuditPDF } from "@/lib/reports/pdf-utils";
 import { useSession } from "next-auth/react";
 import { TaskBoard } from "@/components/dashboard/task-board";
 import { LayoutGrid, List as ListIcon, Sparkles } from "lucide-react";
+
+// ---------- Types ----------
+
+interface MetadataFix {
+    field: string;
+    value: any;
+}
 
 export default function AuditEnginePage() {
     const [findings, setFindings] = useState<Finding[]>([]);
@@ -64,15 +71,20 @@ export default function AuditEnginePage() {
                 toast.success(`Bulk action completed on ${ids.length} findings`);
                 setSelected(new Set());
                 await fetchFindings();
+            } else {
+                const data = await res.json().catch(() => ({}));
+                toast.error(data.error || "Bulk action failed");
             }
-        } catch {
-            toast.error("Bulk action failed");
+        } catch (e) {
+            console.error(e);
+            toast.error("Bulk action failed due to network error");
         }
     };
 
     const fetchFindings = useCallback(async (page = 1) => {
         try {
             setLoading(true);
+            setError("");
             const params = new URLSearchParams({ page: String(page), limit: "50" });
             if (filterType) params.set("type", filterType);
             if (filterSeverity) params.set("severity", filterSeverity);
@@ -84,9 +96,13 @@ export default function AuditEnginePage() {
                 setFindings(data.findings);
                 setPagination(data.pagination);
                 setSelected(new Set());
+            } else {
+                const data = await res.json().catch(() => ({}));
+                setError(data.error || "Failed to load anomalies");
             }
         } catch (e) {
             console.error(e);
+            setError("Lost connection to server while loading findings");
             toast.error("Failed to load anomalies");
         } finally {
             setLoading(false);
@@ -141,7 +157,8 @@ export default function AuditEnginePage() {
         try {
             const res = await fetch("/api/audit/run", { method: "POST" });
             if (!res.ok) {
-                const msg = await res.text() || "Audit engine failed to start";
+                const data = await res.json().catch(() => ({ error: "Audit engine failed to start" }));
+                const msg = data.error || "Audit engine failed to start";
                 setError(msg);
                 toast.error(msg);
                 setRunning(false);
@@ -173,7 +190,7 @@ export default function AuditEnginePage() {
                     }
                 } catch (e) {
                     console.error("Polling error:", e);
-                    setError("Lost connection to audit worker");
+                    setError("Lost connection to audit worker during polling");
                     setRunning(false);
                 }
             };
@@ -181,7 +198,8 @@ export default function AuditEnginePage() {
             pollJob();
 
         } catch (err) {
-            setError("An unexpected error occurred");
+            console.error(err);
+            setError("An unexpected error occurred during audit start");
             toast.error("An unexpected error occurred");
             setRunning(false);
         }
@@ -216,11 +234,12 @@ export default function AuditEnginePage() {
             if (res.ok) {
                 toast.success("Task created successfully!");
             } else {
-                toast.error("Failed to create task");
+                const data = await res.json().catch(() => ({}));
+                toast.error(data.error || "Failed to create task");
             }
         } catch (e) {
             console.error("Failed to create task", e);
-            toast.error("Failed to create task");
+            toast.error("Network error while creating task");
         } finally {
             setCreatingTaskId(null);
         }
@@ -237,15 +256,16 @@ export default function AuditEnginePage() {
                 toast.success(`Marked as ${status}`);
                 await fetchFindings();
             } else {
-                toast.error("Failed to update status");
+                const data = await res.json().catch(() => ({}));
+                toast.error(data.error || "Failed to update status");
             }
         } catch (e) {
             console.error(e);
-            toast.error("Error updating status");
+            toast.error("Error updating recovery status");
         }
     };
 
-    const applyMetadataFix = async (findingId: string, fix: any) => {
+    const applyMetadataFix = async (findingId: string, fix: MetadataFix) => {
         setApplyingFixId(`${findingId}-${fix.field}`);
         try {
             const finding = findings.find(f => f.id === findingId);
@@ -266,9 +286,11 @@ export default function AuditEnginePage() {
                 toast.success(`Successfully updated ${fix.field}!`);
                 await fetchFindings();
             } else {
-                toast.error("Failed to apply healing fix");
+                const data = await res.json().catch(() => ({}));
+                toast.error(data.error || "Failed to apply healing fix");
             }
         } catch (e) {
+            console.error(e);
             toast.error("Error connecting to enrichment engine");
         } finally {
             setApplyingFixId(null);
@@ -535,10 +557,10 @@ export default function AuditEnginePage() {
                                         <td className="px-6 py-4">
                                             {finding.metadataFix ? (
                                                 <div className="flex flex-col gap-2">
-                                                    {JSON.parse(finding.metadataFix).map((fix: any, idx: number) => (
+                                                    {(JSON.parse(finding.metadataFix) as MetadataFix[]).map((fix, idx) => (
                                                         <div key={idx} className="flex items-center gap-2 group">
                                                             <div className="bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded text-[10px] border border-emerald-200 whitespace-nowrap">
-                                                                {fix.field.toUpperCase()}: {fix.value}
+                                                                {fix.field.toUpperCase()}: {String(fix.value)}
                                                             </div>
                                                             <Button
                                                                 variant="ghost"

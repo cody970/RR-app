@@ -1,21 +1,26 @@
-"use client";
-
 import { useState } from "react";
 import { useSession } from "next-auth/react";
-import { UploadCloud, File, AlertCircle, CheckCircle2, Download } from "lucide-react";
-import { TemplateTypes, TemplateType, getTemplateHeaders } from "@/lib/reports/templates";
+import { UploadCloud, File, AlertCircle, CheckCircle2, Download, Table, ArrowRight, Settings2 } from "lucide-react";
+import { TemplateTypes, TemplateType, getTemplateHeaders, IndustrySources, IndustrySource, industryTemplates } from "@/lib/reports/templates";
 import { Button } from "@/components/ui/button";
 import { downloadTemplate } from "@/lib/reports/export-utils";
 import { IngestHistory } from "@/components/dashboard/ingest-history";
+import Papa from "papaparse";
 
 export default function ImportPage() {
     const { data: session } = useSession();
     const [selectedType, setSelectedType] = useState<TemplateType>("Works");
     const [file, setFile] = useState<File | null>(null);
     const [uploading, setUploading] = useState(false);
-    const [result, setResult] = useState<{ imported?: number; errors?: any[] } | null>(null);
+    const [result, setResult] = useState<{ imported?: number; errors?: any[]; mappingUsed?: any } | null>(null);
     const [errorMsg, setErrorMsg] = useState("");
     const [refreshTrigger, setRefreshTrigger] = useState(0);
+
+    // Phase 2: Mapping State
+    const [step, setStep] = useState<"UPLOAD" | "MAP">("UPLOAD");
+    const [headers, setHeaders] = useState<string[]>([]);
+    const [mapping, setMapping] = useState<Record<string, string>>({});
+    const [sourceTemplate, setSourceTemplate] = useState<IndustrySource | "CUSTOM">("CUSTOM");
 
     const handleDrop = (e: React.DragEvent) => {
         e.preventDefault();
@@ -26,8 +31,39 @@ export default function ImportPage() {
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files[0]) {
-            setFile(e.target.files[0]);
+            const selectedFile = e.target.files[0];
+            setFile(selectedFile);
+
+            // Preview headers
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                const text = event.target?.result as string;
+                Papa.parse(text, {
+                    header: true,
+                    preview: 1,
+                    step: (results) => {
+                        setHeaders(results.meta.fields || []);
+                    },
+                    complete: () => {
+                        setStep("MAP");
+                    }
+                });
+            };
+            reader.readAsText(selectedFile);
         }
+    };
+
+    const applyTemplate = (source: IndustrySource | "CUSTOM") => {
+        setSourceTemplate(source);
+        if (source !== "CUSTOM") {
+            setMapping(industryTemplates[source].mapping);
+        } else {
+            setMapping({});
+        }
+    };
+
+    const handleMappingChange = (sourceHeader: string, targetKey: string) => {
+        setMapping(prev => ({ ...prev, [sourceHeader]: targetKey }));
     };
 
     const processUpload = async () => {
@@ -43,15 +79,21 @@ export default function ImportPage() {
                 const res = await fetch("/api/ingest/csv", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ type: selectedType, csvData }),
+                    body: JSON.stringify({
+                        type: selectedType,
+                        csvData,
+                        customMapping: sourceTemplate === "CUSTOM" ? mapping : undefined,
+                        sourceTemplate: sourceTemplate !== "CUSTOM" ? sourceTemplate : undefined
+                    }),
                 });
 
                 if (!res.ok) {
                     setErrorMsg(await res.text() || "Upload failed");
                 } else {
                     setResult(await res.json());
-                    setRefreshTrigger(prev => prev + 1); // Refresh history
-                    setFile(null); // Clear file on success
+                    setRefreshTrigger(prev => prev + 1);
+                    setFile(null);
+                    setStep("UPLOAD");
                 }
             } catch (err) {
                 setErrorMsg("Failed to upload the file.");
@@ -62,27 +104,28 @@ export default function ImportPage() {
         reader.readAsText(file);
     };
 
+    const targetKeys = getTemplateHeaders(selectedType);
+
     return (
         <div className="space-y-6 max-w-6xl mx-auto">
             <div>
                 <h1 className="text-3xl font-bold tracking-tight text-slate-900 mb-2">Ingest Catalog & Usage</h1>
                 <p className="text-slate-500 max-w-2xl">
-                    Upload standardized CSV files. The engine applies strict row-level validation.
-                    Invalid rows are isolated, allowing valid data to persist.
+                    Upload your reports in CSV or TSV format. Our mapping engine automatically recognizes industry-standard formats from Spotify, ASCAP, BMI, and more.
                 </p>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                 <div className="md:col-span-1 space-y-4">
-                    <label className="text-sm font-medium text-slate-700 block">Template Type</label>
+                    <label className="text-sm font-medium text-slate-700 block">Import Target</label>
                     <div className="space-y-2">
                         {TemplateTypes.map((type) => (
                             <button
                                 key={type}
-                                onClick={() => setSelectedType(type)}
+                                onClick={() => { setSelectedType(type); setStep("UPLOAD"); }}
                                 className={`w-full text-left px-4 py-3 rounded-xl text-sm transition-all duration-200 ${selectedType === type
-                                    ? "bg-slate-900 text-white font-medium shadow-md shadow-slate-900/10 border border-slate-900"
-                                    : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 hover:border-slate-300 shadow-sm"
+                                    ? "bg-slate-900 text-white font-medium shadow-md border border-slate-900"
+                                    : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 shadow-sm"
                                     }`}
                             >
                                 {type}
@@ -92,41 +135,88 @@ export default function ImportPage() {
 
                     <Button
                         variant="outline"
-                        onClick={() => downloadTemplate(selectedType, getTemplateHeaders(selectedType))}
-                        className="w-full mt-4 border-slate-200 text-slate-600 hover:bg-slate-50 bg-white shadow-sm"
+                        className="w-full mt-4 flex items-center gap-2"
+                        onClick={() => downloadTemplate(selectedType, targetKeys)}
                     >
-                        <Download className="mr-2 h-4 w-4" /> Download Template
+                        <Download className="h-4 w-4" />
+                        Download Schema
                     </Button>
                 </div>
 
                 <div className="md:col-span-3 space-y-6">
-                    <div
-                        className="border-2 border-dashed border-slate-300 rounded-2xl bg-slate-50/50 hover:bg-slate-100 p-12 text-center transition-colors cursor-pointer"
-                        onDragOver={(e) => e.preventDefault()}
-                        onDrop={handleDrop}
-                        onClick={() => document.getElementById("file-upload")?.click()}
-                    >
-                        <input
-                            id="file-upload"
-                            type="file"
-                            accept={selectedType === "CWR File" ? ".cwr,.txt" : ".csv"}
-                            className="hidden"
-                            onChange={handleFileChange}
-                        />
-                        {file ? (
-                            <div className="flex flex-col items-center">
-                                <File className="h-12 w-12 text-amber-500 mb-4" />
-                                <p className="text-lg font-medium text-slate-900">{file.name}</p>
-                                <p className="text-sm text-slate-500 mt-1">{(file.size / 1024).toFixed(2)} KB</p>
-                            </div>
-                        ) : (
+                    {step === "UPLOAD" ? (
+                        <div
+                            className="border-2 border-dashed border-slate-300 rounded-2xl bg-slate-50/50 hover:bg-slate-100 p-12 text-center transition-colors cursor-pointer"
+                            onDragOver={(e) => e.preventDefault()}
+                            onDrop={handleDrop}
+                            onClick={() => document.getElementById("file-upload")?.click()}
+                        >
+                            <input
+                                id="file-upload"
+                                type="file"
+                                accept=".csv,.tsv,.txt"
+                                className="hidden"
+                                onChange={handleFileChange}
+                            />
                             <div className="flex flex-col items-center">
                                 <UploadCloud className="h-12 w-12 text-slate-400 mb-4" />
-                                <p className="text-lg font-medium text-slate-800 mb-1">Click to upload or drag & drop</p>
-                                <p className="text-sm text-slate-500">CSV files only (max 5MB)</p>
+                                <p className="text-lg font-medium text-slate-800 mb-1">Upload Report</p>
+                                <p className="text-sm text-slate-500">Supports CSV and TSV (max 10MB)</p>
                             </div>
-                        )}
-                    </div>
+                        </div>
+                    ) : (
+                        <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm space-y-6">
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                    <Settings2 className="h-5 w-5 text-slate-600" />
+                                    <h2 className="text-lg font-semibold text-slate-900">Map Columns: {file?.name}</h2>
+                                </div>
+                                <select
+                                    className="text-sm border border-slate-200 rounded-lg px-3 py-2 bg-slate-50"
+                                    value={sourceTemplate}
+                                    onChange={(e) => applyTemplate(e.target.value as any)}
+                                >
+                                    <option value="CUSTOM">Custom / Manual Mapping</option>
+                                    {IndustrySources.map(src => (
+                                        <option key={src} value={src}>{src.replace(/_/g, " ")}</option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4 text-sm font-medium text-slate-500 px-2">
+                                <span>CSV Header (Original)</span>
+                                <span>Internal Field (Target)</span>
+                            </div>
+
+                            <div className="space-y-3 max-h-96 overflow-y-auto pr-2">
+                                {headers.map(header => (
+                                    <div key={header} className="grid grid-cols-2 gap-4 items-center p-3 bg-slate-50 rounded-xl border border-slate-100">
+                                        <span className="truncate font-mono text-slate-700 bg-white px-2 py-1 rounded border border-slate-200">{header}</span>
+                                        <div className="flex items-center gap-2">
+                                            <ArrowRight className="h-4 w-4 text-slate-300" />
+                                            <select
+                                                className="w-full border border-slate-200 rounded-lg px-2 py-1 bg-white truncate"
+                                                value={mapping[header] || ""}
+                                                onChange={(e) => handleMappingChange(header, e.target.value)}
+                                            >
+                                                <option value="">(Skip column)</option>
+                                                {targetKeys.map(k => (
+                                                    <option key={k} value={k}>{k}</option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+
+                            <div className="flex justify-between pt-4 border-t border-slate-100">
+                                <Button variant="ghost" onClick={() => { setStep("UPLOAD"); setFile(null); }}>Back</Button>
+                                <Button onClick={processUpload} disabled={uploading} className="bg-indigo-600 hover:bg-indigo-700 text-white">
+                                    {uploading ? "Ingesting..." : "Confirm & Import"}
+                                </Button>
+                            </div>
+                        </div>
+                    )}
 
                     {errorMsg && (
                         <div className="flex items-center gap-3 p-4 bg-red-50 border border-red-200 rounded-xl text-red-700 shadow-sm">

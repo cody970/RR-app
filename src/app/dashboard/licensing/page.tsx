@@ -1,18 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import {
-    Briefcase,
-    FileText,
-    CheckCircle2,
-    Clock,
-    DollarSign,
-    Globe,
-    Calendar,
-    Plus,
-    Loader2,
-    X,
-} from "lucide-react";
+import { Briefcase, FileText, CheckCircle2, DollarSign, Globe, Calendar, Plus, Loader2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";

@@ -9,6 +9,7 @@
  */
 
 import { db } from "@/lib/infra/db";
+import { round, roundMoney } from "@/lib/finance/math-utils";
 
 // ---------- Types ----------
 
@@ -22,7 +23,9 @@ export interface Discrepancy {
     description: string;
 }
 
-// Typical per-use rates by society (USD)
+/**
+ * Typical per-use rates by society (USD)
+ */
 const TYPICAL_RATES: Record<string, { min: number; avg: number }> = {
     ASCAP: { min: 0.01, avg: 0.08 },
     BMI: { min: 0.01, avg: 0.07 },
@@ -66,9 +69,9 @@ export async function runDiscrepancyChecks(
         where: { orgId, type: { startsWith: "STATEMENT_" } },
         select: { type: true, resourceId: true },
     });
-    const existingSet = new Set(existingFindings.map(f => `${f.type}:${f.resourceId}`));
+    const existingSet = new Set(existingFindings.map((f: { type: string; resourceId: string }) => `${f.type}:${f.resourceId}`));
 
-    const newDiscrepancies = unique.filter(d => !existingSet.has(`${d.type}:${d.resourceId}`));
+    const newDiscrepancies = unique.filter((d: Discrepancy) => !existingSet.has(`${d.type}:${d.resourceId}`));
 
     // Create findings
     if (newDiscrepancies.length > 0) {
@@ -114,21 +117,21 @@ async function checkMissingWorks(statementId: string, orgId: string): Promise<Di
         select: { workId: true },
         distinct: ["workId"],
     });
-    const presentWorkIds = new Set(statementWorkIds.map(l => l.workId));
+    const presentWorkIds = new Set(statementWorkIds.map((l: { workId: string | null }) => l.workId));
 
     const discrepancies: Discrepancy[] = [];
 
     for (const work of catalogWorks) {
         // Only flag if the work is registered with this society
         const isRegistered = work.registrations.some(
-            r => r.society === statement.source && r.status !== "REJECTED"
+            (r: { society: string | null; status: string }) => r.society === statement.source && r.status !== "REJECTED"
         );
 
         if (isRegistered && !presentWorkIds.has(work.id)) {
             discrepancies.push({
                 type: "STATEMENT_MISSING_WORK",
                 severity: "HIGH",
-                confidence: 80,
+                confidence: work.registrations.some((r: { status: string }) => r.status === "CONFIRMED") ? 95 : 75,
                 estimatedImpact: 0, // Unknown — no data to estimate
                 resourceType: "Work",
                 resourceId: work.id,
@@ -166,18 +169,23 @@ async function checkRateAnomalies(statementId: string, orgId: string): Promise<D
         const typical = TYPICAL_RATES[society];
         if (!typical) continue;
 
-        const rate = line.rate || (line.uses > 0 ? line.amount / line.uses : 0);
+        const rate = line.rate || (line.uses > 0 ? round(line.amount / line.uses, 6) : 0);
         if (rate <= 0) continue;
 
         // Flag if rate is less than 30% of the average
         if (rate < typical.avg * 0.3) {
-            const expectedAmount = line.uses * typical.avg;
-            const impact = expectedAmount - line.amount;
+            const expectedAmount = round(line.uses * typical.avg, 4);
+            const impact = roundMoney(expectedAmount - line.amount);
+
+            // Confidence scales with deviation size and sample size (uses)
+            const deviationRatio = 1 - (rate / typical.avg);
+            const usesBoost = Math.min(line.uses / 1000, 0.15); // up to 15% boost for high-use works
+            const confidence = Math.round(Math.min(95, 50 + deviationRatio * 30 + usesBoost * 100));
 
             discrepancies.push({
                 type: "STATEMENT_RATE_ANOMALY",
                 severity: impact > 100 ? "HIGH" : impact > 20 ? "MEDIUM" : "LOW",
-                confidence: 65,
+                confidence,
                 estimatedImpact: Math.max(0, impact),
                 resourceType: "StatementLine",
                 resourceId: line.workId || line.id,
@@ -212,15 +220,25 @@ async function checkRevenueDrops(orgId: string): Promise<Discrepancy[]> {
         },
     });
 
-    return periods.map(p => ({
-        type: "STATEMENT_REVENUE_DROP",
-        severity: (p.changePercent! < -50 ? "HIGH" : "MEDIUM") as "HIGH" | "MEDIUM",
-        confidence: 70,
-        estimatedImpact: Math.max(0, (p.previousAmount || 0) - p.totalAmount),
-        resourceType: "Work",
-        resourceId: p.workId || "",
-        description: `Revenue dropped ${Math.abs(p.changePercent!).toFixed(0)}% for ${p.society} in ${p.period} ($${p.previousAmount?.toFixed(2)} → $${p.totalAmount.toFixed(2)}).`,
-    }));
+    return periods.map((p: typeof periods[0]) => {
+        // Confidence scales with drop magnitude and previous revenue size
+        const dropMagnitude = Math.abs(p.changePercent ?? 0) / 100; // 0-1
+        const revenueWeight = Math.min((p.previousAmount ?? 0) / 500, 0.2); // up to 20% boost
+        // Confidence scales with drop magnitude and historical revenue size
+        const confidence = Math.round(Math.min(98, 55 + dropMagnitude * 35 + revenueWeight * 100));
+
+        const impact = roundMoney((p.previousAmount || 0) - p.totalAmount);
+
+        return {
+            type: "STATEMENT_REVENUE_DROP",
+            severity: (p.changePercent! < -50 ? "HIGH" : "MEDIUM") as "HIGH" | "MEDIUM",
+            confidence,
+            estimatedImpact: Math.max(0, impact),
+            resourceType: "Work",
+            resourceId: p.workId || "",
+            description: `Revenue dropped ${Math.abs(p.changePercent!).toFixed(0)}% for ${p.society} in ${p.period} ($${p.previousAmount?.toFixed(2)} → $${p.totalAmount.toFixed(2)}).`,
+        };
+    });
 }
 
 // ---------- Check: Unmatched Lines ----------
@@ -231,14 +249,14 @@ async function checkRevenueDrops(orgId: string): Promise<Discrepancy[]> {
 async function checkUnmatchedLines(statementId: string, orgId: string): Promise<Discrepancy[]> {
     const unmatchedLines = await db.statementLine.findMany({
         where: { statementId, workId: null, amount: { gt: 1 } },
-        select: { id: true, title: true, amount: true, uses: true, society: true },
+        select: { id: true, title: true, amount: true, uses: true, society: true, isrc: true, iswc: true },
         orderBy: { amount: "desc" },
         take: 50, // Cap to avoid flooding
     });
 
     if (unmatchedLines.length === 0) return [];
 
-    const totalUnmatchedAmount = unmatchedLines.reduce((sum, l) => sum + l.amount, 0);
+    const totalUnmatchedAmount = roundMoney(unmatchedLines.reduce((acc: number, l: { amount: number }) => acc + l.amount, 0));
 
     // Create one summary finding + individual high-value ones
     const discrepancies: Discrepancy[] = [];
@@ -247,7 +265,7 @@ async function checkUnmatchedLines(statementId: string, orgId: string): Promise<
     discrepancies.push({
         type: "STATEMENT_UNMATCHED_LINES",
         severity: totalUnmatchedAmount > 100 ? "HIGH" : "MEDIUM",
-        confidence: 60,
+        confidence: Math.min(85, 50 + (totalUnmatchedAmount > 100 ? 20 : 0) + (unmatchedLines.length > 5 ? 15 : 0)),
         estimatedImpact: totalUnmatchedAmount,
         resourceType: "Statement",
         resourceId: statementId,
@@ -255,12 +273,19 @@ async function checkUnmatchedLines(statementId: string, orgId: string): Promise<
     });
 
     // Individual high-value unmatched lines
-    for (const line of unmatchedLines.filter(l => l.amount > 10)) {
+    for (const line of unmatchedLines) {
+        if (line.amount <= 10) continue;
+
+        // Higher confidence if we have strong identifiers but still no match
+        const hasIdent = line.isrc || line.iswc ? 20 : 0;
+        const impactBonus = Math.min(line.amount / 50, 15);
+        const confidence = Math.round(Math.min(95, 50 + hasIdent + impactBonus));
+
         discrepancies.push({
             type: "STATEMENT_UNMATCHED_WORK",
             severity: line.amount > 50 ? "HIGH" : "MEDIUM",
-            confidence: 55,
-            estimatedImpact: line.amount,
+            confidence,
+            estimatedImpact: roundMoney(line.amount),
             resourceType: "StatementLine",
             resourceId: line.id,
             description: `"${line.title}" earned $${line.amount.toFixed(2)} (${line.uses} uses) from ${line.society || "unknown"} but isn't in your catalog.`,

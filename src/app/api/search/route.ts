@@ -76,7 +76,8 @@ export async function GET(req: Request) {
         ];
 
         return NextResponse.json({ results });
-    } catch (err: any) {
-        return new Response(err.message, { status: 500 });
+    } catch (error: unknown) {
+        const message = error instanceof Error ? error.message : "Internal Server Error";
+        return NextResponse.json({ error: message }, { status: 500 });
     }
 }

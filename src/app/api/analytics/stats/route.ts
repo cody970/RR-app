@@ -3,13 +3,16 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth/auth";
 import { db } from "@/lib/infra/db";
 import { globalCache } from "@/lib/infra/cache";
-import { convertFromUSD, formatCurrency } from "@/lib/finance/currency";
+import { convertFromUSD } from "@/lib/finance/currency";
+import { ApiErrors } from "@/lib/api/error-response";
 
 export async function GET() {
     try {
         const session = await getServerSession(authOptions);
-        if (!session?.user) return new Response("Unauthorized", { status: 401 });
+        if (!session?.user) return ApiErrors.Unauthorized();
         const orgId = session.user.orgId;
+
+        if (!orgId) return ApiErrors.Forbidden("No organization linked to account");
 
         // Get organization base currency
         const org = await db.organization.findUnique({
@@ -42,27 +45,27 @@ export async function GET() {
             select: { type: true, estimatedImpact: true, severity: true, status: true, recoveredAmount: true },
         });
 
-        const totalLeakage = findings.reduce((acc, f) => acc + (f.estimatedImpact || 0), 0);
-        const totalRecovered = findings.reduce((acc, f) => acc + (f.recoveredAmount || 0), 0);
+        const totalLeakage = findings.reduce((acc: number, f: any) => acc + (f.estimatedImpact || 0), 0);
+        const totalRecovered = findings.reduce((acc: number, f: any) => acc + (f.recoveredAmount || 0), 0);
         const recoveryRate = totalLeakage > 0 ? (totalRecovered / totalLeakage) * 100 : 0;
 
-        const impactByType = findings.reduce((acc: any, f) => {
+        const impactByType = findings.reduce((acc: Record<string, number>, f: any) => {
             acc[f.type] = (acc[f.type] || 0) + (f.estimatedImpact || 0);
             return acc;
         }, {});
 
-        const chartData = Object.entries(impactByType).map(([name, value]) => ({
+        const chartData = Object.entries(impactByType).map(([name, value]: [string, any]) => ({
             name: name.replace(/_/g, " "),
             value,
         }));
 
         // 3. Severity & Status Distribution
-        const severityData = findings.reduce((acc: any, f) => {
+        const severityData = findings.reduce((acc: Record<string, number>, f: any) => {
             acc[f.severity] = (acc[f.severity] || 0) + 1;
             return acc;
         }, {});
 
-        const statusData = findings.reduce((acc: any, f) => {
+        const statusData = findings.reduce((acc: Record<string, number>, f: any) => {
             acc[f.status] = (acc[f.status] || 0) + 1;
             return acc;
         }, {});
@@ -83,7 +86,8 @@ export async function GET() {
         await globalCache.set(cacheKey, result, 300000); // 5 min cache
 
         return NextResponse.json(result);
-    } catch (err: any) {
-        return new Response(err.message, { status: 500 });
+    } catch (error: any) {
+        console.error("Stats API error:", error);
+        return ApiErrors.Internal(error?.message || "Internal Server Error");
     }
 }

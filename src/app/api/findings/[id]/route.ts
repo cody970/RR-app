@@ -1,8 +1,14 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth/auth";
 import { db } from "@/lib/infra/db";
+import { requireAuth } from "@/lib/auth/get-session";
 import { validatePermission } from "@/lib/auth/rbac";
+import { z } from "zod";
+import { ApiErrors } from "@/lib/api/error-response";
+
+const findingUpdateSchema = z.object({
+    status: z.enum(["NEW", "INVESTIGATING", "CONFIRMED", "RECOVERED", "DISMISSED"]).optional(),
+    recoveredAmount: z.number().min(0).optional(),
+});
 
 export async function PATCH(
     req: Request,
@@ -10,20 +16,24 @@ export async function PATCH(
 ) {
     try {
         const { id: findingId } = await params;
-        const session = await getServerSession(authOptions);
-        if (!session?.user) return new Response("Unauthorized", { status: 401 });
-
-        const orgId = session.user.orgId;
-        const role = session.user.role;
+        const { orgId, role, userId } = await requireAuth();
 
         // RBAC Check
         try {
             validatePermission(role, "CATALOG_EDIT");
-        } catch (e: any) {
-            return new Response(e.message, { status: 403 });
+        } catch (e: unknown) {
+            const message = e instanceof Error ? e.message : "Forbidden";
+            return ApiErrors.Forbidden(message);
         }
 
-        const { status, recoveredAmount } = await req.json();
+        const body = await req.json().catch(() => ({}));
+        const parsed = findingUpdateSchema.safeParse(body);
+
+        if (!parsed.success) {
+            return ApiErrors.BadRequest("Invalid request", parsed.error.flatten());
+        }
+
+        const { status, recoveredAmount } = parsed.data;
 
         const updated = await db.finding.update({
             where: { id: findingId, orgId },
@@ -40,7 +50,7 @@ export async function PATCH(
                 details: JSON.stringify({ findingId, newStatus: status, recoveredAmount }),
                 evidenceHash: `status-${findingId}-${Date.now()}`,
                 orgId,
-                userId: session.user.id
+                userId,
             }
         });
 
@@ -50,14 +60,18 @@ export async function PATCH(
                 action: "FINDING_UPDATED",
                 details: `Updated finding status to ${status}`,
                 orgId,
-                userId: session.user.id,
+                userId,
                 resourceId: findingId,
                 resourceType: "Finding"
             }
         });
 
         return NextResponse.json(updated);
-    } catch (err: any) {
-        return new Response(err.message, { status: 500 });
+    } catch (error: unknown) {
+        if (error && typeof error === "object" && "status" in error && (error as any).status === 401) {
+            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        }
+        const message = error instanceof Error ? error.message : "Internal Server Error";
+        return NextResponse.json({ error: message }, { status: 500 });
     }
 }

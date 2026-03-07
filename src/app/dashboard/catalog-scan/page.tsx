@@ -2,16 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
-import {
-    Search,
-    Loader2,
-    AlertTriangle,
-    CheckCircle2,
-    Clock,
-    DollarSign,
-    FileSearch,
-    ArrowRight,
-} from "lucide-react";
+import { Search, Loader2, AlertTriangle, CheckCircle2, Clock, DollarSign, FileSearch, ArrowRight } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";

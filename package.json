@@ -11,7 +11,8 @@
     "worker:scan": "tsx src/jobs/scan-worker.ts",
     "dev:worker:scan": "tsx watch src/jobs/scan-worker.ts",
     "lint": "eslint",
-    "test": "vitest run"
+    "test": "vitest run",
+    "postinstall": "prisma generate"
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",

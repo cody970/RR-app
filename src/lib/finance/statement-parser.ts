@@ -436,6 +436,29 @@ export async function importStatement(
     orgId: string,
     fileName?: string
 ): Promise<{ statementId: string; matched: number; unmatched: number }> {
+    // 1. Handle duplicate imports: Delete existing data for the same file/source/period
+    if (fileName) {
+        const existing = await db.statement.findFirst({
+            where: {
+                orgId,
+                fileName,
+                period: parsed.period,
+                source: parsed.source,
+            }
+        });
+
+        if (existing) {
+            console.log(`[Import] Replacing existing statement: ${fileName} for ${parsed.period}`);
+            // Explicitly delete lines first (no cascade in schema)
+            await db.statementLine.deleteMany({
+                where: { statementId: existing.id }
+            });
+            await db.statement.delete({
+                where: { id: existing.id }
+            });
+        }
+    }
+
     // Match lines to works
     const matchedLines = await matchStatementLines(parsed.lines, orgId);
 
@@ -489,93 +512,89 @@ async function aggregateRoyaltyPeriods(
     period: string,
     lines: ParsedStatementLine[]
 ): Promise<void> {
-    // Group by workId + society
-    const groups = new Map<string, { totalAmount: number; totalUses: number; useType?: string }>();
+    // To be idempotent and handle multiple statements in the same period correctly,
+    // we recalculate the TOTAL for affected workIds/societies from ALL statement lines in the DB for this period.
+    const affectedWorkIds = Array.from(new Set(lines.map(l => l.workId!).filter(Boolean)));
+    const affectedSocieties = Array.from(new Set(lines.map(l => l.society)));
 
-    for (const line of lines) {
-        if (!line.workId) continue;
-        const key = `${line.workId}:${line.society}`;
-        const existing = groups.get(key) || { totalAmount: 0, totalUses: 0, useType: line.useType };
-        existing.totalAmount += line.amount;
-        existing.totalUses += line.uses;
-        groups.set(key, existing);
-    }
-
-    // Also aggregate at org level per society (workId = null)
-    const societyTotals = new Map<string, { totalAmount: number; totalUses: number; useType?: string }>();
-    for (const line of lines) {
-        const key = line.society;
-        const existing = societyTotals.get(key) || { totalAmount: 0, totalUses: 0, useType: line.useType };
-        existing.totalAmount += line.amount;
-        existing.totalUses += line.uses;
-        societyTotals.set(key, existing);
-    }
-
-    // Upsert per-work periods
-    for (const [key, data] of groups) {
-        const [workId, society] = key.split(":");
-        const avgRate = data.totalUses > 0 ? data.totalAmount / data.totalUses : null;
-
-        // Find previous period for trend
-        const prevPeriod = getPreviousPeriod(period);
-        const prev = await db.royaltyPeriod.findUnique({
-            where: { orgId_workId_society_period: { orgId, workId, society, period: prevPeriod } },
+    if (affectedWorkIds.length > 0) {
+        const workGroups = await db.statementLine.groupBy({
+            by: ['workId', 'society'],
+            where: {
+                workId: { in: affectedWorkIds },
+                statement: { orgId, period }
+            },
+            _sum: { amount: true, uses: true }
         });
 
-        const changePercent = prev?.totalAmount
-            ? ((data.totalAmount - prev.totalAmount) / prev.totalAmount) * 100
-            : null;
+        for (const group of workGroups) {
+            const workId = group.workId!;
+            const society = group.society!;
+            const totalAmount = group._sum.amount || 0;
+            const totalUses = group._sum.uses || 0;
+            const avgRate = totalUses > 0 ? totalAmount / totalUses : null;
 
-        await db.royaltyPeriod.upsert({
-            where: { orgId_workId_society_period: { orgId, workId, society, period } },
-            create: {
-                orgId, workId, society, period,
-                totalAmount: data.totalAmount,
-                totalUses: data.totalUses,
-                avgRate,
-                useType: data.useType,
-                previousAmount: prev?.totalAmount,
-                changePercent,
-            },
-            update: {
-                totalAmount: { increment: data.totalAmount },
-                totalUses: { increment: data.totalUses },
-                avgRate,
-                previousAmount: prev?.totalAmount,
-                changePercent,
-            },
-        });
+            const prevPeriod = getPreviousPeriod(period);
+            const prev = await db.royaltyPeriod.findUnique({
+                where: { orgId_workId_society_period: { orgId, workId, society, period: prevPeriod } },
+            });
+
+            const changePercent = prev?.totalAmount
+                ? ((totalAmount - prev.totalAmount) / prev.totalAmount) * 100
+                : null;
+
+            await db.royaltyPeriod.upsert({
+                where: { orgId_workId_society_period: { orgId, workId, society, period } },
+                create: {
+                    orgId, workId, society, period,
+                    totalAmount, totalUses, avgRate,
+                    previousAmount: prev?.totalAmount,
+                    changePercent,
+                },
+                update: {
+                    totalAmount, totalUses, avgRate,
+                    previousAmount: prev?.totalAmount,
+                    changePercent,
+                },
+            });
+        }
     }
 
-    // Upsert org-level society totals (workId = null)
-    for (const [society, data] of societyTotals) {
-        const avgRate = data.totalUses > 0 ? data.totalAmount / data.totalUses : null;
-        const prevPeriod = getPreviousPeriod(period);
+    // Also update org-level society totals (workId = "")
+    const societyGroups = await db.statementLine.groupBy({
+        by: ['society'],
+        where: {
+            society: { in: affectedSocieties },
+            statement: { orgId, period }
+        },
+        _sum: { amount: true, uses: true }
+    });
 
-        // For org-level, workId is empty string (can't be null in unique constraint)
+    for (const group of societyGroups) {
+        const society = group.society!;
+        const totalAmount = group._sum.amount || 0;
+        const totalUses = group._sum.uses || 0;
+        const avgRate = totalUses > 0 ? totalAmount / totalUses : null;
+
+        const prevPeriod = getPreviousPeriod(period);
         const prev = await db.royaltyPeriod.findUnique({
             where: { orgId_workId_society_period: { orgId, workId: "", society, period: prevPeriod } },
         });
 
         const changePercent = prev?.totalAmount
-            ? ((data.totalAmount - prev.totalAmount) / prev.totalAmount) * 100
+            ? ((totalAmount - prev.totalAmount) / prev.totalAmount) * 100
             : null;
 
         await db.royaltyPeriod.upsert({
             where: { orgId_workId_society_period: { orgId, workId: "", society, period } },
             create: {
-                orgId, workId: null, society, period,
-                totalAmount: data.totalAmount,
-                totalUses: data.totalUses,
-                avgRate,
-                useType: data.useType,
+                orgId, workId: "", society, period,
+                totalAmount, totalUses, avgRate,
                 previousAmount: prev?.totalAmount,
                 changePercent,
             },
             update: {
-                totalAmount: { increment: data.totalAmount },
-                totalUses: { increment: data.totalUses },
-                avgRate,
+                totalAmount, totalUses, avgRate,
                 previousAmount: prev?.totalAmount,
                 changePercent,
             },

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { UploadCloud, ScanSearch, Sparkles, ArrowRight, CheckCircle2 } from "lucide-react";
+import { UploadCloud, ScanSearch, Sparkles, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 const steps = [

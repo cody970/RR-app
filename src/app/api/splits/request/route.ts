@@ -1,29 +1,29 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth/auth";
-import { PrismaClient } from "@prisma/client";
+import { requireAuth } from "@/lib/auth/get-session";
+import { db } from "@/lib/infra/db";
+import { z } from "zod";
 import crypto from "crypto";
+import { apiError } from "@/lib/infra/utils";
 
-const prisma = new PrismaClient();
+const splitRequestSchema = z.object({
+    workId: z.string().min(1),
+    targetEmail: z.string().email(),
+    writerName: z.string().min(1),
+    proposedSplit: z.number().min(0).max(100),
+});
 
 export async function POST(req: Request) {
     try {
-        const session = await getServerSession(authOptions);
-        if (!session?.user?.id) {
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-        }
-
-        const orgId = (session.user as any).orgId;
-        if (!orgId) {
-            return NextResponse.json({ error: "No organization found" }, { status: 403 });
-        }
+        const { orgId } = await requireAuth();
 
         const body = await req.json().catch(() => ({}));
-        const { workId, targetEmail, writerName, proposedSplit } = body;
+        const parsed = splitRequestSchema.safeParse(body);
 
-        if (!workId || !targetEmail || !writerName || proposedSplit == null) {
-            return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
+        if (!parsed.success) {
+            return apiError("Missing or invalid required fields", 400, parsed.error.flatten());
         }
+
+        const { workId, targetEmail, writerName, proposedSplit } = parsed.data;
 
         // Generate a secure token
         const token = crypto.randomBytes(32).toString("hex");
@@ -31,7 +31,7 @@ export async function POST(req: Request) {
         expiresAt.setDate(expiresAt.getDate() + 7); // Valid for 7 days
 
         // Create SplitSignoff record
-        const signoff = await prisma.splitSignoff.create({
+        const signoff = await db.splitSignoff.create({
             data: {
                 workId,
                 organizationId: orgId,
@@ -43,16 +43,14 @@ export async function POST(req: Request) {
             }
         });
 
-        // In a real application, you would send an email here with a link like:
-        // https://app.royaltyradar.com/portal/splits/${token}
         console.log(`[Email Mock] Sent split approval to ${targetEmail} for ${proposedSplit}%: /portal/splits/${token}`);
 
         return NextResponse.json({ success: true, signoff });
     } catch (error: any) {
+        if (error?.status === 401) {
+            return apiError("Unauthorized", 401);
+        }
         console.error("Error creating split request:", error);
-        return NextResponse.json(
-            { error: error.message || "Failed to create split request" },
-            { status: 500 }
-        );
+        return apiError(error?.message || "Failed to create split request", 500);
     }
 }

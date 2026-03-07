@@ -38,14 +38,54 @@ export async function POST(req: Request) {
             if ((subscription as any).deleted) return new NextResponse(null, { status: 200 });
 
             if (session?.metadata?.orgId) {
+                const stripeCustomerId = subscription.customer as string;
+
+                // Verify the org exists and either has no Stripe customer or matches this one.
+                // This prevents metadata injection where an attacker modifies checkout
+                // metadata to point at a different organization.
+                const org = await prisma.organization.findUnique({
+                    where: { id: session.metadata.orgId },
+                    select: { stripeCustomerId: true },
+                });
+
+                if (!org) {
+                    logger.warn({ orgId: session.metadata.orgId, eventId: event.id }, "Stripe webhook: org not found for metadata orgId");
+                    return new NextResponse(null, { status: 200 });
+                }
+
+                if (org.stripeCustomerId && org.stripeCustomerId !== stripeCustomerId) {
+                    logger.warn(
+                        { orgId: session.metadata.orgId, existingCustomer: org.stripeCustomerId, incomingCustomer: stripeCustomerId, eventId: event.id },
+                        "Stripe webhook: customer ID mismatch — possible metadata injection"
+                    );
+                    return new NextResponse(null, { status: 200 });
+                }
+
+                // Ensure this customer ID isn't already assigned to ANOTHER organization
+                const duplicateCustomerOrg = await prisma.organization.findFirst({
+                    where: {
+                        stripeCustomerId,
+                        id: { not: session.metadata.orgId }
+                    },
+                    select: { id: true }
+                });
+
+                if (duplicateCustomerOrg) {
+                    logger.error(
+                        { orgId: session.metadata.orgId, otherOrgId: duplicateCustomerOrg.id, stripeCustomerId, eventId: event.id },
+                        "Stripe webhook: customer ID already claimed by another organization"
+                    );
+                    return new NextResponse(null, { status: 200 });
+                }
+
                 await prisma.organization.update({
                     where: { id: session.metadata.orgId },
                     data: {
                         stripeSubscriptionId: subscription.id,
-                        stripeCustomerId: subscription.customer as string,
-                        stripePriceId: subscription.items.data[0].price.id,
+                        stripeCustomerId,
+                        stripePriceId: (subscription as any).items.data[0].price.id,
                         stripeCurrentPeriodEnd: new Date(
-                            subscription.current_period_end * 1000
+                            (subscription as any).current_period_end * 1000
                         ),
                         subscriptionStatus: "active",
                     },
@@ -55,7 +95,7 @@ export async function POST(req: Request) {
 
         if (event.type === "invoice.payment_succeeded") {
             const invoice = event.data.object as Stripe.Invoice;
-            const subscriptionId = invoice.subscription as string;
+            const subscriptionId = (invoice as any).subscription as string;
 
             if (!subscriptionId) return new NextResponse(null, { status: 200 });
 
@@ -67,9 +107,9 @@ export async function POST(req: Request) {
             await prisma.organization.update({
                 where: { stripeCustomerId },
                 data: {
-                    stripePriceId: subscription.items.data[0].price.id,
+                    stripePriceId: (subscription as any).items.data[0].price.id,
                     stripeCurrentPeriodEnd: new Date(
-                        subscription.current_period_end * 1000
+                        (subscription as any).current_period_end * 1000
                     ),
                     subscriptionStatus: "active",
                 },
@@ -92,11 +132,11 @@ export async function POST(req: Request) {
             await prisma.organization.update({
                 where: { stripeCustomerId },
                 data: {
-                    stripePriceId: subscription.items.data[0].price.id,
+                    stripePriceId: (subscription as any).items.data[0].price.id,
                     stripeCurrentPeriodEnd: new Date(
-                        subscription.current_period_end * 1000
+                        (subscription as any).current_period_end * 1000
                     ),
-                    subscriptionStatus: subscription.status === "active" ? "active" : "canceled",
+                    subscriptionStatus: (subscription as any).status === "active" ? "active" : "canceled",
                 }
             });
         }

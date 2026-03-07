@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth/auth";
 import { db } from "@/lib/infra/db";
+import { ApiErrors } from "@/lib/api/error-response";
 
 export async function GET(req: Request) {
     try {
@@ -13,10 +14,13 @@ export async function GET(req: Request) {
         const skip = (page - 1) * limit;
 
         const session = await getServerSession(authOptions);
-        if (!session?.user?.id) return new Response("Unauthorized", { status: 401 });
+        if (!session?.user?.id) return ApiErrors.Unauthorized();
+
+        const orgId = session.user.orgId;
+        if (!orgId) return ApiErrors.Forbidden("No organization linked to account");
 
         const where: any = {
-            orgId: session.user.orgId,
+            orgId,
         };
 
         if (type) where.type = type;
@@ -46,7 +50,8 @@ export async function GET(req: Request) {
                 hasMore: total > skip + findings.length
             }
         });
-    } catch (err: any) {
-        return new Response(err.message, { status: 500 });
+    } catch (error: any) {
+        console.error("Findings API error:", error);
+        return ApiErrors.Internal(error?.message || "Internal Server Error");
     }
 }

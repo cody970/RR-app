@@ -5,7 +5,7 @@ const nextConfig: NextConfig = {
   async headers() {
     const cspHeader = `
       default-src 'self';
-      script-src 'self' 'unsafe-inline' https://js.stripe.com;
+      script-src 'self' https://js.stripe.com;
       style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
       img-src 'self' blob: data: https://images.unsplash.com https://i.scdn.co https://images.muso.ai;
       font-src 'self' https://fonts.gstatic.com;
@@ -13,6 +13,8 @@ const nextConfig: NextConfig = {
       connect-src 'self' https://api.stripe.com;
       worker-src 'self' blob:;
       upgrade-insecure-requests;
+      block-all-mixed-content;
+      frame-ancestors 'none';
     `.replace(/\s{2,}/g, ' ').trim();
 
     return [

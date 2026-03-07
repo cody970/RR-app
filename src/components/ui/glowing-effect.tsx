@@ -77,7 +77,7 @@ const GlowingEffect = memo(
 
                     const currentAngle =
                         parseFloat(element.style.getPropertyValue("--start")) || 0;
-                    let targetAngle =
+                    const targetAngle =
                         (180 * Math.atan2(mouseY - center[1], mouseX - center[0])) /
                         Math.PI +
                         90;
@@ -146,13 +146,13 @@ const GlowingEffect = memo(
                 )`
                                     : `radial-gradient(circle, #f59e0b 10%, #f59e0b00 20%),
                 radial-gradient(circle at 40% 40%, #ca8a04 5%, #ca8a0400 15%),
-                radial-gradient(circle at 60% 60%, #b45309 10%, #b4530900 20%), 
+                radial-gradient(circle at 60% 60%, #b45309 10%, #b4530900 20%),
                 radial-gradient(circle at 40% 60%, #d97706 10%, #d9770600 20%),
                 repeating-conic-gradient(
                   from 236.84deg at 50% 50%,
                   #f59e0b 0%,
                   #ca8a04 calc(25% / var(--repeating-conic-gradient-times)),
-                  #b45309 calc(50% / var(--repeating-conic-gradient-times)), 
+                  #b45309 calc(50% / var(--repeating-conic-gradient-times)),
                   #d97706 calc(75% / var(--repeating-conic-gradient-times)),
                   #f59e0b calc(100% / var(--repeating-conic-gradient-times))
                 )`,

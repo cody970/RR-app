@@ -227,6 +227,13 @@ export const processAuditJob = async (job: Job<AuditJobData>) => {
             }
         }
 
+        // ── DISTRIBUTOR LEAKAGE DETECTION ──
+        const { detectDistributorLeaks } = await import('../lib/reports/import-discrepancy-engine');
+        const leakResult = await detectDistributorLeaks(orgId);
+        if (leakResult?.success && leakResult.finding) {
+            findingsCount++;
+        }
+
         // Update job status
         await db.auditJob.update({
             where: { id: jobId },

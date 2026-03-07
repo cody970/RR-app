@@ -2,22 +2,22 @@ import { NextResponse, NextRequest } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth/auth";
 import { db } from "@/lib/infra/db";
+import { apiError } from "@/lib/infra/utils";
 
 export async function GET(req: NextRequest) {
     try {
         const session = await getServerSession(authOptions);
-        if (!session?.user) return new Response("Unauthorized", { status: 401 });
+        if (!session?.user) return apiError("Unauthorized", 401);
         const orgId = session.user.orgId;
 
         const { searchParams } = new URL(req.url);
-        const view = searchParams.get("view") || "summary"; // summary | by-society | by-work | trends
-        const period = searchParams.get("period"); // optional filter
-        const society = searchParams.get("society"); // optional filter
+        const view = searchParams.get("view") || "summary";
+        const period = searchParams.get("period");
+        const society = searchParams.get("society");
 
-        // ---------- Summary ----------
         if (view === "summary") {
             const statements = await db.statement.findMany({
-                where: { orgId },
+                where: { orgId: orgId! },
                 select: {
                     id: true,
                     source: true,
@@ -30,30 +30,28 @@ export async function GET(req: NextRequest) {
                 orderBy: { createdAt: "desc" },
             });
 
-            const totalEarned = statements.reduce((s, st) => s + st.totalAmount, 0);
+            const totalEarned = statements.reduce((s: number, st: any) => s + (st.totalAmount || 0), 0);
             const totalStatements = statements.length;
             const latestPeriod = statements[0]?.period || "N/A";
 
-            // Society breakdown
-            const bySociety = statements.reduce((acc, st) => {
-                acc[st.source] = (acc[st.source] || 0) + st.totalAmount;
+            const bySociety = statements.reduce((acc: Record<string, number>, st: any) => {
+                acc[st.source] = (acc[st.source] || 0) + (st.totalAmount || 0);
                 return acc;
             }, {} as Record<string, number>);
 
-            const topSociety = Object.entries(bySociety).sort((a, b) => b[1] - a[1])[0];
+            const topSociety = Object.entries(bySociety).sort((a: any, b: any) => b[1] - a[1])[0];
 
-            // Period-over-period change
             const periods = await db.royaltyPeriod.findMany({
-                where: { orgId, workId: null },
+                where: { orgId: orgId!, workId: null },
                 orderBy: { period: "desc" },
                 take: 8,
             });
 
             const currentTotal = periods.length > 0
-                ? periods.filter(p => p.period === periods[0]?.period).reduce((s, p) => s + p.totalAmount, 0)
+                ? (periods as any[]).filter((p: any) => p.period === periods[0]?.period).reduce((s: number, p: any) => s + (p.totalAmount || 0), 0)
                 : 0;
             const previousTotal = periods.length > 1
-                ? periods.filter(p => p.period === periods[1]?.period).reduce((s, p) => s + p.totalAmount, 0)
+                ? (periods as any[]).filter((p: any) => p.period === periods[1]?.period).reduce((s: number, p: any) => s + (p.totalAmount || 0), 0)
                 : 0;
             const periodChange = previousTotal > 0
                 ? ((currentTotal - previousTotal) / previousTotal) * 100
@@ -65,16 +63,15 @@ export async function GET(req: NextRequest) {
                 latestPeriod,
                 topSociety: topSociety ? { name: topSociety[0], amount: topSociety[1] } : null,
                 periodChange,
-                bySociety: Object.entries(bySociety).map(([name, amount]) => ({ name, amount })),
+                bySociety: Object.entries(bySociety).map(([name, amount]: [string, any]) => ({ name, amount })),
                 recentStatements: statements.slice(0, 10),
             });
         }
 
-        // ---------- By Society ----------
         if (view === "by-society") {
             const royaltyPeriods = await db.royaltyPeriod.findMany({
                 where: {
-                    orgId,
+                    orgId: orgId!,
                     workId: null,
                     ...(period ? { period } : {}),
                 },
@@ -84,14 +81,13 @@ export async function GET(req: NextRequest) {
             return NextResponse.json(royaltyPeriods);
         }
 
-        // ---------- By Work ----------
         if (view === "by-work") {
             const topWorks = await db.statementLine.groupBy({
                 by: ["workId", "title"],
                 where: {
-                    statement: { orgId },
+                    statement: { orgId: orgId! },
                     workId: { not: null },
-                    ...(period ? { statement: { orgId, period } } : {}),
+                    ...(period ? { statement: { orgId: orgId!, period } } : {}),
                 },
                 _sum: { amount: true, uses: true },
                 orderBy: { _sum: { amount: "desc" } },
@@ -99,7 +95,7 @@ export async function GET(req: NextRequest) {
             });
 
             return NextResponse.json(
-                topWorks.map(w => ({
+                topWorks.map((w: any) => ({
                     workId: w.workId,
                     title: w.title,
                     totalAmount: w._sum.amount || 0,
@@ -108,11 +104,10 @@ export async function GET(req: NextRequest) {
             );
         }
 
-        // ---------- Trends ----------
         if (view === "trends") {
             const allPeriods = await db.royaltyPeriod.findMany({
                 where: {
-                    orgId,
+                    orgId: orgId!,
                     workId: null,
                     ...(society ? { society } : {}),
                 },
@@ -126,22 +121,21 @@ export async function GET(req: NextRequest) {
                 },
             });
 
-            // Group by period for chart data
-            const periodGroups = allPeriods.reduce((acc, p) => {
+            const periodGroups = allPeriods.reduce((acc: Record<string, any>, p: any) => {
                 if (!acc[p.period]) {
                     acc[p.period] = { period: p.period, total: 0, bySociety: {} as Record<string, number> };
                 }
-                acc[p.period].total += p.totalAmount;
-                acc[p.period].bySociety[p.society] = p.totalAmount;
+                acc[p.period].total += (p.totalAmount || 0);
+                acc[p.period].bySociety[p.society] = (p.totalAmount || 0);
                 return acc;
-            }, {} as Record<string, { period: string; total: number; bySociety: Record<string, number> }>);
+            }, {});
 
             return NextResponse.json(Object.values(periodGroups));
         }
 
-        return NextResponse.json({ error: "Invalid view parameter" }, { status: 400 });
+        return apiError("Invalid view parameter", 400);
     } catch (err: any) {
         console.error("Revenue analytics error:", err);
-        return NextResponse.json({ error: err.message }, { status: 500 });
+        return apiError(err.message || "Failed to fetch revenue data", 500);
     }
 }

@@ -6,8 +6,8 @@ import { generateCwrForDownload } from "@/lib/infra/registration-service";
 
 /**
  * GET /api/catalog-scan/:id/export-cwr
- * 
- * Generates and downloads a CWR (Common Works Registration) file 
+ *
+ * Generates and downloads a CWR (Common Works Registration) file
  * for all open gaps in a specific catalog scan.
  */
 export async function GET(

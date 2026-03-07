@@ -2,12 +2,22 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth/auth";
 import { db } from "@/lib/infra/db";
+import { ApiErrors } from "@/lib/api/error-response";
+
+interface WeeklyStat {
+    week: string;
+    count: number;
+    impact: number;
+    recovered: number;
+}
 
 export async function GET() {
     try {
         const session = await getServerSession(authOptions);
-        if (!session?.user) return new Response("Unauthorized", { status: 401 });
+        if (!session?.user) return ApiErrors.Unauthorized();
         const orgId = session.user.orgId;
+
+        if (!orgId) return ApiErrors.Forbidden("No organization linked to account");
 
         // Get findings grouped by creation week for trend analysis
         const findings = await db.finding.findMany({
@@ -25,12 +35,7 @@ export async function GET() {
         });
 
         // Group by week
-        const weeklyData: Record<string, {
-            week: string;
-            count: number;
-            impact: number;
-            recovered: number;
-        }> = {};
+        const weeklyData: Record<string, WeeklyStat> = {};
 
         for (const f of findings) {
             const date = new Date(f.createdAt);
@@ -54,7 +59,7 @@ export async function GET() {
 
         // Recovery funnel
         const statusCounts = findings.reduce(
-            (acc, f) => {
+            (acc: Record<string, number>, f: any) => {
                 acc[f.status] = (acc[f.status] || 0) + 1;
                 return acc;
             },
@@ -70,7 +75,7 @@ export async function GET() {
 
         // Severity breakdown
         const severityCounts = findings.reduce(
-            (acc, f) => {
+            (acc: Record<string, number>, f: any) => {
                 acc[f.severity] = (acc[f.severity] || 0) + 1;
                 return acc;
             },
@@ -84,7 +89,8 @@ export async function GET() {
         ];
 
         return NextResponse.json({ trends, funnel, severity });
-    } catch (err: any) {
-        return new Response(err.message, { status: 500 });
+    } catch (error: any) {
+        console.error("Trends API error:", error);
+        return ApiErrors.Internal(error?.message || "Internal Server Error");
     }
 }

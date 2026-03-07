@@ -11,6 +11,68 @@ export const TemplateTypes = [
 
 export type TemplateType = typeof TemplateTypes[number];
 
+export const IndustrySources = [
+    "SPOTIFY_STREAMING",
+    "ASCAP_ROYALTY",
+    "BMI_ROYALTY",
+    "MLC_DETAIL",
+] as const;
+
+export type IndustrySource = typeof IndustrySources[number];
+
+export interface IndustryTemplate {
+    source: IndustrySource;
+    targetType: TemplateType;
+    mapping: Record<string, string>; // Source Header -> Internal Key
+}
+
+export const industryTemplates: Record<string, IndustryTemplate> = {
+    SPOTIFY_STREAMING: {
+        source: "SPOTIFY_STREAMING",
+        targetType: "DSP Report",
+        mapping: {
+            "track name": "Title",
+            "artist name": "Artist",
+            "platform": "Source",
+            "timestamp": "Period",
+        }
+    },
+    ASCAP_ROYALTY: {
+        source: "ASCAP_ROYALTY",
+        targetType: "Statement Lines",
+        mapping: {
+            "WORK TITLE": "Title",
+            "ISRC": "ISRC",
+            "PERFORMANCE QUARTER": "Period",
+            "DOLLARS": "Amount",
+            "SOURCE": "Source",
+        }
+    },
+    BMI_ROYALTY: {
+        source: "BMI_ROYALTY",
+        targetType: "Statement Lines",
+        mapping: {
+            "Song Title": "Title",
+            "ISRC": "ISRC",
+            "Performance Period": "Period",
+            "Net Amount": "Amount",
+            "Source": "Source",
+        }
+    },
+    MLC_DETAIL: {
+        source: "MLC_DETAIL",
+        targetType: "DSP Report",
+        mapping: {
+            "Musical Work Title": "Title",
+            "ISRC": "ISRC",
+            "DSP": "Source",
+            "Usage Period": "Period",
+            "Total Payable Resources": "Streams",
+            "Net Payable Amount": "Revenue",
+        }
+    }
+};
+
 // Normalization Helper
 const cleanString = (val: unknown) => typeof val === "string" ? val.trim() : val;
 const upperString = (val: unknown) => typeof val === "string" ? val.trim().toUpperCase() : val;

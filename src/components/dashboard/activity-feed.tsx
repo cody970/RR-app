@@ -2,16 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-    Activity as ActivityIcon,
-    User,
-    Clock,
-    AlertCircle,
-    Shield,
-    UserPlus,
-    Settings,
-    CheckCircle2
-} from "lucide-react";
+import { Activity as ActivityIcon, Clock, AlertCircle, Shield, CheckCircle2 } from "lucide-react";
 
 interface Activity {
     id: string;

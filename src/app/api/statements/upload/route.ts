@@ -3,11 +3,12 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth/auth";
 import { parseStatement, importStatement } from "@/lib/finance/statement-parser";
 import { runDiscrepancyChecks } from "@/lib/music/discrepancy-engine";
+import { ApiErrors } from "@/lib/api/error-response";
 
 export async function POST(req: NextRequest) {
     try {
         const session = await getServerSession(authOptions);
-        if (!session?.user) return new Response("Unauthorized", { status: 401 });
+        if (!session?.user) return ApiErrors.Unauthorized();
         const orgId = session.user.orgId;
 
         const formData = await req.formData();
@@ -16,14 +17,14 @@ export async function POST(req: NextRequest) {
         const formatOverride = formData.get("format") as string | null;
 
         if (!file) {
-            return NextResponse.json({ error: "No file provided" }, { status: 400 });
+            return ApiErrors.BadRequest("No file provided");
         }
 
         // Read file content
         const content = await file.text();
 
         if (!content.trim()) {
-            return NextResponse.json({ error: "File is empty" }, { status: 400 });
+            return ApiErrors.BadRequest("File is empty");
         }
 
         // Parse the statement
@@ -33,15 +34,16 @@ export async function POST(req: NextRequest) {
         );
 
         if (parsed.errors.length > 0 && parsed.lines.length === 0) {
-            return NextResponse.json({
-                error: "Failed to parse statement",
-                details: parsed.errors,
-            }, { status: 400 });
+            return ApiErrors.BadRequest("Failed to parse statement", parsed.errors);
         }
 
         // Override period if provided
         if (periodOverride) {
             parsed.period = periodOverride;
+        }
+
+        if (!orgId) {
+            return ApiErrors.Forbidden("No organization linked to user");
         }
 
         // Import to database
@@ -63,6 +65,6 @@ export async function POST(req: NextRequest) {
         });
     } catch (err: any) {
         console.error("Statement upload error:", err);
-        return NextResponse.json({ error: err.message || "Upload failed" }, { status: 500 });
+        return ApiErrors.Internal(err.message || "Upload failed");
     }
 }

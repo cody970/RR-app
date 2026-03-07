@@ -1,14 +1,10 @@
 "use client";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ImpactChart, SeverityPie } from "./stats-charts";
+import { ImpactChart } from "./stats-charts";
 import { Activity, ShieldCheck, Heart, TrendingUp, Filter } from "lucide-react";
 import { useEffect, useState } from "react";
-import {
-    LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Area, AreaChart,
-    PieChart, Pie, Cell,
-    BarChart, Bar,
-} from "recharts";
+import { XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Area, AreaChart, PieChart, Pie, Cell, BarChart, Bar } from "recharts";
 
 interface TrendData {
     week: string;

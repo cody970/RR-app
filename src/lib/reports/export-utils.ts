@@ -61,7 +61,7 @@ Resource ID: ${finding.resourceId}
 Resource Type: ${finding.resourceType}
 
 NATURE OF DISPUTE:
-The audit engine flagged this item due to ${finding.type.toLowerCase().replace(/_/g, " ")}. 
+The audit engine flagged this item due to ${finding.type.toLowerCase().replace(/_/g, " ")}.
 We estimate the financial impact of this unresolved issue to be approximately $${finding.estimatedImpact.toFixed(2)}.
 
 We request a formal review of the metadata and royalty distributions associated with this asset to ensure accurate reporting and payment.

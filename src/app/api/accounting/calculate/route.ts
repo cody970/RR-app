@@ -1,21 +1,35 @@
 import { NextResponse, NextRequest } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth/auth";
 import { db } from "@/lib/infra/db";
+import { requireAuth } from "@/lib/auth/get-session";
+import { validatePermission } from "@/lib/auth/rbac";
 import { processStatementLineSplits, processLicenseSplits } from "@/lib/music/split-engine";
+import { z } from "zod";
+
+const calculateSchema = z.object({
+    source: z.enum(["STATEMENT", "LICENSE"]),
+    sourceId: z.string().min(1),
+});
 
 export async function POST(req: NextRequest) {
     try {
-        const session = await getServerSession(authOptions);
-        if (!session?.user) return new Response("Unauthorized", { status: 401 });
-        const orgId = session.user.orgId;
+        const { orgId, role } = await requireAuth();
 
-        const body = await req.json();
-        const { source, sourceId } = body;
-
-        if (!source || !sourceId) {
-            return NextResponse.json({ error: "Missing source or sourceId" }, { status: 400 });
+        // RBAC: require FINANCE_EDIT for calculations
+        try {
+            validatePermission(role, "FINANCE_EDIT");
+        } catch (e: unknown) {
+            const message = e instanceof Error ? e.message : "Forbidden";
+            return NextResponse.json({ error: message }, { status: 403 });
         }
+
+        const body = await req.json().catch(() => ({}));
+        const parsed = calculateSchema.safeParse(body);
+
+        if (!parsed.success) {
+            return NextResponse.json({ error: "Invalid request", details: parsed.error.flatten() }, { status: 400 });
+        }
+
+        const { source, sourceId } = parsed.data;
 
         let totalLedgersCreated = 0;
 
@@ -54,7 +68,11 @@ export async function POST(req: NextRequest) {
         }
 
         return NextResponse.json({ success: true, ledgersCreated: totalLedgersCreated });
-    } catch (err: any) {
-        return NextResponse.json({ error: err.message }, { status: 500 });
+    } catch (error: unknown) {
+        if (error && typeof error === "object" && "status" in error && (error as any).status === 401) {
+            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        }
+        const message = error instanceof Error ? error.message : "Internal Server Error";
+        return NextResponse.json({ error: message }, { status: 500 });
     }
 }

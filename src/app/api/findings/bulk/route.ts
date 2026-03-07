@@ -1,20 +1,36 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth/auth";
 import { db } from "@/lib/infra/db";
+import { requireAuth } from "@/lib/auth/get-session";
+import { validatePermission } from "@/lib/auth/rbac";
+import { z } from "zod";
+import { ApiErrors } from "@/lib/api/error-response";
+
+const bulkSchema = z.object({
+    ids: z.array(z.string().min(1)).min(1).max(500),
+    action: z.enum(["updateStatus", "createTasks"]),
+    status: z.string().optional(),
+});
 
 export async function PATCH(req: Request) {
     try {
-        const session = await getServerSession(authOptions);
-        if (!session?.user) return new Response("Unauthorized", { status: 401 });
-        const orgId = session.user.orgId;
+        const { orgId, role } = await requireAuth();
 
-        const body = await req.json();
-        const { ids, action, status } = body;
-
-        if (!ids || !Array.isArray(ids) || ids.length === 0) {
-            return new Response("No finding IDs provided", { status: 400 });
+        // RBAC: require CATALOG_EDIT for bulk mutations
+        try {
+            validatePermission(role, "CATALOG_EDIT");
+        } catch (e: unknown) {
+            const message = e instanceof Error ? e.message : "Forbidden";
+            return ApiErrors.Forbidden(message);
         }
+
+        const body = await req.json().catch(() => ({}));
+        const parsed = bulkSchema.safeParse(body);
+
+        if (!parsed.success) {
+            return ApiErrors.BadRequest("Invalid request", parsed.error.flatten());
+        }
+
+        const { ids, action, status } = parsed.data;
 
         if (action === "updateStatus" && status) {
             await db.finding.updateMany({
@@ -25,17 +41,36 @@ export async function PATCH(req: Request) {
         }
 
         if (action === "createTasks") {
-            const tasks = ids.map((findingId: string) => ({
+            // Verify all IDs belong to the org first
+            const existingFindings = await db.finding.findMany({
+                where: { id: { in: ids }, orgId },
+                select: { id: true },
+            });
+
+            const validIds = existingFindings.map((f: { id: string }) => f.id);
+            if (validIds.length === 0) {
+                return ApiErrors.BadRequest("No valid findings found for this organization");
+            }
+
+            const tasks = validIds.map((findingId: string) => ({
                 findingId,
                 orgId,
                 status: "OPEN",
             }));
             await db.task.createMany({ data: tasks });
-            return NextResponse.json({ success: true, created: ids.length });
+            return NextResponse.json({
+                success: true,
+                created: validIds.length,
+                requested: ids.length
+            });
         }
 
         return new Response("Invalid action", { status: 400 });
-    } catch (err: any) {
-        return new Response(err.message, { status: 500 });
+    } catch (error: unknown) {
+        if (error && typeof error === "object" && "status" in error && (error as any).status === 401) {
+            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        }
+        const message = error instanceof Error ? error.message : "Internal Server Error";
+        return NextResponse.json({ error: message }, { status: 500 });
     }
 }

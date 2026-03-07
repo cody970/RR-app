@@ -5,7 +5,7 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { useToast } from "@/components/ui/toast-provider";
 import { formatCurrency } from "@/lib/finance/currency";
 import { Finding } from "@/types";
-import { AlertTriangle, CheckCircle2, CircleDashed, Filter, MoreHorizontal, ShieldAlert, Sparkles } from "lucide-react";
+import { CheckCircle2, CircleDashed, Filter, MoreHorizontal, ShieldAlert, Sparkles } from "lucide-react";
 
 const COLUMNS = [
     { id: "OPEN", label: "Open Issues", icon: CircleDashed, color: "text-amber-600", bg: "bg-amber-100", border: "border-amber-200" },

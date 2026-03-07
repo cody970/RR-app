@@ -1,8 +1,6 @@
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth/auth";
 import { db } from "@/lib/infra/db";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import RegistrationsClient from "./registrations-client";
 
 export default async function RegistrationsPage() {

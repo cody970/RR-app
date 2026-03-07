@@ -9,11 +9,7 @@
 import { db } from "@/lib/infra/db";
 import { logger } from "@/lib/infra/logger";
 import { searchByTitle as songviewSearch, searchByISWC } from "@/lib/clients/songview-client";
-import {
-    lookupRecordingByISRC,
-    isrcToISWC,
-    searchWorkByTitle,
-} from "@/lib/clients/musicbrainz-client";
+import { isrcToISWC, searchWorkByTitle } from "@/lib/clients/musicbrainz-client";
 import { searchByISRC as spotifySearchByISRC } from "@/lib/clients/spotify";
 import { searchMLCByTitle } from "@/lib/clients/mlc-client";
 import { searchByISRC as seSearchByISRC } from "@/lib/clients/soundexchange-client";

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Check, X, Loader2 } from "lucide-react";
+import { Check, Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 export default function SplitResolutionForm({ token }: { token: string }) {
@@ -11,12 +11,15 @@ export default function SplitResolutionForm({ token }: { token: string }) {
     const [reason, setReason] = useState("");
     const router = useRouter();
 
+    const [submitted, setSubmitted] = useState(false);
+
     const handleResolve = async (action: "APPROVE" | "DISPUTE") => {
         if (action === "DISPUTE" && !reason.trim()) {
             alert("Please provide a reason for disputing this split.");
             return;
         }
 
+        if (loading || submitted) return; // Prevent double-submission
         setLoading(true);
         try {
             const res = await fetch("/api/splits/resolve", {
@@ -26,6 +29,7 @@ export default function SplitResolutionForm({ token }: { token: string }) {
             });
 
             if (res.ok) {
+                setSubmitted(true); // Prevent any further submissions
                 router.refresh(); // Reload the server component to show the resolved state
             } else {
                 const data = await res.json();

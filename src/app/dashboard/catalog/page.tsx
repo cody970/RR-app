@@ -1,34 +1,71 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
-import { Search, Library, Disc3, CheckCircle2, XCircle, ChevronLeft, ChevronRight, ExternalLink } from "lucide-react";
+import { useEffect, useState, useCallback, useRef } from "react";
+import { Search, Library, Disc3, CheckCircle2, XCircle, ChevronLeft, ChevronRight, AlertTriangle, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast-provider";
+import { DataState } from "@/components/ui/data-state";
+
+// ---------- Types ----------
+
+interface CatalogWork {
+    id: string;
+    title: string;
+    iswc: string | null;
+    writers: { writer: { name: string } }[];
+    registrations: any[];
+}
+
+interface CatalogRecording {
+    id: string;
+    title: string;
+    isrc: string | null;
+    workId: string | null;
+    work: { title: string } | null;
+}
 
 type CatalogTab = "works" | "recordings";
 
 export default function CatalogPage() {
     const [tab, setTab] = useState<CatalogTab>("works");
-    const [items, setItems] = useState<any[]>([]);
+    const [items, setItems] = useState<(CatalogWork | CatalogRecording)[]>([]);
     const [total, setTotal] = useState(0);
     const [page, setPage] = useState(1);
     const [query, setQuery] = useState("");
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+    const [enrichingId, setEnrichingId] = useState<string | null>(null);
+    const [processingActionId, setProcessingActionId] = useState<string | null>(null);
     const toast = useToast();
+    const abortControllerRef = useRef<AbortController | null>(null);
 
     const fetchCatalog = useCallback(async () => {
+        // Cancel existing request
+        if (abortControllerRef.current) {
+            abortControllerRef.current.abort();
+        }
+
+        abortControllerRef.current = new AbortController();
         setLoading(true);
+        setError(null);
         try {
             const params = new URLSearchParams({ type: tab, page: String(page) });
             if (query) params.set("q", query);
-            const res = await fetch(`/api/catalog?${params}`);
+            const res = await fetch(`/api/catalog?${params}`, {
+                signal: abortControllerRef.current.signal
+            });
             if (res.ok) {
                 const data = await res.json();
                 setItems(data.items);
                 setTotal(data.total);
+            } else {
+                const data = await res.json().catch(() => ({}));
+                setError(data.error || "Failed to load catalog data");
             }
-        } catch (e) {
+        } catch (e: any) {
+            if (e.name === "AbortError") return;
             console.error(e);
+            setError("A network error occurred while fetching the catalog");
         } finally {
             setLoading(false);
         }
@@ -36,6 +73,9 @@ export default function CatalogPage() {
 
     useEffect(() => {
         fetchCatalog();
+        return () => {
+            if (abortControllerRef.current) abortControllerRef.current.abort();
+        };
     }, [fetchCatalog]);
 
     useEffect(() => {
@@ -44,9 +84,7 @@ export default function CatalogPage() {
 
     const totalPages = Math.ceil(total / 20) || 1;
 
-    const [enrichingId, setEnrichingId] = useState<string | null>(null);
-
-    const handleEnrich = async (id: string, title: string, currentId?: string) => {
+    const handleEnrich = async (id: string, title: string, currentId?: string | null) => {
         setEnrichingId(id);
         try {
             const res = await fetch("/api/catalog", {
@@ -61,11 +99,73 @@ export default function CatalogPage() {
                 } else {
                     toast.info("No match found in global databases.");
                 }
+            } else {
+                const data = await res.json().catch(() => ({}));
+                toast.error(data.error || "Enrichment failed");
             }
         } catch (e) {
             console.error(e);
+            toast.error("Network error during enrichment");
         } finally {
             setEnrichingId(null);
+        }
+    };
+
+    const handleRequestSplit = async (workId: string, workTitle: string) => {
+        const writerName = window.prompt(`Enter collaborator's name for ${workTitle}:`);
+        if (!writerName) return;
+        const targetEmail = window.prompt(`Enter email path for ${writerName}:`);
+        if (!targetEmail) return;
+        const proposedSplit = window.prompt(`Enter proposed split % for ${writerName}:`, "50");
+        if (!proposedSplit || isNaN(Number(proposedSplit))) return;
+
+        setProcessingActionId(workId);
+        try {
+            const res = await fetch("/api/splits/request", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    workId,
+                    targetEmail,
+                    writerName,
+                    proposedSplit: Number(proposedSplit)
+                })
+            });
+            if (res.ok) {
+                toast.success(`Split request created for ${writerName}`);
+            } else {
+                const data = await res.json().catch(() => ({}));
+                toast.error(data.error || "Failed to create split request");
+            }
+        } catch (e) {
+            console.error(e);
+            toast.error("An error occurred while creating split request");
+        } finally {
+            setProcessingActionId(null);
+        }
+    };
+
+    const submitToContentId = async (recording: CatalogRecording) => {
+        const confirmed = window.confirm(`Submit recording "${recording.title}" to global Content ID networks (YouTube, Facebook, Instagram, TikTok)?`);
+        if (!confirmed) return;
+
+        setProcessingActionId(recording.id);
+        try {
+            const res = await fetch(`/api/recordings/${recording.id}/content-id`, {
+                method: "POST"
+            });
+            if (res.ok) {
+                toast.success("Recording submitted to Content ID");
+                fetchCatalog(); // Refresh
+            } else {
+                const data = await res.json().catch(() => ({}));
+                toast.error(data.error || "Failed to submit recording");
+            }
+        } catch (e) {
+            console.error(e);
+            toast.error("An error occurred during Content ID submission");
+        } finally {
+            setProcessingActionId(null);
         }
     };
 
@@ -123,142 +223,170 @@ export default function CatalogPage() {
                 <span className="text-sm text-slate-500">{total} {tab}</span>
             </div>
 
-            {/* Table */}
-            <div className="mx-2 border border-slate-200 rounded-xl bg-white overflow-hidden shadow-sm">
-                {loading ? (
-                    <div className="p-12 text-center text-slate-500">Loading catalog...</div>
-                ) : items.length === 0 ? (
-                    <div className="p-12 flex flex-col items-center justify-center text-center">
-                        <Library className="h-12 w-12 text-slate-300 mb-4" />
-                        <h3 className="text-lg font-medium text-slate-900">No {tab} found</h3>
-                        <p className="text-slate-500 mt-1 max-w-sm">
-                            {query ? "Try a different search term." : "Import catalog data to get started."}
-                        </p>
-                        {!query && (
-                            <a href="/dashboard/import" className="mt-4 text-amber-600 font-medium hover:underline text-sm">
+            {/* Table Area */}
+            <div className="mx-2">
+                <DataState
+                    loading={loading}
+                    error={error}
+                    empty={items.length === 0}
+                    onRetry={() => fetchCatalog()}
+                    emptyMessage={`No ${tab} found`}
+                    emptyAction={
+                        !query ? (
+                            <a href="/dashboard/import" className="text-amber-600 font-medium hover:underline text-sm">
                                 Go to Import →
                             </a>
+                        ) : (
+                            <p className="text-slate-500 text-sm">Try a different search term.</p>
+                        )
+                    }
+                >
+                    <div className="border border-slate-200 rounded-xl bg-white overflow-hidden shadow-sm">
+                        {tab === "works" ? (
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-sm text-left">
+                                    <thead className="text-xs text-slate-500 uppercase bg-slate-50 border-b border-slate-200">
+                                        <tr>
+                                            <th className="px-6 py-3">Title</th>
+                                            <th className="px-6 py-3">ISWC</th>
+                                            <th className="px-6 py-3">Writers</th>
+                                            <th className="px-6 py-3">Health</th>
+                                            <th className="px-6 py-3 text-right">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {(items as CatalogWork[]).map((work) => (
+                                            <tr key={work.id} className="border-b border-slate-100 hover:bg-slate-50 transition-colors group">
+                                                <td className="px-6 py-4 font-medium text-slate-900">{work.title}</td>
+                                                <td className="px-6 py-4 text-slate-500 font-mono text-xs">
+                                                    {work.iswc || <span className="text-red-500/70 italic">Missing</span>}
+                                                </td>
+                                                <td className="px-6 py-4 text-slate-500 text-xs">
+                                                    {work.writers?.length > 0
+                                                        ? work.writers.map((ww) => ww.writer?.name).join(", ")
+                                                        : <span className="text-slate-400 italic">None</span>}
+                                                </td>
+                                                <td className="px-6 py-4">
+                                                    <div className="flex gap-2 flex-wrap">
+                                                        <HealthBadge ok={!!work.iswc} label="ISWC" />
+                                                        <HealthBadge ok={work.registrations?.length > 0} label="Registered" />
+                                                    </div>
+                                                </td>
+                                                <td className="px-6 py-4 text-right">
+                                                    <div className="flex items-center justify-end gap-2">
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            className="text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 transition-all border border-indigo-100"
+                                                            onClick={() => handleRequestSplit(work.id, work.title)}
+                                                            disabled={processingActionId === work.id}
+                                                        >
+                                                            {processingActionId === work.id ? "..." : "Req. Split"}
+                                                        </Button>
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            className={`text-slate-500 hover:text-amber-600 hover:bg-amber-50 transition-all ${enrichingId === work.id ? "animate-pulse" : ""}`}
+                                                            disabled={!!enrichingId || !!work.iswc}
+                                                            onClick={() => handleEnrich(work.id, work.title, work.iswc)}
+                                                        >
+                                                            {enrichingId === work.id ? "Syncing..." : work.iswc ? "Verified" : "Sync Global"}
+                                                        </Button>
+                                                    </div>
+                                                </td>
+
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        ) : (
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-sm text-left">
+                                    <thead className="text-xs text-slate-500 uppercase bg-slate-50 border-b border-slate-200">
+                                        <tr>
+                                            <th className="px-6 py-3">Title</th>
+                                            <th className="px-6 py-3">ISRC</th>
+                                            <th className="px-6 py-3">Linked Work</th>
+                                            <th className="px-6 py-3">Health</th>
+                                            <th className="px-6 py-3 text-right">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {(items as CatalogRecording[]).map((rec) => (
+                                            <tr key={rec.id} className="border-b border-slate-100 hover:bg-slate-50 transition-colors group">
+                                                <td className="px-6 py-4 font-medium text-slate-900">{rec.title}</td>
+                                                <td className="px-6 py-4 text-slate-500 font-mono text-xs">
+                                                    {rec.isrc || <span className="text-red-500/70 italic">Missing</span>}
+                                                </td>
+                                                <td className="px-6 py-4 text-slate-500 text-xs">
+                                                    {rec.work?.title || <span className="text-slate-400 italic">Unlinked</span>}
+                                                </td>
+                                                <td className="px-6 py-4">
+                                                    <div className="flex gap-2 flex-wrap">
+                                                        <HealthBadge ok={!!rec.isrc} label="ISRC" />
+                                                        <HealthBadge ok={!!rec.workId} label="Linked" />
+                                                    </div>
+                                                </td>
+                                                <td className="px-6 py-4 text-right">
+                                                    <div className="flex items-center justify-end gap-2">
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            className="text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 transition-all border border-emerald-100"
+                                                            onClick={() => submitToContentId(rec)}
+                                                            disabled={processingActionId === rec.id}
+                                                        >
+                                                            {processingActionId === rec.id ? "..." : "Content ID"}
+                                                        </Button>
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            className={`text-slate-500 hover:text-amber-600 hover:bg-amber-50 transition-all ${enrichingId === rec.id ? "animate-pulse" : ""}`}
+                                                            disabled={!!enrichingId || !!rec.isrc}
+                                                            onClick={() => handleEnrich(rec.id, rec.title, rec.isrc)}
+                                                        >
+                                                            {enrichingId === rec.id ? "Syncing..." : rec.isrc ? "Verified" : "Sync Global"}
+                                                        </Button>
+                                                    </div>
+                                                </td>
+
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
                         )}
                     </div>
-                ) : tab === "works" ? (
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-sm text-left">
-                            <thead className="text-xs text-slate-500 uppercase bg-slate-50 border-b border-slate-200">
-                                <tr>
-                                    <th className="px-6 py-3">Title</th>
-                                    <th className="px-6 py-3">ISWC</th>
-                                    <th className="px-6 py-3">Writers</th>
-                                    <th className="px-6 py-3">Health</th>
-                                    <th className="px-6 py-3 text-right">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {items.map((work: any) => (
-                                    <tr key={work.id} className="border-b border-slate-100 hover:bg-slate-50 transition-colors group">
-                                        <td className="px-6 py-4 font-medium text-slate-900">{work.title}</td>
-                                        <td className="px-6 py-4 text-slate-500 font-mono text-xs">
-                                            {work.iswc || <span className="text-red-500/70 italic">Missing</span>}
-                                        </td>
-                                        <td className="px-6 py-4 text-slate-500 text-xs">
-                                            {work.writers?.length > 0
-                                                ? work.writers.map((ww: any) => ww.writer?.name).join(", ")
-                                                : <span className="text-slate-400 italic">None</span>}
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            <div className="flex gap-2 flex-wrap">
-                                                <HealthBadge ok={!!work.iswc} label="ISWC" />
-                                                <HealthBadge ok={work.registrations?.length > 0} label="Registered" />
-                                            </div>
-                                        </td>
-                                        <td className="px-6 py-4 text-right">
-                                            <Button
-                                                variant="ghost"
-                                                size="sm"
-                                                className={`text-slate-500 hover:text-amber-600 hover:bg-amber-50 transition-all ${enrichingId === work.id ? "animate-pulse" : ""}`}
-                                                disabled={!!enrichingId || !!work.iswc}
-                                                onClick={() => handleEnrich(work.id, work.title, work.iswc)}
-                                            >
-                                                {enrichingId === work.id ? "Syncing..." : work.iswc ? "Verified" : "Sync Global"}
-                                            </Button>
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
-                ) : (
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-sm text-left">
-                            <thead className="text-xs text-slate-500 uppercase bg-slate-50 border-b border-slate-200">
-                                <tr>
-                                    <th className="px-6 py-3">Title</th>
-                                    <th className="px-6 py-3">ISRC</th>
-                                    <th className="px-6 py-3">Linked Work</th>
-                                    <th className="px-6 py-3">Health</th>
-                                    <th className="px-6 py-3 text-right">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {items.map((rec: any) => (
-                                    <tr key={rec.id} className="border-b border-slate-100 hover:bg-slate-50 transition-colors group">
-                                        <td className="px-6 py-4 font-medium text-slate-900">{rec.title}</td>
-                                        <td className="px-6 py-4 text-slate-500 font-mono text-xs">
-                                            {rec.isrc || <span className="text-red-500/70 italic">Missing</span>}
-                                        </td>
-                                        <td className="px-6 py-4 text-slate-500 text-xs">
-                                            {rec.work?.title || <span className="text-slate-400 italic">Unlinked</span>}
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            <div className="flex gap-2 flex-wrap">
-                                                <HealthBadge ok={!!rec.isrc} label="ISRC" />
-                                                <HealthBadge ok={!!rec.workId} label="Linked" />
-                                            </div>
-                                        </td>
-                                        <td className="px-6 py-4 text-right">
-                                            <Button
-                                                variant="ghost"
-                                                size="sm"
-                                                className={`text-slate-500 hover:text-amber-600 hover:bg-amber-50 transition-all ${enrichingId === rec.id ? "animate-pulse" : ""}`}
-                                                disabled={!!enrichingId || !!rec.isrc}
-                                                onClick={() => handleEnrich(rec.id, rec.title, rec.isrc)}
-                                            >
-                                                {enrichingId === rec.id ? "Syncing..." : rec.isrc ? "Verified" : "Sync Global"}
-                                            </Button>
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
-                )}
-            </div>
 
-            {/* Pagination */}
-            {total > 20 && (
-                <div className="flex items-center justify-between px-2">
-                    <p className="text-sm text-slate-500">Page {page} of {totalPages}</p>
-                    <div className="flex gap-2">
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            className="bg-white border-slate-200 hover:bg-slate-50 text-slate-700"
-                            disabled={page <= 1}
-                            onClick={() => setPage(page - 1)}
-                        >
-                            <ChevronLeft className="h-4 w-4" />
-                        </Button>
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            className="bg-white border-slate-200 hover:bg-slate-50 text-slate-700"
-                            disabled={page >= totalPages}
-                            onClick={() => setPage(page + 1)}
-                        >
-                            <ChevronRight className="h-4 w-4" />
-                        </Button>
-                    </div>
-                </div>
-            )}
+                    {/* Pagination */}
+                    {!error && total > 20 && (
+                        <div className="flex items-center justify-between px-2">
+                            <p className="text-sm text-slate-500">Page {page} of {totalPages}</p>
+                            <div className="flex gap-2">
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="bg-white border-slate-200 hover:bg-slate-50 text-slate-700"
+                                    disabled={page <= 1}
+                                    onClick={() => setPage(page - 1)}
+                                >
+                                    <ChevronLeft className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="bg-white border-slate-200 hover:bg-slate-50 text-slate-700"
+                                    disabled={page >= totalPages}
+                                    onClick={() => setPage(page + 1)}
+                                >
+                                    <ChevronRight className="h-4 w-4" />
+                                </Button>
+                            </div>
+                        </div>
+                    )}
+                </DataState>
+            </div>
         </div>
     );
 }
