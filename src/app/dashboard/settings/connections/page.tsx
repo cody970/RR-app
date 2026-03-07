@@ -441,9 +441,12 @@ export default function ConnectionsPage() {
                                     type="text"
                                     value={formSchedule}
                                     onChange={(e) => setFormSchedule(e.target.value)}
-                                    placeholder="0 0 * * * (daily at midnight)"
+                                    placeholder="0 0 * * * (daily at midnight, 5-field cron)"
                                     className="w-full h-9 px-3 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500"
                                 />
+                                <p className="text-[10px] text-slate-400 mt-1">
+                                    Standard 5-field cron: minute hour day month weekday
+                                </p>
                             </div>
                         )}
                     </div>

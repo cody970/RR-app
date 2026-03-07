@@ -11,12 +11,13 @@
  * After successful ingestion, auto-triggers discrepancy checks.
  */
 
-import { Worker, Job, Queue } from "bullmq";
+import { Worker, Job } from "bullmq";
 import { redis } from "@/lib/infra/redis";
 import { db } from "@/lib/infra/db";
-import { parseStatement, importStatement } from "@/lib/finance/statement-parser";
+import { parseStatement, importStatement, type StatementFormat } from "@/lib/finance/statement-parser";
 import { runDiscrepancyChecks } from "@/lib/music/discrepancy-engine";
 import { notifyOrg } from "@/lib/infra/notify";
+import { statementFetchQueue } from "@/lib/infra/queue";
 
 // ---------- Types ----------
 
@@ -34,20 +35,31 @@ interface FetchResult {
     errors: string[];
 }
 
-// ---------- Queue Setup ----------
+// ---------- Helpers ----------
 
-export const statementFetchQueue = new Queue<FetchJobData>("statement-fetch-queue", {
-    connection: redis as ReturnType<typeof redis["duplicate"]>,
-    defaultJobOptions: {
-        attempts: 3,
-        backoff: {
-            type: "exponential",
-            delay: 5000,
-        },
-        removeOnComplete: 100,
-        removeOnFail: 500,
-    },
-});
+/**
+ * Get the current quarter period string (e.g., "2025-Q1").
+ */
+function getCurrentQuarterPeriod(): string {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = now.getMonth(); // 0-indexed
+    const quarter = Math.floor(month / 3) + 1;
+    return `${year}-Q${quarter}`;
+}
+
+/**
+ * Map society hint to statement format for parsing.
+ */
+function getStatementFormat(societyHint: string | null): StatementFormat | undefined {
+    const formatMap: Record<string, StatementFormat> = {
+        "MLC": "MLC_CSV",
+        "SOUNDEXCHANGE": "SOUNDEXCHANGE_CSV",
+        "ASCAP": "ASCAP_CSV",
+        "BMI": "BMI_CSV",
+    };
+    return societyHint ? formatMap[societyHint] : undefined;
+}
 
 // ---------- SFTP Client ----------
 
@@ -156,7 +168,7 @@ async function fetchFromMLCApi(
         );
 
         const csvContent = [headers, ...rows].join("\n");
-        const period = new Date().toISOString().slice(0, 7).replace("-", "-Q");
+        const period = getCurrentQuarterPeriod();
 
         return [
             {
@@ -278,10 +290,12 @@ export async function processStatementFetchJob(
                 if (!source.sftpHost || !source.sftpUsername) {
                     throw new Error("SFTP configuration incomplete");
                 }
-                // In production, credentials would be stored encrypted or in a vault
+                // Note: In production, credentials should be stored encrypted in a secrets manager
+                // (e.g., AWS Secrets Manager, HashiCorp Vault) rather than environment variables.
+                // This implementation uses env vars as a baseline that can be swapped for a vault.
                 const sftpPassword = process.env[`SFTP_PASSWORD_${sourceId}`] || process.env.SFTP_DEFAULT_PASSWORD;
                 if (!sftpPassword) {
-                    throw new Error("SFTP password not configured");
+                    throw new Error("SFTP password not configured. Set SFTP_PASSWORD_{sourceId} or SFTP_DEFAULT_PASSWORD env var.");
                 }
                 files = await fetchFromSFTP(
                     source.sftpHost,
@@ -324,15 +338,9 @@ export async function processStatementFetchJob(
             result.filesProcessed++;
 
             try {
-                // Parse the statement
-                const parsed = parseStatement(
-                    file.content,
-                    source.societyHint === "MLC"
-                        ? "MLC_CSV"
-                        : source.societyHint === "SOUNDEXCHANGE"
-                          ? "SOUNDEXCHANGE_CSV"
-                          : undefined
-                );
+                // Parse the statement using the appropriate format for the society
+                const format = getStatementFormat(source.societyHint);
+                const parsed = parseStatement(file.content, format);
 
                 if (parsed.source === "UNKNOWN" || parsed.lines.length === 0) {
                     result.filesFailed++;
