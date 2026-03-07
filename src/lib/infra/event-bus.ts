@@ -137,6 +137,22 @@ export async function publishScanCompleted(
 }
 
 /**
+ * Publish a scan failed event.
+ */
+export async function publishScanFailed(
+    orgId: string,
+    scanId: string,
+    error: string
+): Promise<void> {
+    await publishEvent({
+        type: "scan.failed",
+        orgId,
+        timestamp: new Date().toISOString(),
+        data: { scanId, error },
+    });
+}
+
+/**
  * Publish an audit progress event.
  */
 export async function publishAuditProgress(
@@ -166,6 +182,22 @@ export async function publishAuditCompleted(
         orgId,
         timestamp: new Date().toISOString(),
         data: { jobId, findingsCount },
+    });
+}
+
+/**
+ * Publish an audit failed event.
+ */
+export async function publishAuditFailed(
+    orgId: string,
+    jobId: string,
+    error: string
+): Promise<void> {
+    await publishEvent({
+        type: "audit.failed",
+        orgId,
+        timestamp: new Date().toISOString(),
+        data: { jobId, error },
     });
 }
 
