@@ -308,29 +308,36 @@ model Statement {
 }
 
 model StatementLine {
-  id             String         @id @default(cuid())
-  statement      Statement      @relation(fields: [statementId], references: [id])
-  statementId    String
-  isrc           String?
-  iswc           String?
-  uses           Int
-  amount         Float
-  amountOriginal Float?
-  currency       String         @default("USD")
-  title          String?
-  artist         String?
-  society        String?        // ASCAP, BMI, MLC, SOUNDEXCHANGE
-  territory      String?
-  useType        String?        // PERFORMANCE, MECHANICAL, DIGITAL, SYNC
-  rate           Float?
-  workId         String?
-  createdAt      DateTime       @default(now())
+  id              String         @id @default(cuid())
+  statement       Statement      @relation(fields: [statementId], references: [id])
+  statementId     String
+  isrc            String?
+  iswc            String?
+  uses            Int
+  amount          Float
+  amountOriginal  Float?
+  currency        String         @default("USD")
+  title           String?
+  artist          String?
+  society         String?        // ASCAP, BMI, MLC, SOUNDEXCHANGE
+  territory       String?
+  useType         String?        // PERFORMANCE, MECHANICAL, DIGITAL, SYNC
+  rate            Float?
+  workId          String?
+  // Smart matching metadata for AI-powered fuzzy matching
+  matchMethod     String?        // EXACT_ISWC, EXACT_ISRC, EXACT_TITLE, NORMALIZED_TITLE, FUZZY_HIGH, FUZZY_MEDIUM, FUZZY_LOW, CONTAINS, USER_CORRECTED, USER_REJECTED, NONE
+  matchConfidence Int?           // 0-100 confidence score
+  needsReview     Boolean        @default(false) // True for fuzzy matches that need user confirmation
+  reviewedAt      DateTime?      // When the match was reviewed by user
+  reviewedBy      String?        // User ID who reviewed the match
+  createdAt       DateTime       @default(now())
 
   @@index([statementId])
   @@index([isrc])
   @@index([iswc])
   @@index([title])
   @@index([workId])
+  @@index([needsReview])
 }
 
 model RoyaltyPeriod {

@@ -32,6 +32,8 @@ interface FuzzyMatch {
     matchedWorkId: string;
     matchedWorkTitle: string;
     matchedWorkIswc: string | null;
+    matchMethod: string | null;
+    matchConfidence: number | null;
     createdAt: string;
 }
 
@@ -359,11 +361,24 @@ export default function ReviewMatchesPage() {
                                         {/* Matched Work (Right) */}
                                         <div className="flex-1 min-w-0">
                                             <div className="flex items-center gap-2 mb-1">
-                                                <Badge variant="outline" className="text-xs bg-amber-50 text-amber-700 border-amber-200">
+                                                <Badge 
+                                                    variant="outline" 
+                                                    className={`text-xs ${
+                                                        match.matchConfidence && match.matchConfidence >= 80
+                                                            ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                                                            : match.matchConfidence && match.matchConfidence >= 70
+                                                            ? "bg-amber-50 text-amber-700 border-amber-200"
+                                                            : "bg-orange-50 text-orange-700 border-orange-200"
+                                                    }`}
+                                                >
                                                     <Music className="h-3 w-3 mr-1" />
-                                                    Fuzzy Match
+                                                    {match.matchConfidence ? `${match.matchConfidence}%` : "Fuzzy"} Match
                                                 </Badge>
-                                                <span className="text-xs text-slate-400">Catalog Work</span>
+                                                {match.matchMethod && (
+                                                    <span className="text-xs text-slate-400">
+                                                        {match.matchMethod.replace(/_/g, " ").toLowerCase().replace(/\b\w/g, c => c.toUpperCase())}
+                                                    </span>
+                                                )}
                                             </div>
                                             <p className="font-medium text-slate-900 truncate">
                                                 {match.matchedWorkTitle}
