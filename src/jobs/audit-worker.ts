@@ -16,7 +16,28 @@ interface AuditJobData {
     userId: string;
 }
 
-const upsertFinding = async (data: any) => {
+/** Shape of a finding record passed to upsertFinding / batchUpsertFindings. */
+interface FindingData {
+    type: string;
+    severity: "HIGH" | "MEDIUM" | "LOW";
+    confidence: number;
+    estimatedImpact: number;
+    amountOriginal: number;
+    currency: string;
+    resourceType: string;
+    resourceId: string;
+    orgId: string;
+    status?: string;
+    metadataFix?: string | null;
+}
+
+/** Normalised work entry used for O(n) duplicate detection. */
+type NormalizedWork = { id: string; normalizedTitle: string };
+
+/** Composite key used to identify an existing open finding. */
+const findingKey = (type: string, resourceId: string) => `${type}:${resourceId}`;
+
+const upsertFinding = async (data: FindingData) => {
     const existing = await db.finding.findFirst({
         where: {
             orgId: data.orgId,
@@ -41,6 +62,58 @@ const upsertFinding = async (data: any) => {
     return db.finding.create({ data });
 };
 
+/**
+ * Batch upsert findings — reduces N sequential DB round trips down to a single
+ * findMany + createMany + parallel updates.
+ *
+ * Returns the number of findings that were created or updated.
+ */
+const batchUpsertFindings = async (findings: FindingData[]): Promise<number> => {
+    if (findings.length === 0) return 0;
+
+    const orgId = findings[0].orgId;
+
+    // Single query to find all existing open findings that match any of the pairs
+    const existing = await db.finding.findMany({
+        where: {
+            orgId,
+            status: "OPEN",
+            OR: findings.map((f) => ({ type: f.type, resourceId: f.resourceId })),
+        },
+        select: { id: true, type: true, resourceId: true },
+    });
+
+    const existingMap = new Map(
+        existing.map((e: { id: string; type: string; resourceId: string }) => [findingKey(e.type, e.resourceId), e.id])
+    );
+
+    const toCreate = findings.filter((f) => !existingMap.has(findingKey(f.type, f.resourceId)));
+    const toUpdate = findings.filter((f) => existingMap.has(findingKey(f.type, f.resourceId)));
+
+    if (toCreate.length > 0) {
+        await db.finding.createMany({ data: toCreate });
+    }
+
+    if (toUpdate.length > 0) {
+        await Promise.all(
+            toUpdate.map((f) => {
+                const id = existingMap.get(findingKey(f.type, f.resourceId))!;
+                return db.finding.update({
+                    where: { id },
+                    data: {
+                        estimatedImpact: f.estimatedImpact,
+                        amountOriginal: f.amountOriginal,
+                        confidence: f.confidence,
+                        metadataFix: f.metadataFix,
+                    },
+                });
+            })
+        );
+    }
+
+    return toCreate.length + toUpdate.length;
+};
+
 export const processAuditJob = async (job: Job<AuditJobData>) => {
     const { jobId, orgId, userId } = job.data;
     logger.info({ jobId, orgId }, `Processing audit job ${jobId} for org ${orgId}`);
@@ -57,7 +130,11 @@ export const processAuditJob = async (job: Job<AuditJobData>) => {
         const [works, recordings, statementLines] = await Promise.all([
             db.work.findMany({
                 where: { orgId },
-                include: { writers: true }
+                include: {
+                    writers: {
+                        select: { splitPercent: true },
+                    },
+                },
             }),
             db.recording.findMany({ where: { orgId } }),
             db.statementLine.findMany({
@@ -74,26 +151,45 @@ export const processAuditJob = async (job: Job<AuditJobData>) => {
         const catalogISRCs = new Set(recordings.filter((r: any) => r.isrc).map((r: any) => r.isrc!.toUpperCase()));
 
         // ── WORK-LEVEL RULES ──
-        for (const work of works) {
-            // Rule 1: Missing ISWC
-            if (!work.iswc) {
-                const enrichment = await enrichMetadata(work.title, work.iswc);
-                const impactUSD = ESTIMATES.MISSING_ISWC_IMPACT_USD;
-                await upsertFinding({
-                    type: "MISSING_ISWC",
-                    severity: "MEDIUM",
-                    confidence: enrichment.matchScore,
-                    metadataFix: enrichment.suggestions ? JSON.stringify(enrichment.suggestions) : null,
-                    estimatedImpact: impactUSD,
-                    amountOriginal: convertFromUSD(impactUSD, currency),
-                    currency,
-                    resourceType: "Work",
-                    resourceId: work.id,
-                    orgId
-                });
-                findingsCount++;
-            }
 
+        // Pre-compute stripped title map for O(n) duplicate detection.
+        // Without this, the inner duplicate-detection loop would be O(n²).
+        const strippedTitleMap = new Map<string, NormalizedWork[]>();
+        for (const w of works) {
+            const norm = w.title.toLowerCase().trim();
+            const stripped = norm.replace(/\s*\(.*?\)\s*/g, "").trim();
+            const arr = strippedTitleMap.get(stripped) ?? [];
+            arr.push({ id: w.id, normalizedTitle: norm });
+            strippedTitleMap.set(stripped, arr);
+        }
+
+        // Collect all work-level findings for batched DB upsert
+        const pendingWorkFindings: FindingData[] = [];
+
+        // Rule 1 (missing ISWC) requires an async enrichment call per work —
+        // run all enrichments in parallel to avoid sequential waiting.
+        const missingIswcWorks = works.filter((w: any) => !w.iswc);
+        const enrichments = await Promise.all(
+            missingIswcWorks.map((w: any) => enrichMetadata(w.title, w.iswc))
+        );
+        missingIswcWorks.forEach((work: any, idx: number) => {
+            const enrichment = enrichments[idx];
+            const impactUSD = ESTIMATES.MISSING_ISWC_IMPACT_USD;
+            pendingWorkFindings.push({
+                type: "MISSING_ISWC",
+                severity: "MEDIUM",
+                confidence: enrichment.matchScore,
+                metadataFix: enrichment.suggestions ? JSON.stringify(enrichment.suggestions) : null,
+                estimatedImpact: impactUSD,
+                amountOriginal: convertFromUSD(impactUSD, currency),
+                currency,
+                resourceType: "Work",
+                resourceId: work.id,
+                orgId,
+            });
+        });
+
+        for (const work of works) {
             // Rule 2: Split Overlap (over 100%)
             let totalSplit = 0;
             for (const writer of work.writers) {
@@ -101,7 +197,7 @@ export const processAuditJob = async (job: Job<AuditJobData>) => {
             }
             if (totalSplit > 100) {
                 const impactUSD = ESTIMATES.SPLIT_OVERLAP_IMPACT_USD;
-                await upsertFinding({
+                pendingWorkFindings.push({
                     type: "SPLIT_OVERLAP",
                     severity: "HIGH",
                     confidence: 100,
@@ -110,16 +206,15 @@ export const processAuditJob = async (job: Job<AuditJobData>) => {
                     currency,
                     resourceType: "Work",
                     resourceId: work.id,
-                    orgId
+                    orgId,
                 });
-                findingsCount++;
             }
 
             // Rule 3: Split Underclaim
             if (work.writers.length > 0 && totalSplit < 100 && totalSplit > 0) {
                 const unclaimed = 100 - totalSplit;
                 const impactUSD = unclaimed * ESTIMATES.UNCLAIMED_SPLIT_MULTIPLIER;
-                await upsertFinding({
+                pendingWorkFindings.push({
                     type: "SPLIT_UNDERCLAIM",
                     severity: unclaimed > 30 ? "HIGH" : "MEDIUM",
                     confidence: 95,
@@ -128,41 +223,34 @@ export const processAuditJob = async (job: Job<AuditJobData>) => {
                     currency,
                     resourceType: "Work",
                     resourceId: work.id,
-                    orgId
+                    orgId,
                 });
-                findingsCount++;
             }
 
-            // Rule 4: Duplicate Detection
+            // Rule 4: Duplicate Detection — O(1) Map lookup (was O(n) inner loop)
             const normalizedTitle = work.title.toLowerCase().trim();
-            const variations = [
-                normalizedTitle.replace(/\s*\(.*?\)\s*/g, "").trim(),
-                normalizedTitle.replace(/[^a-z0-9\s]/g, "").trim(),
-                normalizedTitle.replace(/\s+/g, " ").trim(),
-            ];
-
-            for (const otherWork of works) {
-                if (otherWork.id === work.id) continue;
-                const otherNorm = otherWork.title.toLowerCase().trim();
-                const otherStripped = otherNorm.replace(/\s*\(.*?\)\s*/g, "").trim();
-
-                if (variations[0] === otherStripped && normalizedTitle !== otherNorm) {
-                    await upsertFinding({
-                        type: "POSSIBLE_DUPLICATE",
-                        severity: "LOW",
-                        confidence: 75,
-                        estimatedImpact: ESTIMATES.DUPLICATE_WORK_IMPACT_USD,
-                        amountOriginal: convertFromUSD(ESTIMATES.DUPLICATE_WORK_IMPACT_USD, currency),
-                        currency,
-                        resourceType: "Work",
-                        resourceId: work.id,
-                        orgId
-                    });
-                    findingsCount++;
-                    break;
-                }
+            const stripped = normalizedTitle.replace(/\s*\(.*?\)\s*/g, "").trim();
+            const strippedMatches = strippedTitleMap.get(stripped) ?? [];
+            const hasDuplicate = strippedMatches.some(
+                (m) => m.id !== work.id && m.normalizedTitle !== normalizedTitle
+            );
+            if (hasDuplicate) {
+                pendingWorkFindings.push({
+                    type: "POSSIBLE_DUPLICATE",
+                    severity: "LOW",
+                    confidence: 75,
+                    estimatedImpact: ESTIMATES.DUPLICATE_WORK_IMPACT_USD,
+                    amountOriginal: convertFromUSD(ESTIMATES.DUPLICATE_WORK_IMPACT_USD, currency),
+                    currency,
+                    resourceType: "Work",
+                    resourceId: work.id,
+                    orgId,
+                });
             }
         }
+
+        // Batch-upsert all work-level findings in bulk (replaces N*2 sequential DB calls)
+        findingsCount += await batchUpsertFindings(pendingWorkFindings);
 
         // ── RECORDING-LEVEL RULES ──
         // Process recordings in parallel with concurrency control
@@ -258,13 +346,15 @@ export const processAuditJob = async (job: Job<AuditJobData>) => {
         findingsCount += recordingGaps.reduce((sum, count) => sum + count, 0);
 
         // ── STATEMENT-LEVEL RULES ──
+        // Collect statement findings then batch-upsert in one operation
+        const pendingStatementFindings: FindingData[] = [];
         for (const line of statementLines) {
             if (!line.isrc) continue;
             const isrcUpper = line.isrc.toUpperCase();
             if (!catalogISRCs.has(isrcUpper)) {
                 const impactUSD = line.amount || 0;
                 if (impactUSD > 0) {
-                    await upsertFinding({
+                    pendingStatementFindings.push({
                         type: "BLACK_BOX_REVENUE",
                         severity: impactUSD > 100 ? "HIGH" : impactUSD > 20 ? "MEDIUM" : "LOW",
                         confidence: 85,
@@ -273,12 +363,12 @@ export const processAuditJob = async (job: Job<AuditJobData>) => {
                         currency: line.currency || currency,
                         resourceType: "StatementLine",
                         resourceId: line.id,
-                        orgId
+                        orgId,
                     });
-                    findingsCount++;
                 }
             }
         }
+        findingsCount += await batchUpsertFindings(pendingStatementFindings);
 
         // ── DISTRIBUTOR LEAKAGE DETECTION ──
         const { detectDistributorLeaks } = await import('../lib/reports/import-discrepancy-engine');

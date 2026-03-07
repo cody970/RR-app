@@ -216,9 +216,13 @@ export async function POST(req: Request) {
                         });
                         const workMap = new Map(works.map((w: any) => [w.title, w.id]));
 
-                        for (const row of batch) {
-                            const workId = workMap.get(row.WorkTitle);
-                            if (workId) {
+                        // Process writer rows in parallel — each row targets a different
+                        // (ipiCae, workId) pair so concurrent upserts are safe.
+                        await Promise.all(
+                            batch.map(async (row: any) => {
+                                const workId = workMap.get(row.WorkTitle);
+                                if (!workId) return;
+
                                 const writer = await tx.writer.upsert({
                                     where: { ipiCae_orgId: { ipiCae: row.IPI || `MOCK-${Date.now()}`, orgId } },
                                     update: { name: row.Name },
@@ -230,8 +234,8 @@ export async function POST(req: Request) {
                                     update: { splitPercent: row.SplitPercent, role: row.Role },
                                     create: { workId, writerId: writer.id, splitPercent: row.SplitPercent, role: row.Role },
                                 });
-                            }
-                        }
+                            })
+                        );
                     } else if (type === "Statement Lines") {
                         const statementMap = new Map<string, string>();
                         const linesData: any[] = [];
