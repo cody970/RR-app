@@ -40,6 +40,10 @@ model Organization {
   licenses         License[]
   payeeLedgers     PayeeLedger[]
   payouts          Payout[]
+  // DMP Integration back-relations
+  workAcknowledgements WorkAcknowledgement[]
+  cwrExports       CwrExport[]
+  ackImports       AckImport[]
   currency      String         @default("USD")
   
   // Stripe Billing Fields
@@ -95,7 +99,22 @@ model User {
 model Writer {
   id            String         @id @default(cuid())
   name          String
-  ipiCae        String?
+  // DMP-enhanced: split name into first/last for CWR formatting
+  firstName     String?
+  lastName      String?
+  ipiCae        String?        // IPI Name Number (11 digits)
+  ipiBase       String?        // IPI Base Number (I-NNNNNNNNN-C)
+  isni          String?        // ISNI (16 digits, ISO 27729)
+  // Society affiliations
+  prSociety     String?        // Performing Rights society TIS-N code
+  mrSociety     String?        // Mechanical Rights society TIS-N code
+  srSociety     String?        // Synchronisation Rights society TIS-N code
+  // General agreement (DMP: generally_controlled)
+  generallyControlled Boolean  @default(false)
+  saan          String?        // Society-Assigned Agreement Number
+  publisherFee  Float?         // Publisher admin fee percentage (0-100)
+  notes         String?
+  accountNumber String?        // Internal account reference
   organization  Organization   @relation(fields: [orgId], references: [id])
   orgId         String
   works         WorkWriter[]
@@ -106,12 +125,27 @@ model Writer {
   updatedAt     DateTime       @updatedAt
 
   @@unique([ipiCae, orgId])
+  @@index([orgId])
+  @@index([lastName, orgId])
 }
 
 model Publisher {
   id            String         @id @default(cuid())
   name          String
-  ipiCae        String?
+  // DMP-enhanced: split name for CWR formatting
+  firstName     String?
+  lastName      String?
+  ipiCae        String?        // IPI Name Number (11 digits)
+  ipiBase       String?        // IPI Base Number (I-NNNNNNNNN-C)
+  isni          String?        // ISNI (16 digits, ISO 27729)
+  // Society affiliations (stored as TIS-N codes)
+  prSociety     String?        // Performing Rights society TIS-N code
+  mrSociety     String?        // Mechanical Rights society TIS-N code
+  srSociety     String?        // Synchronisation Rights society TIS-N code
+  // Share percentages for CWR SPT records
+  prSharePercent  Float?       // PR share (0-100)
+  mrSharePercent  Float?       // MR share (0-100)
+  srSharePercent  Float?       // SR share (0-100)
   organization  Organization   @relation(fields: [orgId], references: [id])
   orgId         String
   users         User[]
@@ -121,12 +155,23 @@ model Publisher {
   updatedAt     DateTime       @updatedAt
 
   @@unique([ipiCae, orgId])
+  @@index([orgId])
 }
 
 model Work {
   id            String         @id @default(cuid())
   title         String
   iswc          String?
+  // DMP-enhanced fields
+  workId        String?        // Internal/publisher work ID
+  versionType   String?        // ORI=Original, MOD=Modified, LIB=Library, etc.
+  originalTitle String?        // Original title if this is a modified version
+  lastChange    DateTime?      // Tracks metadata changes to drive REV transactions
+  durationSec   Int?           // Work duration in seconds (for CWR)
+  recordedIndicator Boolean    @default(false) // Has this work been commercially recorded?
+  libraryCode   String?        // Music library code
+  cdIdentifier  String?        // CD/album identifier
+  language      String?        // ISO 639-2 primary language code
   organization  Organization   @relation(fields: [orgId], references: [id])
   orgId         String
   writers       WorkWriter[]
@@ -139,6 +184,9 @@ model Work {
   licenseRequests LicenseRequest[]
   licenses      License[]
   splitSignoffs SplitSignoff[]
+  alternateTitles AlternateTitle[]
+  acknowledgements WorkAcknowledgement[]
+  cwrExports    CwrExportWork[]
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
 
@@ -146,6 +194,7 @@ model Work {
   @@index([orgId])
   @@index([iswc])
   @@index([title, orgId])
+  @@index([lastChange])
 }
 
 model WorkWriter {
@@ -154,9 +203,16 @@ model WorkWriter {
   writer        Writer         @relation(fields: [writerId], references: [id])
   writerId      String
   splitPercent  Float
-  role          String?
+  role          String?        // Legacy role field
+  // DMP-enhanced WriterInWork fields
+  capacity      String?        // CWR writer capacity: CA, A, C, E, ES, PA, TR, etc.
+  controlled    Boolean        @default(false) // Is this writer controlled by the publisher?
+  saan          String?        // Society-Assigned Agreement Number (overrides writer-level)
+  publisherFee  Float?         // Publisher admin fee % for this work (overrides writer-level)
+  relativeShare Float?         // Relative share within controlled writers (0-100)
 
   @@id([workId, writerId])
+  @@index([writerId])
 }
 
 model Recording {
@@ -164,6 +220,15 @@ model Recording {
   title         String
   isrc          String?
   durationSec   Int?
+  // DMP-enhanced Recording fields
+  recordingTitle  String?      // Recording-specific title (if different from work title)
+  versionTitle    String?      // Version description e.g. "Radio Edit", "Acoustic"
+  releaseDate     DateTime?    // Commercial release date
+  recordLabel     String?      // Record label name
+  artistName      String?      // Primary artist name
+  artistIsni      String?      // Artist ISNI (ISO 27729)
+  ean             String?      // EAN-13 barcode of the release
+  audioFileUrl    String?      // URL to audio file (for preview/matching)
   work          Work?          @relation(fields: [workId], references: [id])
   workId        String?
   organization  Organization   @relation(fields: [orgId], references: [id])
@@ -175,6 +240,7 @@ model Recording {
   @@index([orgId])
   @@index([isrc])
   @@index([title, orgId])
+  @@index([artistName, orgId])
 }
 
 model Registration {
@@ -702,6 +768,133 @@ model License {
 
   @@index([orgId])
   @@index([workId])
+  @@index([status])
+}
+
+// -----------------------------------------------------------------------------
+// DMP Integration — Society Reference Table
+// -----------------------------------------------------------------------------
+
+model Society {
+  id        String   @id @default(cuid())
+  tisN      String   @unique  // TIS-N numeric code e.g. "010"
+  name      String            // Full society name e.g. "ASCAP"
+  country   String?           // ISO 3166-1 alpha-2 country code
+  label     String?           // Short display label
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([tisN])
+  @@index([name])
+}
+
+// -----------------------------------------------------------------------------
+// DMP Integration — Alternate Titles
+// -----------------------------------------------------------------------------
+
+model AlternateTitle {
+  id        String   @id @default(cuid())
+  workId    String
+  title     String
+  titleType String   @default("AT") // AT=Alternate, OT=Original, FT=Formal, IT=Incorrect, OL=Original Language, TT=Translated
+  language  String?  // ISO 639-2 language code
+
+  work      Work     @relation(fields: [workId], references: [id], onDelete: Cascade)
+
+  @@index([workId])
+}
+
+// -----------------------------------------------------------------------------
+// DMP Integration — Work Acknowledgements (ACK file processing)
+// -----------------------------------------------------------------------------
+
+model WorkAcknowledgement {
+  id             String    @id @default(cuid())
+  workId         String
+  orgId          String
+  societyCode    String    // TIS-N code e.g. "010"
+  societyName    String?   // Human-readable society name
+  remoteWorkId   String?   // Society's own work ID
+  iswcAssigned   String?   // ISWC assigned by society
+  date           DateTime?
+  status         String    // RA=Registration Accepted, AS=Accepted with changes, RA=Rejected, NP=Not Processed
+  statusMessage  String?
+  transactionType String?  // NWR, REV, WRK
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  work           Work         @relation(fields: [workId], references: [id], onDelete: Cascade)
+  organization   Organization @relation(fields: [orgId], references: [id])
+
+  @@index([workId])
+  @@index([orgId])
+  @@index([societyCode])
+  @@index([status])
+}
+
+// -----------------------------------------------------------------------------
+// DMP Integration — CWR Export tracking
+// -----------------------------------------------------------------------------
+
+model CwrExport {
+  id             String          @id @default(cuid())
+  orgId          String
+  filename       String
+  version        String          // "2.1", "2.2", "3.0", "3.1"
+  senderCode     String?
+  sequenceNumber Int             @default(1)
+  workCount      Int             @default(0)
+  status         String          @default("GENERATED") // GENERATED, SUBMITTED, ACKNOWLEDGED
+  fileContent    String?         @db.Text
+  submittedAt    DateTime?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  organization   Organization    @relation(fields: [orgId], references: [id])
+  works          CwrExportWork[]
+
+  @@index([orgId])
+  @@index([status])
+}
+
+model CwrExportWork {
+  cwrExportId  String
+  workId       String
+  transactionType String @default("NWR") // NWR or REV
+
+  cwrExport    CwrExport @relation(fields: [cwrExportId], references: [id], onDelete: Cascade)
+  work         Work      @relation(fields: [workId], references: [id])
+
+  @@id([cwrExportId, workId])
+  @@index([workId])
+}
+
+// -----------------------------------------------------------------------------
+// DMP Integration — ACK Import tracking
+// -----------------------------------------------------------------------------
+
+model AckImport {
+  id              String    @id @default(cuid())
+  orgId           String
+  filename        String
+  senderCode      String?
+  senderName      String?
+  receiverCode    String?
+  creationDate    DateTime?
+  version         String?   // "2.1", "2.2", "3.0"
+  totalAcks       Int       @default(0)
+  acceptedCount   Int       @default(0)
+  rejectedCount   Int       @default(0)
+  conflictCount   Int       @default(0)
+  status          String    @default("PROCESSED") // PROCESSING, PROCESSED, FAILED
+  errors          String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  organization    Organization @relation(fields: [orgId], references: [id])
+
+  @@index([orgId])
   @@index([status])
 }
 
