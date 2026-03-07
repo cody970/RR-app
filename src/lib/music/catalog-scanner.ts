@@ -8,6 +8,8 @@
 
 import { db } from "@/lib/infra/db";
 import { logger } from "@/lib/infra/logger";
+import { pMap } from "@/lib/infra/utils";
+import { ESTIMATES } from "@/lib/music/constants";
 import { searchByTitle as songviewSearch, searchByISWC } from "@/lib/clients/songview-client";
 import { isrcToISWC, searchWorkByTitle } from "@/lib/clients/musicbrainz-client";
 import { searchByISRC as spotifySearchByISRC } from "@/lib/clients/spotify";
@@ -84,7 +86,7 @@ export async function runCatalogScan(
 
     // ---------- Phase 1: Check Works for PRO Registration Gaps ----------
 
-    for (const work of works) {
+    await pMap(works, async (work: any) => {
         try {
             const writerName = work.writers?.[0]?.writer?.name;
 
@@ -181,11 +183,11 @@ export async function runCatalogScan(
         if (onProgress && scannedItems % 10 === 0) {
             await onProgress({ scanId, totalItems, scannedItems, gapsFound });
         }
-    }
+    }, 10); // Concurrency limit of 10
 
     // ---------- Phase 2: Check Recordings for Orphaned ISRCs ----------
 
-    for (const recording of recordings) {
+    await pMap(recordings, async (recording: any) => {
         try {
             if (recording.isrc) {
                 // Check if this ISRC has revenue but no linked work
@@ -218,7 +220,6 @@ export async function runCatalogScan(
                     const spotifyTrack = await spotifySearchByISRC(recording.isrc);
                     if (spotifyTrack && !recording.workId) {
                         // Track is actively streaming but has no composition registration
-                        // (already flagged above, but this gives us artist info)
                     }
                 }
             }
@@ -230,13 +231,13 @@ export async function runCatalogScan(
         if (onProgress && scannedItems % 10 === 0) {
             await onProgress({ scanId, totalItems, scannedItems, gapsFound });
         }
-    }
+    }, 10);
 
     // ---------- Phase 3: MLC + SoundExchange Gap Check ----------
 
     // Phase 3a: Check works against The MLC for mechanical licensing gaps
     if (process.env.MLC_API_KEY) {
-        for (const work of works) {
+        await pMap(works, async (work: any) => {
             try {
                 const writerName = work.writers?.[0]?.writer?.name;
                 const mlcResult = await searchMLCByTitle(work.title, writerName);
@@ -252,7 +253,7 @@ export async function runCatalogScan(
                             society: "MLC",
                             gapType: "NO_REGISTRATION",
                             confidence: 80,
-                            estimatedImpact: estimateWorkImpact(work.id, recordings, revenueByISRC) * 0.15,
+                            estimatedImpact: estimateWorkImpact(work.id, recordings, revenueByISRC) * ESTIMATES.MECHANICAL_SHARE,
                         },
                     });
                     gapsFound++;
@@ -273,14 +274,14 @@ export async function runCatalogScan(
                     gapsFound++;
                 }
             } catch (e) {
-                console.error(`MLC check error for work ${work.id}:`, e);
+                logger.error({ err: e, workId: work.id }, `MLC check error`);
             }
-        }
+        }, 5);
     }
 
     // Phase 3b: Check recordings against SoundExchange
     if (process.env.SOUNDEXCHANGE_API_KEY) {
-        for (const recording of recordings) {
+        await pMap(recordings, async (recording: any) => {
             try {
                 if (recording.isrc) {
                     const seResult = await seSearchByISRC(recording.isrc);
@@ -297,16 +298,16 @@ export async function runCatalogScan(
                                 society: "SoundExchange",
                                 gapType: "NO_REGISTRATION",
                                 confidence: 80,
-                                estimatedImpact: revenue ? revenue.totalRevenue * 0.10 : null,
+                                estimatedImpact: revenue ? revenue.totalRevenue * ESTIMATES.SOUNDEXCHANGE_SHARE : null,
                             },
                         });
                         gapsFound++;
                     }
                 }
             } catch (e) {
-                console.error(`SoundExchange check error for recording ${recording.id}:`, e);
+                logger.error({ err: e, recordingId: recording.id }, `SoundExchange check error`);
             }
-        }
+        }, 5);
     }
 
     // ---------- Phase 4: Enrichment & Revenue Matching ----------
@@ -319,7 +320,7 @@ export async function runCatalogScan(
         where: { orgId, type: "STATEMENT_UNMATCHED_WORK" },
     });
 
-    for (const gap of scanGaps) {
+    await pMap(scanGaps, async (gap: any) => {
         try {
             let updatedImpact = gap.estimatedImpact || 0;
             let needsUpdate = false;
@@ -343,7 +344,7 @@ export async function runCatalogScan(
                                 if (!ww.writer.ipiCae) {
                                     const musoWriter = await findWriterIPI(ww.writer.name);
                                     if (musoWriter.ipiNameNumber) {
-                                        // Update the gap metadata (using songviewMatch for now as a catch-all)
+                                        // Update the gap metadata
                                         const matchData = (gap.songviewMatch as any) || {};
                                         matchData.musoEnrichment = {
                                             writerName: ww.writer.name,
@@ -385,7 +386,7 @@ export async function runCatalogScan(
         } catch (e) {
             logger.error({ err: e, gapId: gap.id }, "Error enriching gap");
         }
-    }
+    }, 10);
 
     // ---------- Finalize ----------
 
@@ -416,8 +417,8 @@ function estimateWorkImpact(
         if (rec.isrc) {
             const revenue = revenueByISRC.get(rec.isrc);
             if (revenue) {
-                // Estimate publishing share as ~25% of total revenue
-                totalImpact += revenue.totalRevenue * 0.25;
+                // Estimate publishing share
+                totalImpact += revenue.totalRevenue * ESTIMATES.PUBLISHING_SHARE;
             }
         }
     }

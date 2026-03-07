@@ -4,6 +4,8 @@ import GithubProvider from "next-auth/providers/github";
 import GoogleProvider from "next-auth/providers/google";
 import bcrypt from "bcrypt";
 import { db } from "@/lib/infra/db";
+import { logger } from "@/lib/infra/logger";
+import crypto from "crypto";
 
 export const authOptions: NextAuthOptions = {
     providers: [
@@ -62,32 +64,42 @@ export const authOptions: NextAuthOptions = {
     },
     callbacks: {
         async signIn({ user, account, profile }) {
+            const clientIp = "unknown"; // In a real Next.js app, you'd get this from headers
+
             if (account?.provider === 'google' || account?.provider === 'github') {
                 // Ensure the OAuth provider has verified the user's email address
-                const isVerified = profile && ('email_verified' in profile ? profile.email_verified : true); // GitHub doesn't always provide email_verified directly on profile, but if it exists, check it.
-                if (account?.provider === 'google' && !isVerified) {
-                    console.warn(`[Auth] Rejected OAuth sign-in for unverified email: ${user.email}`);
+                const isVerified = profile && ('email_verified' in profile ? (profile as any).email_verified : true);
+
+                if (!isVerified) {
+                    logger.warn({
+                        email: user.email,
+                        provider: account.provider,
+                        type: "AUTH_UNVERIFIED_EMAIL"
+                    }, "Rejected OAuth sign-in: Unverified email");
                     return false;
                 }
 
                 const existingUser = await db.user.findUnique({ where: { email: user.email! } });
                 if (!existingUser) {
-                    // Auto-create user and organization for new OAuth logins
+                    logger.info({ email: user.email, provider: account.provider }, "Auto-creating user from OAuth login");
+
                     const orgName = user.name ? `${user.name}'s Workspace` : `${user.email?.split('@')[0]}'s Workspace`;
                     const org = await db.organization.create({
                         data: {
                             name: orgName,
                         }
                     });
+
                     const newUser = await db.user.create({
                         data: {
                             email: user.email!,
-                            passwordHash: "$2b$10$OAUTH_USER_SENTINEL_DO_NOT_USE_FOR_LOGIN",
-                            // Default to VIEWER; can be upgraded to ADMIN/OWNER after verification/setup
-                            role: "VIEWER",
+                            // Secure sentinel that cannot be used for login but satisfies the DB constraint
+                            passwordHash: `OAUTH_ONLY_${crypto.randomBytes(32).toString('hex')}`,
+                            role: "OWNER", // First user is owner
                             orgId: org.id
                         }
                     });
+
                     user.orgId = newUser.orgId;
                     user.role = newUser.role;
                     user.id = newUser.id;
@@ -96,6 +108,12 @@ export const authOptions: NextAuthOptions = {
                     user.role = existingUser.role;
                     user.id = existingUser.id;
                 }
+
+                logger.info({
+                    userId: user.id,
+                    email: user.email,
+                    provider: account.provider
+                }, "OAuth login successful");
             }
             return true;
         },

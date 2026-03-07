@@ -25,3 +25,24 @@ export function formatCurrency(amount: number | null | undefined) {
     maximumFractionDigits: 2,
   }).format(amount);
 }
+/**
+ * Parallel map with concurrency limit.
+ */
+export async function pMap<T, R>(
+  items: T[],
+  mapper: (item: T) => Promise<R>,
+  concurrency: number = 5
+): Promise<R[]> {
+  const results: R[] = [];
+  const batches = [];
+  for (let i = 0; i < items.length; i += concurrency) {
+    batches.push(items.slice(i, i + concurrency));
+  }
+
+  for (const batch of batches) {
+    const batchResults = await Promise.all(batch.map(mapper));
+    results.push(...batchResults);
+  }
+
+  return results;
+}

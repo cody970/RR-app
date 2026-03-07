@@ -7,6 +7,7 @@
  */
 
 import { redis } from "@/lib/infra/redis";
+import { isrcToISWC } from "./musicbrainz-client";
 
 const ACE_SEARCH_URL = "https://www.ascap.com/api/wservice/MasterData/Search";
 const BMI_SEARCH_URL = "https://repertoire.bmi.com/Search/Search";
@@ -248,4 +249,25 @@ export async function batchCheckRegistrations(
     }
 
     return results;
+}
+
+/**
+ * Search by ISRC code.
+ * Since PROs primarily use ISWCs, we resolve ISRC to ISWC via MusicBrainz first.
+ */
+export async function searchByISRC(isrc: string): Promise<SongviewResult> {
+    const cacheKey = `songview:isrc:${isrc}`;
+    const cached = await getCached(cacheKey);
+    if (cached) return cached;
+
+    const resolved = await isrcToISWC(isrc);
+    if (resolved.iswc) {
+        return searchByISWC(resolved.iswc);
+    } else if (resolved.workTitle) {
+        return searchByTitle(resolved.workTitle);
+    }
+
+    const result: SongviewResult = { found: false };
+    await setCache(cacheKey, result);
+    return result;
 }

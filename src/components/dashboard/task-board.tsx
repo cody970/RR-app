@@ -8,10 +8,10 @@ import { Finding } from "@/types";
 import { CheckCircle2, CircleDashed, Filter, MoreHorizontal, ShieldAlert, Sparkles } from "lucide-react";
 
 const COLUMNS = [
-    { id: "OPEN", label: "Open Issues", icon: CircleDashed, color: "text-amber-600", bg: "bg-amber-100", border: "border-amber-200" },
-    { id: "DISPUTED", label: "In Dispute", icon: ShieldAlert, color: "text-red-500", bg: "bg-red-100", border: "border-red-200" },
-    { id: "RECOVERED", label: "Recovered", icon: CheckCircle2, color: "text-emerald-600", bg: "bg-emerald-100", border: "border-emerald-200" },
-    { id: "IGNORED", label: "Resolved/Archived", icon: Filter, color: "text-slate-500", bg: "bg-slate-100", border: "border-slate-200" }
+    { id: "OPEN", label: "Open Issues", icon: CircleDashed, color: "text-indigo-600 dark:text-indigo-400", bg: "bg-indigo-500/10", border: "border-indigo-500/20" },
+    { id: "DISPUTED", label: "In Dispute", icon: ShieldAlert, color: "text-violet-600 dark:text-violet-400", bg: "bg-violet-500/10", border: "border-violet-500/20" },
+    { id: "RECOVERED", label: "Recovered", icon: CheckCircle2, color: "text-emerald-600 dark:text-emerald-400", bg: "bg-emerald-500/10", border: "border-emerald-500/20" },
+    { id: "IGNORED", label: "Resolved", icon: Filter, color: "text-slate-500", bg: "bg-slate-500/10", border: "border-slate-500/20" }
 ];
 
 export function TaskBoard() {
@@ -58,85 +58,95 @@ export function TaskBoard() {
     };
 
     if (loading) return (
-        <div className="flex flex-col items-center justify-center p-20 space-y-4">
-            <div className="h-10 w-10 border-4 border-amber-500 border-t-transparent rounded-full animate-spin" />
-            <p className="text-slate-500 font-medium">Synchronizing Workspace...</p>
+        <div className="flex flex-col items-center justify-center p-24 space-y-6">
+            <div className="h-12 w-12 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin transition-all" />
+            <div className="flex flex-col items-center gap-2">
+                <p className="text-foreground font-bold tracking-tight text-lg">Synchronizing Workspace</p>
+                <p className="text-muted-foreground text-xs font-medium uppercase tracking-widest">Applying audit intelligence...</p>
+            </div>
         </div>
     );
 
     const getSeverityColor = (sev: string) => {
         switch (sev) {
-            case "HIGH": return "bg-red-50 text-red-600 border-red-200";
-            case "MEDIUM": return "bg-amber-50 text-amber-600 border-amber-200";
-            default: return "bg-blue-50 text-blue-600 border-blue-200";
+            case "HIGH": return "bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/20";
+            case "MEDIUM": return "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20";
+            default: return "bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-indigo-500/20";
         }
     };
 
     return (
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 min-h-[700px]">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-8 min-h-[800px]">
             {COLUMNS.map(col => {
                 const colFindings = findings.filter(f => f.status === col.id);
                 return (
-                    <div key={col.id} className="flex flex-col gap-4">
-                        <div className="flex items-center justify-between px-2 py-1">
-                            <div className="flex items-center gap-2">
-                                <col.icon className={`h-4 w-4 ${col.color}`} />
-                                <h3 className="font-semibold text-slate-800 text-sm tracking-tight">{col.label}</h3>
+                    <div key={col.id} className="flex flex-col gap-6">
+                        <div className="flex items-center justify-between px-3">
+                            <div className="flex items-center gap-3">
+                                <div className={`p-2 rounded-lg ${col.bg} border ${col.border}`}>
+                                    <col.icon className={`h-4 w-4 ${col.color}`} />
+                                </div>
+                                <h3 className="font-bold text-foreground text-sm tracking-tight">{col.label}</h3>
                             </div>
-                            <span className="bg-white text-slate-500 px-2 py-0.5 rounded text-[10px] border border-slate-200 shadow-sm font-mono">
+                            <span className="bg-card/50 text-muted-foreground px-2.5 py-1 rounded-lg text-[10px] border border-border/50 shadow-sm font-black ring-1 ring-black/[0.03]">
                                 {colFindings.length}
                             </span>
                         </div>
 
-                        <div className="bg-slate-100 rounded-xl p-3 border border-slate-200 min-h-[600px] flex flex-col gap-3 shadow-inner">
+                        <div className="bg-muted/30 rounded-3xl p-4 border border-border/50 min-h-[700px] flex flex-col gap-4 shadow-inner glass-card backdrop-blur-sm relative overflow-hidden">
+                            {/* Ambient background accent per column */}
+                            <div className={`absolute top-0 right-0 w-24 h-24 blur-[60px] rounded-full pointer-events-none opacity-10 ${col.bg}`} />
+
                             {colFindings.length === 0 ? (
-                                <div className="flex flex-col items-center justify-center py-10 opacity-40 h-full text-slate-400">
-                                    <col.icon className="h-10 w-10 mb-2" />
-                                    <p className="text-[10px] uppercase font-bold tracking-widest text-slate-500">Empty Pool</p>
+                                <div className="flex flex-col items-center justify-center py-20 opacity-20 h-full text-muted-foreground">
+                                    <col.icon className="h-12 w-12 mb-4" />
+                                    <p className="text-[10px] uppercase font-black tracking-[0.2em]">Queue Clear</p>
                                 </div>
                             ) : (
                                 colFindings.map(finding => (
                                     <Card
                                         key={finding.id}
-                                        className="group relative border-slate-200 bg-white hover:bg-slate-50 border-l-4 hover:shadow-md transition-all duration-200 cursor-grab shadow-sm"
-                                        style={{ borderLeftColor: finding.severity === 'HIGH' ? '#ef4444' : (finding.severity === 'MEDIUM' ? '#f59e0b' : '#3b82f6') }}
+                                        className="group relative border-border/50 bg-card hover:bg-card/80 border-l-4 hover:shadow-2xl hover:shadow-indigo-500/[0.05] transition-all duration-500 cursor-grab shadow-sm rounded-2xl overflow-hidden"
+                                        style={{ borderLeftColor: finding.severity === 'HIGH' ? '#f43f5e' : (finding.severity === 'MEDIUM' ? '#f59e0b' : '#6366f1') }}
                                     >
-                                        <CardHeader className="p-3 pb-1">
-                                            <div className="flex justify-between items-start mb-2">
-                                                <span className={`text-[9px] px-1.5 py-0.5 rounded border font-bold ${getSeverityColor(finding.severity)}`}>
+                                        <CardHeader className="p-4 pb-2">
+                                            <div className="flex justify-between items-start mb-3">
+                                                <span className={`text-[9px] px-2 py-0.5 rounded-full border font-black uppercase tracking-wider ${getSeverityColor(finding.severity)}`}>
                                                     {finding.severity}
                                                 </span>
-                                                <button className="text-slate-400 hover:text-slate-700 transition-colors">
-                                                    <MoreHorizontal className="h-3.5 w-3.5" />
+                                                <button className="text-muted-foreground/40 hover:text-foreground transition-colors p-1 rounded-md hover:bg-muted/50">
+                                                    <MoreHorizontal className="h-4 w-4" />
                                                 </button>
                                             </div>
-                                            <CardTitle className="text-xs font-bold text-slate-800 group-hover:text-amber-600 transition-colors leading-tight">
+                                            <CardTitle className="text-[13px] font-bold text-foreground group-hover:text-indigo-600 transition-colors leading-snug tracking-tight">
                                                 {finding.type.replace(/_/g, " ")}
                                             </CardTitle>
                                         </CardHeader>
-                                        <CardContent className="p-3 pt-1">
-                                            <div className="flex justify-between items-end">
-                                                <div className="flex flex-col">
-                                                    <p className="text-xs text-slate-500 mb-1">Impact Potential</p>
-                                                    <p className="text-sm font-bold text-emerald-600 font-mono">
+                                        <CardContent className="p-4 pt-1">
+                                            <div className="flex justify-between items-end mb-5">
+                                                <div className="flex flex-col gap-0.5">
+                                                    <p className="text-[10px] font-bold text-muted-foreground/60 uppercase tracking-widest">Impact Potential</p>
+                                                    <p className="text-base font-black text-emerald-600 dark:text-emerald-400 font-mono tracking-tight">
                                                         {formatCurrency(finding.estimatedImpact || 0, finding.currency)}
                                                     </p>
                                                 </div>
                                                 <div className="flex items-center gap-1 group/heal">
                                                     {finding.metadataFix && (
-                                                        <Sparkles className="h-3 w-3 text-amber-500 animate-pulse" />
+                                                        <div className="h-7 w-7 rounded-lg bg-indigo-500/10 flex items-center justify-center border border-indigo-500/20 shadow-lg shadow-indigo-500/10">
+                                                            <Sparkles className="h-3.5 w-3.5 text-indigo-500 animate-pulse" />
+                                                        </div>
                                                     )}
                                                 </div>
                                             </div>
 
-                                            <div className="mt-4 pt-3 border-t border-slate-100 flex flex-col gap-2">
-                                                <label className="text-[9px] font-bold text-slate-500 uppercase tracking-tighter">Transition To:</label>
-                                                <div className="grid grid-cols-2 gap-1">
+                                            <div className="pt-4 border-t border-border/50 flex flex-col gap-3">
+                                                <label className="text-[9px] font-black text-muted-foreground uppercase tracking-[0.15em]">Quick Move</label>
+                                                <div className="grid grid-cols-2 gap-2">
                                                     {COLUMNS.filter(c => c.id !== col.id).map(c => (
                                                         <button
                                                             key={c.id}
                                                             onClick={() => updateStatus(finding.id, c.id)}
-                                                            className="text-[9px] px-2 py-1 rounded bg-slate-50 hover:bg-slate-100 text-slate-600 border border-slate-200 hover:text-slate-900 transition-colors text-left truncate shadow-sm"
+                                                            className="text-[10px] font-bold px-2 py-1.5 rounded-xl bg-muted/50 hover:bg-indigo-500 hover:text-white text-muted-foreground border border-border/50 transition-all duration-300 text-center truncate shadow-sm ring-1 ring-black/[0.02] hover:shadow-indigo-500/20"
                                                         >
                                                             {c.label.split(' ')[0]}
                                                         </button>
@@ -152,5 +162,7 @@ export function TaskBoard() {
                 );
             })}
         </div>
+    );
+}
     );
 }

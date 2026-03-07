@@ -43,8 +43,8 @@ function SoundWaves() {
                 <mesh key={i} position={[particle.x, particle.y, particle.z]}>
                     <sphereGeometry args={[particle.size, 16, 16]} />
                     <meshStandardMaterial
-                        color={new THREE.Color().setHSL(0.12, 1, Math.random() * 0.5 + 0.3)} // Amber to yellow colors
-                        emissive={new THREE.Color().setHSL(0.12, 1, 0.5)}
+                        color={new THREE.Color().setHSL(0.66, 0.8, Math.random() * 0.5 + 0.3)} // Indigo to violet colors
+                        emissive={new THREE.Color().setHSL(0.75, 0.8, 0.5)}
                         emissiveIntensity={0.5}
                         transparent
                         opacity={0.8}
@@ -61,8 +61,8 @@ function FloatingShapes() {
             <Float speed={2} rotationIntensity={0.5} floatIntensity={2} position={[4, 2, -4]}>
                 <Sphere args={[1.5, 32, 32]}>
                     <MeshDistortMaterial
-                        color="#f59e0b" // Amber 500
-                        emissive="#d97706"
+                        color="#6366f1" // Indigo 500
+                        emissive="#4f46e5"
                         distort={0.4}
                         speed={2}
                         roughness={0.2}
@@ -74,8 +74,8 @@ function FloatingShapes() {
             <Float speed={1.5} rotationIntensity={1} floatIntensity={1} position={[-5, -1, -2]}>
                 <Sphere args={[2, 32, 32]}>
                     <MeshDistortMaterial
-                        color="#ca8a04" // Yellow 600
-                        emissive="#a16207"
+                        color="#8b5cf6" // Violet 500
+                        emissive="#7c3aed"
                         distort={0.6}
                         speed={3}
                         roughness={0.1}
@@ -93,8 +93,8 @@ export function HeroVisualizer() {
         <div className="absolute inset-0 pointer-events-none z-0">
             <Canvas camera={{ position: [0, 2, 10], fov: 45 }}>
                 <ambientLight intensity={0.5} />
-                <directionalLight position={[10, 10, 5]} intensity={1} color="#fcd34d" />
-                <directionalLight position={[-10, -10, -5]} intensity={0.5} color="#8b5cf6" />
+                <directionalLight position={[10, 10, 5]} intensity={1} color="#818cf8" />
+                <directionalLight position={[-10, -10, -5]} intensity={0.5} color="#c084fc" />
 
                 <SoundWaves />
                 <FloatingShapes />

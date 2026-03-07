@@ -36,8 +36,8 @@ export default async function DashboardPage() {
         where: { orgId, severity: "HIGH" }
     });
 
-    const totalLeakage = findings.reduce((acc, f) => acc + (f.estimatedImpact || 0), 0);
-    const totalRecovered = findings.reduce((acc, f) => acc + (f.recoveredAmount || 0), 0);
+    const totalLeakage = findings.reduce((acc: number, f: any) => acc + (f.estimatedImpact || 0), 0);
+    const totalRecovered = findings.reduce((acc: number, f: any) => acc + (f.recoveredAmount || 0), 0);
     const recoveryRate = totalLeakage > 0 ? (totalRecovered / totalLeakage) * 100 : 0;
 
     // 2. Prepare Analytics Data
@@ -49,25 +49,25 @@ export default async function DashboardPage() {
     const itemsWithId = worksWithIswc + recordsWithIsrc;
     const healthScore = totalItems > 0 ? Math.round((itemsWithId / totalItems) * 100) : 100;
 
-    const impactByType = findings.reduce((acc: Record<string, number>, f) => {
+    const impactByType = findings.reduce((acc: Record<string, number>, f: any) => {
         acc[f.type] = (acc[f.type] || 0) + (f.estimatedImpact || 0);
         return acc;
-    }, {});
+    }, {} as Record<string, number>);
 
     const chartData = Object.entries(impactByType).map(([name, value]) => ({
         name: name.replace(/_/g, " "),
         value,
     }));
 
-    const severityData = findings.reduce((acc: Record<string, number>, f) => {
+    const severityData = findings.reduce((acc: Record<string, number>, f: any) => {
         acc[f.severity] = (acc[f.severity] || 0) + 1;
         return acc;
-    }, {});
+    }, {} as Record<string, number>);
 
-    const statusData = findings.reduce((acc: Record<string, number>, f) => {
+    const statusData = findings.reduce((acc: Record<string, number>, f: any) => {
         acc[f.status] = (acc[f.status] || 0) + 1;
         return acc;
-    }, {});
+    }, {} as Record<string, number>);
 
     const analyticsData = {
         healthScore,
@@ -87,39 +87,39 @@ export default async function DashboardPage() {
             value: totalItems.toLocaleString(),
             sub: `${workCount} Works • ${recordsCount} Recordings`,
             icon: Library,
-            iconColor: "text-amber-600 dark:text-amber-400",
-            iconBg: "from-amber-500/15 to-yellow-500/10",
-            valueColor: "text-foreground",
-            borderAccent: "hover:border-amber-300 dark:hover:border-amber-500/30",
+            iconColor: "text-indigo-600 dark:text-indigo-400",
+            iconBg: "from-indigo-500/15 to-violet-500/10",
+            valueColor: "text-slate-900 dark:text-white",
+            borderAccent: "hover:border-indigo-300 dark:hover:border-indigo-500/30",
         },
         {
-            title: "Match Rate",
+            title: "Metadata Match Rate",
             value: totalItems > 0 ? `${healthScore}%` : "0%",
-            sub: "Metadata completeness",
+            sub: "Average completeness",
             icon: CheckCircle,
-            iconColor: "text-emerald-600 dark:text-emerald-400",
-            iconBg: "from-emerald-500/15 to-green-500/10",
+            iconColor: "text-emerald-500 dark:text-emerald-400",
+            iconBg: "from-emerald-500/15 to-teal-500/10",
             valueColor: "text-emerald-600 dark:text-emerald-400",
             borderAccent: "hover:border-emerald-300 dark:hover:border-emerald-500/30",
         },
         {
             title: "High Risk Anomalies",
             value: highRiskFindings.toString(),
-            sub: "Conflicts & missing identifiers",
+            sub: "Conflicts detected",
             icon: FileWarning,
-            iconColor: "text-rose-600 dark:text-rose-400",
-            iconBg: "from-rose-500/15 to-pink-500/10",
-            valueColor: highRiskFindings > 0 ? "text-rose-600 dark:text-rose-400" : "text-foreground",
-            borderAccent: highRiskFindings > 0 ? "hover:border-rose-300 dark:hover:border-rose-500/30 animate-border-glow" : "hover:border-slate-300",
+            iconColor: "text-rose-500 dark:text-rose-400",
+            iconBg: "from-rose-500/15 to-orange-500/10",
+            valueColor: highRiskFindings > 0 ? "text-rose-600 dark:text-rose-400" : "text-slate-900 dark:text-white",
+            borderAccent: highRiskFindings > 0 ? "hover:border-rose-300 dark:hover:border-rose-500/30 animate-pulse-glow" : "hover:border-slate-300",
         },
         {
             title: "Estimated Leakage",
-            value: `$${totalLeakage.toFixed(2)}`,
-            sub: "Likely uncollected royalties",
+            value: `$${totalLeakage.toLocaleString()}`,
+            sub: "Pending recovery",
             icon: TrendingDown,
             iconColor: "text-violet-600 dark:text-violet-400",
-            iconBg: "from-violet-500/15 to-purple-500/10",
-            valueColor: totalLeakage > 0 ? "text-violet-600 dark:text-violet-400" : "text-foreground",
+            iconBg: "from-violet-500/15 to-fuchsia-500/10",
+            valueColor: totalLeakage > 0 ? "text-violet-600 dark:text-violet-400" : "text-slate-900 dark:text-white",
             borderAccent: "hover:border-violet-300 dark:hover:border-violet-500/30",
         },
     ];
@@ -175,39 +175,41 @@ export default async function DashboardPage() {
                     <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-7">
                         <Card className="col-span-4 rounded-2xl bg-card border-border shadow-lg shadow-black/[0.03] dark:shadow-black/20">
                             <CardHeader className="flex flex-row items-center justify-between pb-4 border-b border-border">
-                                <CardTitle className="text-foreground text-lg font-semibold">Recent Audit Findings</CardTitle>
+                                <CardTitle className="text-slate-900 dark:text-white text-lg font-black tracking-tight">Recent Audit Findings</CardTitle>
                                 {findings.length > 0 && (
                                     <a
                                         href="/dashboard/audit"
-                                        className="inline-flex items-center gap-1 text-xs font-medium text-amber-600 dark:text-amber-400 hover:text-amber-700 dark:hover:text-amber-300 transition-colors"
+                                        className="inline-flex items-center gap-1 text-xs font-black uppercase tracking-widest text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 transition-colors"
                                     >
                                         View all <ArrowUpRight className="h-3.5 w-3.5" />
                                     </a>
                                 )}
                             </CardHeader>
                             <CardContent className="pt-6">
-                                <div className="flex h-[300px] items-center justify-center text-muted-foreground border border-dashed border-border rounded-xl bg-muted/30">
+                                <div className="flex h-[320px] items-center justify-center text-slate-500 border border-dashed border-slate-200 dark:border-slate-800 rounded-2xl bg-slate-50/30 dark:bg-slate-900/10">
                                     {findings.length > 0 ? (
-                                        <div className="text-center space-y-3">
-                                            <div className="inline-flex items-center gap-2 text-emerald-600 dark:text-emerald-400 font-medium">
-                                                <CheckCircle className="h-5 w-5" />
+                                        <div className="text-center space-y-4">
+                                            <div className="inline-flex items-center gap-2 text-emerald-600 dark:text-emerald-400 font-bold">
+                                                <div className="w-8 h-8 rounded-full bg-emerald-500/10 flex items-center justify-center">
+                                                    <CheckCircle className="h-4 w-4" />
+                                                </div>
                                                 {findings.length} findings detected
                                             </div>
                                             <div>
-                                                <a href="/dashboard/audit" className="text-amber-600 dark:text-amber-400 hover:text-amber-700 text-sm font-medium transition-colors hover:underline">
-                                                    View and resolve them in Audit Engine →
+                                                <a href="/dashboard/audit" className="inline-flex items-center justify-center h-10 px-6 rounded-xl bg-indigo-600 text-white text-xs font-black uppercase tracking-widest hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-500/20">
+                                                    Review Audit Engine
                                                 </a>
                                             </div>
                                         </div>
                                     ) : (
-                                        <div className="text-center space-y-3 pt-6 pb-6">
-                                            <div className="w-14 h-14 mx-auto rounded-2xl bg-muted flex items-center justify-center border border-border">
-                                                <ScanSearch className="h-7 w-7 text-muted-foreground" />
+                                        <div className="text-center space-y-4 pt-6 pb-6">
+                                            <div className="w-16 h-16 mx-auto rounded-2xl bg-white dark:bg-slate-900 flex items-center justify-center border border-slate-200 dark:border-slate-800 shadow-sm">
+                                                <ScanSearch className="h-8 w-8 text-slate-400" />
                                             </div>
                                             <div>
-                                                <span className="block text-sm text-muted-foreground mb-1 font-medium">No audits run yet</span>
-                                                <a href="/dashboard/import" className="text-amber-600 dark:text-amber-400 hover:text-amber-700 text-sm font-medium transition-colors hover:underline">
-                                                    Import catalog to get started →
+                                                <span className="block text-sm text-slate-500 mb-4 font-medium">No results to display yet</span>
+                                                <a href="/dashboard/import" className="inline-flex items-center justify-center h-10 px-6 rounded-xl bg-slate-900 text-white text-xs font-black uppercase tracking-widest hover:bg-indigo-600 transition-all shadow-lg shadow-slate-900/10">
+                                                    Import Catalog
                                                 </a>
                                             </div>
                                         </div>

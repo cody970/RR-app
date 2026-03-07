@@ -33,54 +33,67 @@ const steps = [
 
 export function OnboardingWizard() {
     return (
-        <div className="border border-slate-200 rounded-2xl bg-gradient-to-br from-white via-white to-amber-50/50 p-8 shadow-xl shadow-slate-200/40">
-            <div className="text-center mb-8">
-                <h2 className="text-2xl font-bold text-slate-900 mb-2">
-                    Welcome to <span className="bg-gradient-to-r from-amber-500 to-amber-700 bg-clip-text text-transparent">RoyaltyRadar</span>
+        <div className="border border-border/50 rounded-3xl bg-gradient-to-br from-card via-card to-indigo-500/[0.03] p-10 shadow-2xl shadow-black/[0.03] dark:shadow-black/40 glass-card relative overflow-hidden">
+            {/* Ambient background effects */}
+            <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-indigo-500/5 blur-[100px] rounded-full pointer-events-none" />
+            <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-violet-500/5 blur-[100px] rounded-full pointer-events-none" />
+
+            <div className="text-center mb-12 relative z-10">
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-[10px] font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-widest mb-4">
+                    <Sparkles className="h-3 w-3" />
+                    Quick Start Guide
+                </div>
+                <h2 className="text-3xl font-extrabold text-foreground mb-3 tracking-tight">
+                    Welcome to <span className="bg-gradient-to-r from-indigo-500 via-violet-500 to-fuchsia-500 bg-clip-text text-transparent">RoyaltyRadar</span>
                 </h2>
-                <p className="text-slate-500 max-w-lg mx-auto">
-                    Get started in 3 simple steps. Import your catalog, enrich it with global metadata, then run your first audit to detect revenue leakage.
+                <p className="text-muted-foreground max-w-xl mx-auto text-sm font-medium leading-relaxed">
+                    Elevate your publishing operations in three steps. Centralize your catalog, automate metadata enrichment, and eliminate revenue leakage.
                 </p>
             </div>
 
-            <div className="grid md:grid-cols-3 gap-6 relative">
+            <div className="grid md:grid-cols-3 gap-8 relative z-10">
                 {steps.map((step, i) => (
                     <div
                         key={step.title}
-                        className="relative group rounded-xl border border-slate-200 bg-white p-6 hover:border-amber-300 transition-all duration-300 hover:shadow-md hover:shadow-amber-900/5 relative"
+                        className="relative group rounded-2xl border border-border/50 bg-card/50 p-8 hover:border-indigo-500/30 transition-all duration-500 hover:shadow-xl hover:shadow-indigo-500/[0.05] backdrop-blur-sm"
                     >
-                        {/* Step number */}
-                        <div className="absolute -top-3 -left-3 h-7 w-7 rounded-full bg-amber-500 flex items-center justify-center text-xs font-bold text-white shadow-lg shadow-amber-500/20">
+                        {/* Step number badge */}
+                        <div className="absolute -top-3 -left-3 h-8 w-8 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center text-xs font-black text-white shadow-lg shadow-indigo-500/30 border border-white/10">
                             {i + 1}
                         </div>
 
-                        <div className={`h-12 w-12 rounded-xl flex items-center justify-center mb-4 transition-colors
-                            ${step.color === "amber" ? "bg-amber-100 text-amber-600 border border-amber-200 group-hover:bg-amber-200" :
-                                step.color === "slate" ? "bg-slate-100 text-slate-600 border border-slate-200 group-hover:bg-slate-200" :
-                                    "bg-emerald-100 text-emerald-600 border border-emerald-200 group-hover:bg-emerald-200"}`}
+                        <div className={`h-14 w-14 rounded-2xl flex items-center justify-center mb-6 transition-all duration-300 group-hover:scale-110 group-hover:rotate-3 shadow-inner
+                            ${step.color === "amber" ? "bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20" :
+                                step.color === "slate" ? "bg-violet-500/10 text-violet-600 dark:text-violet-400 border border-violet-500/20" :
+                                    "bg-fuchsia-500/10 text-fuchsia-600 dark:text-fuchsia-400 border border-fuchsia-500/20"}`}
                         >
-                            <step.icon className="h-6 w-6" />
+                            <step.icon className="h-7 w-7" />
                         </div>
 
-                        <h3 className="text-lg font-semibold text-slate-900 mb-2">{step.title}</h3>
-                        <p className="text-sm text-slate-500 mb-4 leading-relaxed">{step.description}</p>
+                        <h3 className="text-lg font-bold text-foreground mb-3 tracking-tight">{step.title}</h3>
+                        <p className="text-sm text-muted-foreground mb-6 leading-relaxed font-sm">
+                            {step.description}
+                        </p>
 
-                        <Link href={step.href}>
-                            <Button
-                                className={`w-full h-10 ${step.color === "emerald"
-                                    ? "bg-slate-900 hover:bg-slate-800 text-white shadow-md shadow-slate-900/10"
-                                    : "bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 shadow-sm"
-                                    }`}
-                            >
-                                {step.cta}
-                                <ArrowRight className="ml-2 h-4 w-4" />
-                            </Button>
-                        </Link>
+                        <div className="mt-auto">
+                            <Link href={step.href}>
+                                <Button
+                                    className={`w-full h-11 rounded-xl transition-all duration-300 font-bold tracking-tight group/btn
+                                        ${i === 2
+                                            ? "bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white shadow-lg shadow-indigo-500/20 border-none"
+                                            : "bg-background hover:bg-muted text-foreground border border-border shadow-sm"
+                                        }`}
+                                >
+                                    {step.cta}
+                                    <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover/btn:translate-x-1" />
+                                </Button>
+                            </Link>
+                        </div>
 
-                        {/* Connector arrow (not on last) */}
+                        {/* Visual Connector (hidden on mobile) */}
                         {i < steps.length - 1 && (
-                            <div className="hidden md:block absolute top-1/2 -right-4 transform -translate-y-1/2 text-slate-300 z-10 w-8 flex justify-center">
-                                <ArrowRight className="h-5 w-5" />
+                            <div className="hidden md:block absolute top-1/2 -right-6 transform -translate-y-1/2 text-border/40 z-10">
+                                <ArrowRight className="h-4 w-4" />
                             </div>
                         )}
                     </div>

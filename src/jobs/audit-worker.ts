@@ -1,10 +1,14 @@
 import { Worker, Job } from 'bullmq';
-import { redis } from '../lib/redis';
-import { db } from '../lib/db';
-import { enrichMetadata } from '../lib/enrichment';
-import { convertFromUSD } from '../lib/currency';
-import { createEvidenceHash } from '../lib/hash';
-import { notifyOrg } from '../lib/notify';
+import { redis } from '@/lib/infra/redis';
+import { db } from '@/lib/infra/db';
+import { logger } from '@/lib/infra/logger';
+import { enrichMetadata } from '@/lib/music/enrichment';
+import { convertFromUSD } from '@/lib/finance/currency';
+import { createEvidenceHash } from '@/lib/infra/hash';
+import { ESTIMATES } from '@/lib/music/constants';
+import { notifyOrg } from '@/lib/infra/notify';
+import { pMap } from "@/lib/infra/utils";
+import { searchByISRC } from "@/lib/clients/songview-client";
 
 interface AuditJobData {
     jobId: string;
@@ -39,7 +43,7 @@ const upsertFinding = async (data: any) => {
 
 export const processAuditJob = async (job: Job<AuditJobData>) => {
     const { jobId, orgId, userId } = job.data;
-    console.log(`Processing audit job ${jobId} for org ${orgId}`);
+    logger.info({ jobId, orgId }, `Processing audit job ${jobId} for org ${orgId}`);
 
     try {
         // Get organization base currency
@@ -68,17 +72,13 @@ export const processAuditJob = async (job: Job<AuditJobData>) => {
 
         // Build lookup sets for cross-referencing
         const catalogISRCs = new Set(recordings.filter((r: any) => r.isrc).map((r: any) => r.isrc!.toUpperCase()));
-        const catalogTitles = new Map<string, string>(); // normalized title -> work id
-        for (const w of works) {
-            catalogTitles.set(w.title.toLowerCase().trim(), w.id);
-        }
 
         // ── WORK-LEVEL RULES ──
         for (const work of works) {
             // Rule 1: Missing ISWC
             if (!work.iswc) {
                 const enrichment = await enrichMetadata(work.title, work.iswc);
-                const impactUSD = 15.50;
+                const impactUSD = ESTIMATES.MISSING_ISWC_IMPACT_USD;
                 await upsertFinding({
                     type: "MISSING_ISWC",
                     severity: "MEDIUM",
@@ -100,7 +100,7 @@ export const processAuditJob = async (job: Job<AuditJobData>) => {
                 totalSplit += writer.splitPercent;
             }
             if (totalSplit > 100) {
-                const impactUSD = 250.00;
+                const impactUSD = ESTIMATES.SPLIT_OVERLAP_IMPACT_USD;
                 await upsertFinding({
                     type: "SPLIT_OVERLAP",
                     severity: "HIGH",
@@ -115,10 +115,10 @@ export const processAuditJob = async (job: Job<AuditJobData>) => {
                 findingsCount++;
             }
 
-            // Rule 3: Split Underclaim (under 100% — leaving money on the table)
+            // Rule 3: Split Underclaim
             if (work.writers.length > 0 && totalSplit < 100 && totalSplit > 0) {
                 const unclaimed = 100 - totalSplit;
-                const impactUSD = unclaimed * 5; // Estimate based on unclaimed percentage
+                const impactUSD = unclaimed * ESTIMATES.UNCLAIMED_SPLIT_MULTIPLIER;
                 await upsertFinding({
                     type: "SPLIT_UNDERCLAIM",
                     severity: unclaimed > 30 ? "HIGH" : "MEDIUM",
@@ -133,12 +133,12 @@ export const processAuditJob = async (job: Job<AuditJobData>) => {
                 findingsCount++;
             }
 
-            // Rule 4: Duplicate Detection (fuzzy title matching)
+            // Rule 4: Duplicate Detection
             const normalizedTitle = work.title.toLowerCase().trim();
             const variations = [
-                normalizedTitle.replace(/\s*\(.*?\)\s*/g, "").trim(), // Remove parenthetical
-                normalizedTitle.replace(/[^a-z0-9\s]/g, "").trim(),   // Remove punctuation
-                normalizedTitle.replace(/\s+/g, " ").trim(),          // Normalize whitespace
+                normalizedTitle.replace(/\s*\(.*?\)\s*/g, "").trim(),
+                normalizedTitle.replace(/[^a-z0-9\s]/g, "").trim(),
+                normalizedTitle.replace(/\s+/g, " ").trim(),
             ];
 
             for (const otherWork of works) {
@@ -151,25 +151,28 @@ export const processAuditJob = async (job: Job<AuditJobData>) => {
                         type: "POSSIBLE_DUPLICATE",
                         severity: "LOW",
                         confidence: 75,
-                        estimatedImpact: 10.00,
-                        amountOriginal: convertFromUSD(10.00, currency),
+                        estimatedImpact: ESTIMATES.DUPLICATE_WORK_IMPACT_USD,
+                        amountOriginal: convertFromUSD(ESTIMATES.DUPLICATE_WORK_IMPACT_USD, currency),
                         currency,
                         resourceType: "Work",
                         resourceId: work.id,
                         orgId
                     });
                     findingsCount++;
-                    break; // Only flag once per work
+                    break;
                 }
             }
         }
 
         // ── RECORDING-LEVEL RULES ──
-        for (const rec of recordings) {
+        // Process recordings in parallel with concurrency control
+        const recordingGaps = await pMap(recordings, async (rec: any) => {
+            let localFindings = 0;
+
             // Rule 5: Missing ISRC
             if (!rec.isrc) {
                 const enrichment = await enrichMetadata(rec.title, rec.isrc);
-                const impactUSD = 45.00;
+                const impactUSD = ESTIMATES.MISSING_ISRC_IMPACT_USD;
                 await upsertFinding({
                     type: "MISSING_ISRC",
                     severity: "HIGH",
@@ -182,12 +185,60 @@ export const processAuditJob = async (job: Job<AuditJobData>) => {
                     resourceId: rec.id,
                     orgId
                 });
-                findingsCount++;
+                localFindings++;
+            } else {
+                const songviewResult = await searchByISRC(rec.isrc!);
+                if (!songviewResult.found) {
+                    const impactUSD = ESTIMATES.UNREGISTERED_RECORDING_IMPACT_USD;
+                    await upsertFinding({
+                        type: "UNREGISTERED_RECORDING",
+                        severity: "MEDIUM",
+                        confidence: 90,
+                        estimatedImpact: impactUSD,
+                        amountOriginal: convertFromUSD(impactUSD, currency),
+                        currency,
+                        resourceType: "Recording",
+                        resourceId: rec.id,
+                        orgId
+                    });
+                    localFindings++;
+                }
+
+                if (songviewResult.found && (songviewResult.shares || 0) > 100.1) {
+                    const impactUSD = ESTIMATES.SPLIT_OVERLAP_IMPACT_USD;
+                    await upsertFinding({
+                        type: "SPLIT_CONFLICT",
+                        severity: "HIGH",
+                        confidence: 85,
+                        estimatedImpact: impactUSD,
+                        amountOriginal: convertFromUSD(impactUSD, currency),
+                        currency,
+                        resourceType: "Recording",
+                        resourceId: rec.id,
+                        orgId
+                    });
+                    localFindings++;
+                }
+
+                if (songviewResult.found && !songviewResult.iswc) {
+                    const impactUSD = ESTIMATES.MISSING_ISWC_IMPACT_USD;
+                    await upsertFinding({
+                        type: "MISSING_ISWC",
+                        severity: "LOW",
+                        confidence: 95,
+                        estimatedImpact: impactUSD,
+                        amountOriginal: convertFromUSD(impactUSD, currency),
+                        currency,
+                        resourceType: "Recording",
+                        resourceId: rec.id,
+                        orgId
+                    });
+                    localFindings++;
+                }
             }
 
-            // Rule 6: Unlinked Recording
             if (!rec.workId) {
-                const impactUSD = 25.00;
+                const impactUSD = ESTIMATES.UNLINKED_RECORDING_IMPACT_USD;
                 await upsertFinding({
                     type: "UNLINKED_RECORDING",
                     severity: "MEDIUM",
@@ -199,16 +250,18 @@ export const processAuditJob = async (job: Job<AuditJobData>) => {
                     resourceId: rec.id,
                     orgId
                 });
-                findingsCount++;
+                localFindings++;
             }
-        }
+            return localFindings;
+        }, 10);
 
-        // ── STATEMENT-LEVEL RULES (Black Box Detection) ──
+        findingsCount += recordingGaps.reduce((sum, count) => sum + count, 0);
+
+        // ── STATEMENT-LEVEL RULES ──
         for (const line of statementLines) {
             if (!line.isrc) continue;
             const isrcUpper = line.isrc.toUpperCase();
             if (!catalogISRCs.has(isrcUpper)) {
-                // This is unclaimed revenue — no catalog entry matches this ISRC
                 const impactUSD = line.amount || 0;
                 if (impactUSD > 0) {
                     await upsertFinding({
@@ -243,13 +296,13 @@ export const processAuditJob = async (job: Job<AuditJobData>) => {
             }
         });
 
-        // Audit Log: Completion (with SHA-256 hash chain)
+        // Audit Log: Completion
         const lastLogAfter = await db.auditLog.findFirst({
             where: { orgId },
             orderBy: { timestamp: "desc" },
             select: { evidenceHash: true }
         });
-        const completeDetails = JSON.stringify({ jobId: jobId, findingsFound: findingsCount });
+        const completeDetails = JSON.stringify({ jobId, findingsFound: findingsCount });
         await db.auditLog.create({
             data: {
                 action: "AUDIT_JOB_COMPLETED",
@@ -260,7 +313,7 @@ export const processAuditJob = async (job: Job<AuditJobData>) => {
             }
         });
 
-        // Send notification to all org users
+        // Send notification
         await notifyOrg({
             orgId,
             title: "Audit Complete",
@@ -270,7 +323,7 @@ export const processAuditJob = async (job: Job<AuditJobData>) => {
         });
 
     } catch (error) {
-        console.error("Audit background job failed:", error);
+        logger.error({ err: error, jobId, orgId }, "Audit background job failed");
         await db.auditJob.update({
             where: { id: jobId },
             data: {
@@ -292,12 +345,11 @@ const auditWorker = new Worker<AuditJobData>(
 );
 
 auditWorker.on('completed', job => {
-    console.log(`Job ${job.id} completed!`);
+    logger.info({ jobId: job.id }, `Job ${job.id} completed!`);
 });
 
 auditWorker.on('failed', (job, err) => {
-    console.log(`Job ${job?.id} failed with error ${err.message}`);
+    logger.error({ jobId: job?.id, err }, `Job ${job?.id} failed with error ${err.message}`);
 });
 
-console.log('Audit worker started!');
-
+logger.info('Audit worker started!');
