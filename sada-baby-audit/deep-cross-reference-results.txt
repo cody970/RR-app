@@ -1,0 +1,503 @@
+================================================================================
+SADA BABY — DEEP DIVE CROSS-REFERENCE ANALYSIS
+================================================================================
+
+Total track appearances across all projects: 179
+Unique tracks (after deduplication): 173
+Duplicate appearances: 6
+
+================================================================================
+CROSS-PROJECT DUPLICATES (same track on multiple projects)
+================================================================================
+
+  &quot;Black Harlow&quot;
+    → The Lost Tapes (2021)
+    → Skuba Sada 2.5 (2022)
+
+  &quot;Bully Ball&quot;
+    → Brolik (2020)
+    → Skuba Sada 2.5 (2022)
+
+  &quot;In Real Life&quot;
+    → The Lost Tapes of Skuba Sada (2020)
+    → The Lost Tapes (2021)
+
+  &quot;Perfect Form Skub&quot;
+    → Bartier Bounty 3 (2022)
+    → Skuba Sada 2.5 (2022)
+
+  &quot;Sada Wada&quot;
+    → Bartier Bounty 3 (2022)
+    → Skuba Sada 2.5 (2022)
+
+  &quot;Whoop N Wham&quot;
+    → WHOOP Tape (2019)
+    → The Lost Tapes of Skuba Sada (2020)
+
+  TOTAL DUPLICATED TRACKS: 6
+
+================================================================================
+ASCAP CROSS-REFERENCE RESULTS
+================================================================================
+
+  MATCHED to ASCAP: 40 tracks
+  NOT FOUND in ASCAP: 133 tracks
+
+--- MATCHED TRACKS ---
+  ✅ &quot;2K 17&quot; → ASCAP: &quot;2K 17&quot; [EXACT] (Skuba Baby (2017))
+  ✅ &quot;2K20&quot; → ASCAP: &quot;2K20&quot; [EXACT] (Skuba Sada 2.5 (2022))
+  ✅ &quot;50 Shades of Red&quot; → ASCAP: &quot;RED&quot; [PARTIAL] (Bartier Bounty 2 (2020))
+  ✅ &quot;Aktivated&quot; → ASCAP: &quot;AKTIVATED&quot; [EXACT] (Skuba Sada 2.5 (2022))
+  ✅ &quot;Alright&quot; → ASCAP: &quot;ALRIGHT&quot; [EXACT] (Skuba Baby (2017))
+  ✅ &quot;B4&quot; → ASCAP: &quot;B4&quot; [EXACT] (Skuba Baby (2017))
+  ✅ &quot;Balifornia&quot; → ASCAP: &quot;BALIFORNIA&quot; [EXACT] (WHOOP Tape (2019))
+  ✅ &quot;Big Eastside&quot; → ASCAP: &quot;EASTSIDE&quot; [PARTIAL] (SHONUFF (2023))
+  ✅ &quot;Big Squad&quot; → ASCAP: &quot;SQUAD&quot; [PARTIAL] (D.O.N - Dat One Nigga (2017))
+  ✅ &quot;Bloody Love&quot; → ASCAP: &quot;BLOOD&quot; [PARTIAL] (Bartier Bounty 3 (2022))
+  ✅ &quot;Detroit Red&quot; → ASCAP: &quot;DETROIT&quot; [PARTIAL] (D.O.N - Dat One Nigga (2017))
+  ✅ &quot;Digimon&quot; → ASCAP: &quot;DIGIMON&quot; [EXACT] (Skuba Baby (2017))
+  ✅ &quot;Eastside Jump Shot&quot; → ASCAP: &quot;EASTSIDE&quot; [PARTIAL] (D.O.N - Dat One Nigga (2017))
+  ✅ &quot;Ghetto Champagne&quot; → ASCAP: &quot;GHETTO CHAMPAGNE&quot; [EXACT] (D.O.N - Dat One Nigga (2017))
+  ✅ &quot;HardKore Holly&quot; → ASCAP: &quot;HARD&quot; [PARTIAL] (Bartier Bounty 3 (2022))
+  ✅ &quot;I Know&quot; → ASCAP: &quot;I KNOW&quot; [EXACT] (Skuba Baby (2017))
+  ✅ &quot;In Jig's Voice&quot; → ASCAP: &quot;ICE&quot; [PARTIAL] (D.O.N - Dat One Nigga (2017))
+  ✅ &quot;In My Hood&quot; → ASCAP: &quot;IN MY HOOD&quot; [EXACT] (Skuba Baby (2017))
+  ✅ &quot;Lil Blood Nem&quot; → ASCAP: &quot;BLOOD&quot; [PARTIAL] (WHOOP Tape (2019))
+  ✅ &quot;Little While&quot; → ASCAP: &quot;LIT&quot; [PARTIAL] (Skuba Sada 2.5 (2022))
+  ✅ &quot;Outside&quot; → ASCAP: &quot;OUTSIDE&quot; [EXACT] (Skuba Sada 2.5 (2022))
+  ✅ &quot;Permanent Gang Kings&quot; → ASCAP: &quot;KING&quot; [PARTIAL] (D.O.N - Dat One Nigga (2017))
+  ✅ &quot;Pressin&quot; → ASCAP: &quot;PRESSIN&quot; [EXACT] (Skuba Sada 2.5 (2022))
+  ✅ &quot;Probably&quot; → ASCAP: &quot;PROBABLY&quot; [EXACT] (Skuba Baby (2017))
+  ✅ &quot;Red Whoop&quot; → ASCAP: &quot;RED&quot; [PARTIAL] (Brolik (2020))
+  ✅ &quot;Return Wit My Strap&quot; → ASCAP: &quot;RETURN WIT MY STRAP&quot; [EXACT] (Skuba Baby (2017))
+  ✅ &quot;Shred Buddy&quot; → ASCAP: &quot;RED&quot; [PARTIAL] (Skuba Sada 2.5 (2022))
+  ✅ &quot;Skanilla Ice&quot; → ASCAP: &quot;ICE&quot; [PARTIAL] (WHOOP Tape (2019))
+  ✅ &quot;Skub&quot; → ASCAP: &quot;SKUBA SADA&quot; [PARTIAL] (Bartier Bounty 2 (2020))
+  ✅ &quot;SkubaHoodBlocKlub&quot; → ASCAP: &quot;HOOD&quot; [PARTIAL] (Brolik (2020))
+  ✅ &quot;Skupac&quot; → ASCAP: &quot;SKUPAC&quot; [EXACT] (Skuba Baby (2017))
+  ✅ &quot;Slide&quot; → ASCAP: &quot;SLIDE&quot; [EXACT] (Skuba Sada 2.5 (2022))
+  ✅ &quot;SMO&quot; → ASCAP: &quot;SMOKE&quot; [PARTIAL] (Skuba Baby (2017))
+  ✅ &quot;Smoking Aces&quot; → ASCAP: &quot;KING&quot; [PARTIAL] (D.O.N - Dat One Nigga (2017))
+  ✅ &quot;Stacy&quot; → ASCAP: &quot;STACY&quot; [EXACT] (Skuba Baby (2017))
+  ✅ &quot;The Big Red Whoop&quot; → ASCAP: &quot;RED&quot; [PARTIAL] (Brolik (2020))
+  ✅ &quot;Top Side&quot; → ASCAP: &quot;TOP&quot; [PARTIAL] (SHONUFF (2023))
+  ✅ &quot;Trap Withdrawals&quot; → ASCAP: &quot;TRAP&quot; [PARTIAL] (Bartier Bounty 2 (2020))
+  ✅ &quot;Whole Lotta Choppas Remix&quot; → ASCAP: &quot;WHOLE LOTTA CHOPPAS&quot; [PARTIAL] (Skuba Sada 2.5 (2022))
+  ✅ &quot;Whoop Juice&quot; → ASCAP: &quot;ICE&quot; [PARTIAL] (Bartier Bounty 2 (2020))
+
+--- UNREGISTERED TRACKS (NOT in ASCAP) ---
+
+  📁 Skuba Baby (2017) — 7 unregistered:
+    ❌ Acting Bad
+    ❌ Dat One Shit
+    ❌ Demons
+    ❌ Maquel
+    ❌ Peacock
+    ❌ Right Now
+    ❌ Sticks & Stones
+
+  📁 D.O.N - Dat One Nigga (2017) — 10 unregistered:
+    ❌ 21 Skuba
+    ❌ Death Row
+    ❌ First Sunday
+    ❌ Guatemalan
+    ❌ Heart Auction
+    ❌ Percosex
+    ❌ Shabooya
+    ❌ Skuba Sauce
+    ❌ Sorrell Inc.
+    ❌ Timeline Tough Guys
+
+  📁 WHOOP Tape (2019) — 18 unregistered:
+    ❌ 007
+    ❌ Bersatile
+    ❌ Bloxk Day
+    ❌ Bolumbus Day
+    ❌ Helluva
+    ❌ Katch If You Kan
+    ❌ Kold Lil Choppa
+    ❌ Mega Tron
+    ❌ Offensive Threat
+    ❌ Paper Skuba
+    ❌ Pony Down
+    ❌ Shang Tsung
+    ❌ Skub N Skilla Show
+    ❌ Skuba Bang
+    ❌ Tien N Yamcha
+    ❌ Waka Sada
+    ❌ Whoop Me Down
+    ❌ Whoop N Wham
+
+  📁 Brolik (2020) — 13 unregistered:
+    ❌ 7 Mile Shuffle
+    ❌ 8 Legged Ape
+    ❌ Baklava
+    ❌ Bison Dele
+    ❌ Brolik
+    ❌ Bully Ball
+    ❌ Fuck Slime
+    ❌ Kut n Kordial
+    ❌ Mood
+    ❌ Press Up
+    ❌ Toxic
+    ❌ Triple Threat Match
+    ❌ WWF
+
+  📁 Bartier Bounty 2 (2020) — 14 unregistered:
+    ❌ 150/55
+    ❌ 5nem
+    ❌ Aunty Stella
+    ❌ Baptism
+    ❌ Billie Holiday
+    ❌ Free 8 Ball
+    ❌ Free Jig
+    ❌ Funky Kong
+    ❌ Half Man Half Ape
+    ❌ Horse Play 2
+    ❌ Kam and Kauri
+    ❌ Kooler Final Form
+    ❌ Kourtside
+    ❌ Silver Back
+
+  📁 The Lost Tapes of Skuba Sada (2020) — 14 unregistered:
+    ❌ 500
+    ❌ Back End
+    ❌ Barry Lil Kuzin
+    ❌ Bobby Bouscher
+    ❌ Deuce Skubalo
+    ❌ Gory Lanez
+    ❌ In Real Life
+    ❌ Press Option
+    ❌ Re Rock
+    ❌ ShoNuff
+    ❌ Sticks & Stones Part 2
+    ❌ Weezo
+    ❌ Whoop Kamp
+    ❌ Whoop N Wham
+
+  📁 The Lost Tapes (2021) — 13 unregistered:
+    ❌ 1955
+    ❌ 2055
+    ❌ Big Hot Cheeto
+    ❌ Black Harlow
+    ❌ Bloxk Vibes
+    ❌ Brazy Taxi
+    ❌ Chief Keef
+    ❌ Friends
+    ❌ Good Wealthy
+    ❌ Heavy Press Hotel
+    ❌ In Real Life
+    ❌ Streets Of Rage
+    ❌ The Bool
+
+  📁 Bartier Bounty 3 (2022) — 18 unregistered:
+    ❌ 1992
+    ❌ Angel And Dren
+    ❌ Bad Boyz
+    ❌ Bade Bunningham
+    ❌ CJ
+    ❌ Internet Disease
+    ❌ Ja Morant
+    ❌ Karmelo Skanthony
+    ❌ Magana
+    ❌ Miles DeRozan
+    ❌ Perfect Form Skub
+    ❌ Rehab
+    ❌ Sada Wada
+    ❌ Saynomo
+    ❌ Skubop
+    ❌ The Workout
+    ❌ Unkle Emanuel
+    ❌ Unkle Hell Yea
+
+  📁 Skuba Sada 2.5 (2022) — 14 unregistered:
+    ❌ 2 Freaks
+    ❌ Black Harlow
+    ❌ Blickelodeon
+    ❌ Bop Stick
+    ❌ Bully Ball
+    ❌ Lame
+    ❌ Leave Em There
+    ❌ No Talkin
+    ❌ Off White Whoop
+    ❌ Perfect Form Skub
+    ❌ Sada Wada
+    ❌ Say Whoop
+    ❌ Skuba Skooly
+    ❌ SkubaRu
+
+  📁 SHONUFF (2023) — 18 unregistered:
+    ❌ 9Fingers
+    ❌ Bible Study
+    ❌ Casada Jr
+    ❌ Freeze Tag
+    ❌ Game 5
+    ❌ Halftime
+    ❌ Heat Khekk
+    ❌ Khalifa Mode
+    ❌ Khoppa Khoppa
+    ❌ Multiverse
+    ❌ Old Skool Whoop
+    ❌ Playeration
+    ❌ Quit Krying
+    ❌ Rojo
+    ❌ SukiSada
+    ❌ The Intervention
+    ❌ Titans
+    ❌ Unkle TJ
+
+================================================================================
+ASCAP-ONLY WORKS (registered but not found on any scraped project)
+================================================================================
+
+  63 ASCAP works not matched to any scraped project:
+    🔵 BLOOD BATH
+    🔵 BLOOD BROTHERS
+    🔵 BLOOD GANG
+    🔵 BLOOD IN BLOOD OUT
+    🔵 BLOOD MONEY
+    🔵 BLOOD SPORT
+    🔵 BLOOD THIRSTY
+    🔵 BLOOD TYPE
+    🔵 BLOOD WALK
+    🔵 BLOOD WORK
+    🔵 BLOODY MARY
+    🔵 BLOXK PARTY
+    🔵 BLOXK PARTY REMIX
+    🔵 BOUNCE BACK
+    🔵 CHAIN GANG
+    🔵 COME UP
+    🔵 CRAZY
+    🔵 DETROIT VS EVERYBODY
+    🔵 DRIP DRIP DRIP
+    🔵 FIRST DAY OUT
+    🔵 FREE JOE EXOTIC
+    🔵 FREESTYLE
+    🔵 GANG NEM
+    🔵 GET MONEY
+    🔵 GO CRAZY
+    🔵 GRINDIN
+    🔵 GUCCI GANG
+    🔵 HEAVY HITTER
+    🔵 HOOD RICH
+    🔵 HUSTLE HARD
+    🔵 LIFESTYLE
+    🔵 LOYALTY
+    🔵 MADE IT
+    🔵 MONEY
+    🔵 MONEY TALK
+    🔵 NEXT UP
+    🔵 NO CAP
+    🔵 NO HOOK
+    🔵 ON GOD
+    🔵 ON SIGHT
+    🔵 ON THE BLOCK
+    🔵 PAPER ROUTE
+    🔵 PIMP NAMED SLICKBACK
+    🔵 PULL UP
+    🔵 REAL ONE
+    🔵 RED LIGHT
+    🔵 RIDE
+    🔵 ROCKSTAR
+    🔵 SAVAGE
+    🔵 SEDUCE
+    🔵 SHOOTERS
+    🔵 SHORTY
+    🔵 STACK IT UP
+    🔵 STICKS AND STONES
+    🔵 STREET LIFE
+    🔵 TALK MY SHIT
+    🔵 THAT WAY
+    🔵 THE RACE
+    🔵 TRAP HOUSE
+    🔵 TRENCHES
+    🔵 UP NEXT
+    🔵 WILD
+    🔵 ZONE
+
+================================================================================
+SUMMARY STATISTICS
+================================================================================
+
+  Projects analyzed: 10
+  Total track appearances: 179
+  Unique tracks (deduplicated): 173
+  Cross-project duplicates: 6
+  Matched to ASCAP: 40
+  NOT registered with ASCAP: 133
+  ASCAP-only (no project match): 63
+  ASCAP registration rate: 40/173 = 23.1%
+  GAP (unregistered): 133/173 = 76.9%
+
+================================================================================
+PRIORITY REGISTRATION RECOMMENDATIONS
+================================================================================
+
+  🔴 HIGH PRIORITY — Major Label / Certified / High-Visibility:
+
+    Skuba Sada 2.5 (2022):
+      → 2 Freaks
+      → Black Harlow
+      → Blickelodeon
+      → Bop Stick
+      → Bully Ball
+      → Lame
+      → Leave Em There
+      → No Talkin
+      → Off White Whoop
+      → Perfect Form Skub
+      → Sada Wada
+      → Say Whoop
+      → Skuba Skooly
+      → SkubaRu
+
+    Bartier Bounty 2 (2020):
+      → 150/55
+      → 5nem
+      → Aunty Stella
+      → Baptism
+      → Billie Holiday
+      → Free 8 Ball
+      → Free Jig
+      → Funky Kong
+      → Half Man Half Ape
+      → Horse Play 2
+      → Kam and Kauri
+      → Kooler Final Form
+      → Kourtside
+      → Silver Back
+
+  🟡 MEDIUM PRIORITY — Streaming Available / A&R Projects:
+
+    Bartier Bounty 3 (2022):
+      → 1992
+      → Angel And Dren
+      → Bad Boyz
+      → Bade Bunningham
+      → CJ
+      → Internet Disease
+      → Ja Morant
+      → Karmelo Skanthony
+      → Magana
+      → Miles DeRozan
+      → Perfect Form Skub
+      → Rehab
+      → Sada Wada
+      → Saynomo
+      → Skubop
+      → The Workout
+      → Unkle Emanuel
+      → Unkle Hell Yea
+
+    WHOOP Tape (2019):
+      → 007
+      → Bersatile
+      → Bloxk Day
+      → Bolumbus Day
+      → Helluva
+      → Katch If You Kan
+      → Kold Lil Choppa
+      → Mega Tron
+      → Offensive Threat
+      → Paper Skuba
+      → Pony Down
+      → Shang Tsung
+      → Skub N Skilla Show
+      → Skuba Bang
+      → Tien N Yamcha
+      → Waka Sada
+      → Whoop Me Down
+      → Whoop N Wham
+
+    SHONUFF (2023):
+      → 9Fingers
+      → Bible Study
+      → Casada Jr
+      → Freeze Tag
+      → Game 5
+      → Halftime
+      → Heat Khekk
+      → Khalifa Mode
+      → Khoppa Khoppa
+      → Multiverse
+      → Old Skool Whoop
+      → Playeration
+      → Quit Krying
+      → Rojo
+      → SukiSada
+      → The Intervention
+      → Titans
+      → Unkle TJ
+
+    The Lost Tapes (2021):
+      → 1955
+      → 2055
+      → Big Hot Cheeto
+      → Black Harlow
+      → Bloxk Vibes
+      → Brazy Taxi
+      → Chief Keef
+      → Friends
+      → Good Wealthy
+      → Heavy Press Hotel
+      → In Real Life
+      → Streets Of Rage
+      → The Bool
+
+    The Lost Tapes of Skuba Sada (2020):
+      → 500
+      → Back End
+      → Barry Lil Kuzin
+      → Bobby Bouscher
+      → Deuce Skubalo
+      → Gory Lanez
+      → In Real Life
+      → Press Option
+      → Re Rock
+      → ShoNuff
+      → Sticks & Stones Part 2
+      → Weezo
+      → Whoop Kamp
+      → Whoop N Wham
+
+  🟢 LOWER PRIORITY — Early Career / DatPiff / Limited Distribution:
+
+    Skuba Baby (2017):
+      → Acting Bad
+      → Dat One Shit
+      → Demons
+      → Maquel
+      → Peacock
+      → Right Now
+      → Sticks & Stones
+
+    D.O.N - Dat One Nigga (2017):
+      → 21 Skuba
+      → Death Row
+      → First Sunday
+      → Guatemalan
+      → Heart Auction
+      → Percosex
+      → Shabooya
+      → Skuba Sauce
+      → Sorrell Inc.
+      → Timeline Tough Guys
+
+    Brolik (2020):
+      → 7 Mile Shuffle
+      → 8 Legged Ape
+      → Baklava
+      → Bison Dele
+      → Brolik
+      → Bully Ball
+      → Fuck Slime
+      → Kut n Kordial
+      → Mood
+      → Press Up
+      → Toxic
+      → Triple Threat Match
+      → WWF
+
+================================================================================
+END OF ANALYSIS
+================================================================================

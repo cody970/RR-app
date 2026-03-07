@@ -1,0 +1,907 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sada Baby — Comprehensive Royalty Audit Report</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', Arial, sans-serif; background: #0f0f0f; color: #e0e0e0; line-height: 1.6; }
+  .header { background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%); padding: 40px; text-align: center; border-bottom: 3px solid #e94560; }
+  .header h1 { font-size: 2.2em; color: #fff; letter-spacing: 2px; text-transform: uppercase; }
+  .header h2 { font-size: 1.1em; color: #e94560; margin-top: 8px; letter-spacing: 1px; }
+  .header .meta { color: #aaa; margin-top: 12px; font-size: 0.9em; }
+  .container { max-width: 1200px; margin: 0 auto; padding: 30px 20px; }
+  
+  /* Summary Cards */
+  .summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin: 30px 0; }
+  .card { background: #1a1a2e; border-radius: 12px; padding: 20px; text-align: center; border: 1px solid #2a2a4e; }
+  .card.green { border-color: #00c853; }
+  .card.red { border-color: #e94560; }
+  .card.yellow { border-color: #ffd600; }
+  .card.blue { border-color: #2979ff; }
+  .card .number { font-size: 2.8em; font-weight: bold; }
+  .card.green .number { color: #00c853; }
+  .card.red .number { color: #e94560; }
+  .card.yellow .number { color: #ffd600; }
+  .card.blue .number { color: #2979ff; }
+  .card .label { font-size: 0.85em; color: #aaa; margin-top: 6px; text-transform: uppercase; letter-spacing: 1px; }
+  
+  /* Section headers */
+  .section-title { font-size: 1.3em; font-weight: bold; color: #e94560; text-transform: uppercase; letter-spacing: 2px; border-bottom: 2px solid #e94560; padding-bottom: 8px; margin: 40px 0 20px 0; }
+  
+  /* Alert boxes */
+  .alert { border-radius: 8px; padding: 16px 20px; margin: 16px 0; border-left: 4px solid; }
+  .alert.warning { background: #1a1500; border-color: #ffd600; color: #ffd600; }
+  .alert.danger { background: #1a0000; border-color: #e94560; color: #ff6b6b; }
+  .alert.info { background: #001a2e; border-color: #2979ff; color: #82b1ff; }
+  .alert.success { background: #001a00; border-color: #00c853; color: #69f0ae; }
+  
+  /* Project cards */
+  .project-card { background: #1a1a2e; border-radius: 12px; margin: 20px 0; overflow: hidden; border: 1px solid #2a2a4e; }
+  .project-header { padding: 16px 20px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; }
+  .project-header:hover { background: #1f1f3e; }
+  .project-name { font-size: 1.1em; font-weight: bold; color: #fff; }
+  .project-label { font-size: 0.8em; color: #aaa; margin-top: 3px; }
+  .project-stats { display: flex; gap: 12px; align-items: center; }
+  .stat-badge { padding: 4px 10px; border-radius: 20px; font-size: 0.8em; font-weight: bold; }
+  .badge-green { background: #00c85322; color: #00c853; border: 1px solid #00c853; }
+  .badge-red { background: #e9456022; color: #e94560; border: 1px solid #e94560; }
+  .badge-yellow { background: #ffd60022; color: #ffd600; border: 1px solid #ffd600; }
+  .progress-bar { height: 6px; background: #2a2a4e; }
+  .progress-fill { height: 100%; transition: width 0.3s; }
+  .track-list { padding: 0 20px 16px; }
+  .track-row { display: flex; align-items: center; padding: 8px 0; border-bottom: 1px solid #1f1f3f; gap: 12px; }
+  .track-row:last-child { border-bottom: none; }
+  .track-icon { font-size: 1.1em; width: 24px; flex-shrink: 0; }
+  .track-name { flex: 1; font-size: 0.95em; }
+  .track-badges { display: flex; gap: 6px; flex-wrap: wrap; }
+  .tbadge { padding: 2px 8px; border-radius: 4px; font-size: 0.72em; font-weight: bold; }
+  .tbadge-ascap { background: #0d47a122; color: #82b1ff; border: 1px solid #2979ff; }
+  .tbadge-bmi { background: #1b5e2022; color: #69f0ae; border: 1px solid #00c853; }
+  .tbadge-conflict { background: #b71c1c22; color: #ff8a80; border: 1px solid #e94560; }
+  .tbadge-pending { background: #f57f1722; color: #ffcc02; border: 1px solid #ffd600; }
+  .tbadge-partial { background: #4a148c22; color: #ce93d8; border: 1px solid #9c27b0; }
+  .track-row.unregistered .track-name { color: #ff6b6b; }
+  .track-row.registered .track-name { color: #e0e0e0; }
+  
+  /* Unregistered list */
+  .unreg-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; margin: 20px 0; }
+  .unreg-project { background: #1a0a0a; border: 1px solid #e9456044; border-radius: 8px; padding: 16px; }
+  .unreg-project h4 { color: #e94560; margin-bottom: 10px; font-size: 0.95em; }
+  .unreg-track { padding: 4px 0; font-size: 0.88em; color: #ff8a80; border-bottom: 1px solid #2a1a1a; }
+  .unreg-track:last-child { border-bottom: none; }
+  .unreg-track::before { content: "❌ "; }
+  
+  /* Conflict table */
+  table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 0.88em; }
+  th { background: #1f1f3e; color: #e94560; padding: 10px 12px; text-align: left; text-transform: uppercase; font-size: 0.8em; letter-spacing: 1px; }
+  td { padding: 9px 12px; border-bottom: 1px solid #1f1f3f; }
+  tr:hover td { background: #1a1a2e; }
+  .status-reconciled { color: #00c853; }
+  .status-pending { color: #ffd600; }
+  .status-conflict { color: #e94560; }
+  
+  /* Action items */
+  .action-list { list-style: none; }
+  .action-item { background: #1a1a2e; border-radius: 8px; padding: 16px 20px; margin: 12px 0; border-left: 4px solid #e94560; }
+  .action-item.priority-1 { border-color: #e94560; }
+  .action-item.priority-2 { border-color: #ffd600; }
+  .action-item.priority-3 { border-color: #2979ff; }
+  .action-num { font-size: 1.4em; font-weight: bold; color: #e94560; float: left; margin-right: 12px; }
+  .action-title { font-weight: bold; color: #fff; font-size: 1em; }
+  .action-desc { color: #aaa; font-size: 0.88em; margin-top: 6px; }
+  .action-desc li { margin: 4px 0 4px 16px; list-style: disc; }
+  
+  /* Footer */
+  .footer { background: #1a1a2e; padding: 30px; text-align: center; color: #666; font-size: 0.85em; margin-top: 60px; border-top: 1px solid #2a2a4e; }
+  
+  /* Toggle */
+  details summary { list-style: none; }
+  details summary::-webkit-details-marker { display: none; }
+  
+  .toggle-btn { background: none; border: none; color: #aaa; cursor: pointer; font-size: 0.85em; padding: 4px 8px; }
+  
+  @media print {
+    body { background: white; color: black; }
+    .header { background: #1a1a2e !important; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>🎵 Sada Baby — Royalty Audit Report</h1>
+  <h2>ASCAP + BMI Comprehensive Cross-Reference Analysis</h2>
+  <div class="meta">Casada Aaron Sorrell &nbsp;|&nbsp; 10 Projects (2017–2023) &nbsp;|&nbsp; Generated: March 07, 2026 &nbsp;|&nbsp; Prepared for: Cody Patrick</div>
+</div>
+
+<div class="container">
+
+  <!-- Summary Cards -->
+  <div class="summary-grid">
+    <div class="card blue">
+      <div class="number">179</div>
+      <div class="label">Total Tracks Audited</div>
+    </div>
+    <div class="card green">
+      <div class="number">104</div>
+      <div class="label">Registered (Any PRO)</div>
+    </div>
+    <div class="card red">
+      <div class="number">75</div>
+      <div class="label">Completely Unregistered</div>
+    </div>
+    <div class="card yellow">
+      <div class="number">8</div>
+      <div class="label">BMI Conflicts</div>
+    </div>
+    <div class="card yellow">
+      <div class="number">70</div>
+      <div class="label">Pending Review</div>
+    </div>
+    <div class="card blue">
+      <div class="number">348</div>
+      <div class="label">Total BMI Works</div>
+    </div>
+  </div>
+
+  <!-- Registration Breakdown -->
+  <div class="section-title">Registration Status Overview</div>
+  
+  <div class="summary-grid">
+    <div class="card green">
+      <div class="number">13</div>
+      <div class="label">Registered in Both ASCAP + BMI</div>
+    </div>
+    <div class="card green">
+      <div class="number">87</div>
+      <div class="label">BMI Only</div>
+    </div>
+    <div class="card green">
+      <div class="number">4</div>
+      <div class="label">ASCAP Only</div>
+    </div>
+    <div class="card red">
+      <div class="number">75</div>
+      <div class="label">Neither PRO</div>
+    </div>
+  </div>
+
+  <div class="alert warning">
+    <strong>⚠️ Registration Rate: 58.1%</strong> — 104 of 179 tracks have at least one PRO registration.
+    <strong>75 tracks (41.9%)</strong> have NO registration with ASCAP or BMI and are generating zero collectible performance royalties.
+  </div>
+
+  <div class="alert danger">
+    <strong>🚨 Key Gaps:</strong>
+    WHOOP Tape (15 unregistered, ft. Waka Flocka) &nbsp;·&nbsp;
+    Brolik (9 unregistered) &nbsp;·&nbsp;
+    Bartier Bounty 2 (12 unregistered) &nbsp;·&nbsp;
+    SHONUFF (8 unregistered, ft. Wiz Khalifa) &nbsp;·&nbsp;
+    Skuba Sada 2.5 / Warner (3 unregistered)
+  </div>
+
+  <!-- Project Breakdown -->
+  <div class="section-title">Project-by-Project Breakdown</div>
+
+  <details class="project-card" open>
+    <summary>
+      <div class="project-header">
+        <div>
+          <div class="project-name">📁 Skuba Baby (2017)</div>
+          <div class="project-label">TF Entertainment</div>
+        </div>
+        <div class="project-stats">
+          <span class="stat-badge badge-green">✅ 17 registered</span>
+          <span class="stat-badge badge-red">❌ 1 unregistered</span>
+          <span class="stat-badge badge-yellow">18 total</span>
+        </div>
+      </div>
+      <div class="progress-bar"><div class="progress-fill" style="width:94%;background:#00c853"></div></div>
+    </summary>
+    <div class="track-list">
+      <div class="track-row registered"><span class="track-icon">✅</span><span class="track-name">Acting Bad</span><div class="track-badges"><span class="tbadge tbadge-bmi">BMI #42776415</span></div></div>
+      <div class="track-row registered"><span class="track-icon">✅</span><span class="track-name">Alright</span><div class="track-badges"><span class="tbadge tbadge-ascap">ASCAP</span></div></div>
+      <div class="track-row registered"><span class="track-icon">✅</span><span class="track-name">B4</span><div class="track-badges"><span class="tbadge tbadge-ascap">ASCAP</span><span class="tbadge tbadge-bmi">BMI #42776422</span></div></div>
+      <div class="track-row registered"><span class="track-icon">✅</span><span class="track-name">Dat One Shit</span><div class="track-badges"><span class="tbadge tbadge-bmi">BMI #31151380</span></div></div>
+      <div class="track-row registered"><span class="track-icon">✅</span><span class="track-name">Demons</span><div class="track-badges"><span class="tbadge tbadge-bmi">BMI #42776552</span></div></div>
+      <div class="track-row registered"><span class="track-icon">✅</span><span class="track-name">Digimon</span><div class="track-badges"><span class="tbadge tbadge-ascap">ASCAP</span></div></div>
+      <div class="track-row registered"><span class="track-icon">✅</span><span class="track-name">I Know</span><div class="track-badges"><span class="tbadge tbadge-ascap">ASCAP</span><span class="tbadge tbadge-bmi">BMI #42776527</span></div></div>
+      <div class="track-row registered"><span class="track-icon">✅</span><span class="track-name">In My Hood</span><div class="track-badges"><span class="tbadge tbadge-ascap">ASCAP</span><span class="tbadge tbadge-pending">BMI #42776413</span></div></div>
+      <div class="track-row registered"><span class="track-icon">✅</span><span class="track-name">Maquel</span><div class="track-badges"><span class="tbadge tbadge-bmi">BMI #42776528</span></div></div>
+      <div class="track-row registered"><span class="track-icon">✅</span><span class="track-name">Peacock</span><div class="track-badges"><span class="tbadge tbadge-bmi">BMI #42776550</span></div></div>
+      <div class="track-row registered"><span class="track-icon">✅</span><span class="track-name">Percosex</span><div class="track-badges"><span class="tbadge tbadge-bmi">BMI #42776452</span></div></div>
+      <div class="track-row registered"><span class="track-icon">✅</span><span class="track-name">Probably</span><div class="track-badges"><span class="tbadge tbadge-ascap">ASCAP</span><span class="tbadge tbadge-bmi">BMI #42776555</span></div></div>
+      <div class="track-row registered"><span class="track-icon">✅</span><span class="track-name">Return Wit My Strap</span><div class="track-badges"><span class="tbadge tbadge-ascap">ASCAP</span><span class="tbadge tbadge-bmi">BMI #42776417</span></div></div>
+      <div class="track-row registered"><span class="track-icon">✅</span><span class="track-name">Right Now</span><div class="track-badges"><span class="tbadge tbadge-bmi">BMI #66135498</span></div></div>
+      <div class="track-row registered"><span class="track-icon">✅</span><span class="track-name">SMO</span><div class="track-badges"><span class="tbadge tbadge-bmi">BMI #42776530</span></div></div>
+      <div class="track-row registered"><span class="track-icon">✅</span><span class="track-name">Skupac</span><div class="track-badges"><span class="tbadge tbadge-ascap">ASCAP</span><span class="tbadge tbadge-pending">BMI #29740892</span></div></div>
+      <div class="track-row registered"><span class="track-icon">✅</span><span class="track-name">Stacy</span><div class="track-badges"><span class="tbadge tbadge-ascap">ASCAP</span><span class="tbadge tbadge-bmi">BMI #25870290</span></div></div>
+      <div class="track-row unregistered"><span class="track-icon">❌</span><span class="track-name">Sticks & Stones</span><div class="track-badges"></div></div>
+    </div>
+  </details>
+
+  <details class="project-card" open>
+    <summary>
+      <div class="project-header">
+        <div>
+          <div class="project-name">📁 D.O.N / Dat One Nigga (2017)</div>
+          <div class="project-label">Big Squad LLC</div>
+        </div>
+        <div class="project-stats">
+          <span class="stat-badge badge-green">✅ 14 registered</span>
+          <span class="stat-badge badge-red">❌ 3 unregistered</span>
+          <span class="stat-badge badge-yellow">17 total</span>
+        </div>
+      </div>
+      <div class="progress-bar"><div class="progress-fill" style="width:82%;background:#00c853"></div></div>
+    </summary>
+    <div class="track-list">
+      <div class="track-row registered"><span class="track-icon">✅</span><span class="track-name">21 Skuba</span><div class="track-badges"><span class="tbadge tbadge-bmi">BMI #42776388</span></div></div>
+      <div class="track-row registered"><span class="track-icon">✅</span><span class="track-name">Big Squad</span><div class="track-badges"><span class="tbadge tbadge-bmi">BMI #42776503</span></div></div>
+      <div class="track-row unregistered"><span class="track-icon">❌</span><span class="track-name">Death Row</span><div class="track-badges"></div></div>
+      <div class="track-row registered"><span class="track-icon">✅</span><span class="track-name">Detroit Red</span><div class="track-badges"><span class="tbadge tbadge-bmi">BMI #42776499</span></div></div>
+      <div class="track-row registered"><span class="track-icon">✅</span><span class="track-name">Eastside Jump Shot</span><div class="track-badges"><span class="tbadge tbadge-pending">BMI #42776404</span></div></div>
+      <div class="track-row registered"><span class="track-icon">✅</span><span class="track-name">First Sunday</span><div class="track-badges"><span class="tbadge tbadge-bmi">BMI #42776489</span></div></div>
+      <div class="track-row registered"><span class="track-icon">✅</span><span class="track-name">Ghetto Champagne</span><div class="track-badges"><span class="tbadge tbadge-ascap">ASCAP</span></div></div>
+      <div class="track-row registered"><span class="track-icon">✅</span><span class="track-name">Guatemalan</span><div class="track-badges"><span class="tbadge tbadge-bmi">BMI #42776509</span></div></div>
+      <div class="track-row registered"><span class="track-icon">✅</span><span class="track-name">Heart Auction</span><div class="track-badges"><span class="tbadge tbadge-bmi">BMI #42776437</span></div></div>
+      <div class="track-row unregistered"><span class="track-icon">❌</span><span class="track-name">In Jig's Voice</span><div class="track-badges"></div></div>
+      <div class="track-row registered"><span class="track-icon">✅</span><span class="track-name">Percosex</span><div class="track-badges"><span class="tbadge tbadge-bmi">BMI #42776452</span></div></div>
+      <div class="track-row registered"><span class="track-icon">✅</span><span class="track-name">Permanent Gang Kings</span><div class="track-badges"><span class="tbadge tbadge-bmi">BMI #42776430</span></div></div>
+      <div class="track-row registered"><span class="track-icon">✅</span><span class="track-name">Shabooya</span><div class="track-badges"><span class="tbadge tbadge-pending">BMI #42776476</span></div></div>
+      <div class="track-row registered"><span class="track-icon">✅</span><span class="track-name">Skuba Sauce</span><div class="track-badges"><span class="tbadge tbadge-bmi">BMI #26010193</span></div></div>
+      <div class="track-row registered"><span class="track-icon">✅</span><span class="track-name">Smoking Aces</span><div class="track-badges"><span class="tbadge tbadge-bmi">BMI #42776530</span><span class="tbadge tbadge-partial">~PARTIAL</span></div></div>
+      <div class="track-row unregistered"><span class="track-icon">❌</span><span class="track-name">Sorrell Inc.</span><div class="track-badges"></div></div>
+      <div class="track-row registered"><span class="track-icon">✅</span><span class="track-name">Timeline Tough Guys</span><div class="track-badges"><span class="tbadge tbadge-bmi">BMI #42776390</span></div></div>
+    </div>
+  </details>
+
+  <details class="project-card" open>
+    <summary>
+      <div class="project-header">
+        <div>
+          <div class="project-name">📁 WHOOP Tape (2019)</div>
+          <div class="project-label">Independent</div>
+        </div>
+        <div class="project-stats">
+          <span class="stat-badge badge-green">✅ 6 registered</span>
+          <span class="stat-badge badge-red">❌ 15 unregistered</span>
+          <span class="stat-badge badge-yellow">21 total</span>
+        </div>
+      </div>
+      <div class="progress-bar"><div class="progress-fill" style="width:29%;background:#e94560"></div></div>
+    </summary>
+    <div class="track-list">
+      <div class="track-row unregistered"><span class="track-icon">❌</span><span class="track-name">007</span><div class="track-badges"></div></div>
+      <div class="track-row registered"><span class="track-icon">✅</span><span class="track-name">Balifornia</span><div class="track-badges"><span class="tbadge tbadge-ascap">ASCAP</span><span class="tbadge tbadge-bmi">BMI #38466250</span></div></div>
+      <div class="track-row unregistered"><span class="track-icon">❌</span><span class="track-name">Bersatile</span><div class="track-badges"></div></div>
+      <div class="track-row unregistered"><span class="track-icon">❌</span><span class="track-name">Bloxk Day</span><div class="track-badges"></div></div>
+      <div class="track-row unregistered"><span class="track-icon">❌</span><span class="track-name">Bolumbus Day</span><div class="track-badges"></div></div>
+      <div class="track-row unregistered"><span class="track-icon">❌</span><span class="track-name">Helluva</span><div class="track-badges"></div></div>
+      <div class="track-row unregistered"><span class="track-icon">❌</span><span class="track-name">Katch If You Kan</span><div class="track-badges"></div></div>
+      <div class="track-row unregistered"><span class="track-icon">❌</span><span class="track-name">Kold Lil Choppa</span><div class="track-badges"></div></div>
+      <div class="track-row unregistered"><span class="track-icon">❌</span><span class="track-name">Lil Blood Nem</span><div class="track-badges"></div></div>
+      <div class="track-row unregistered"><span class="track-icon">❌</span><span class="track-name">Mega Tron</span><div class="track-badges"></div></div>
+      <div class="track-row unregistered"><span class="track-icon">❌</span><span class="track-name">Offensive Threat</span><div class="track-badges"></div></div>
+      <div class="track-row unregistered"><span class="track-icon">❌</span><span class="track-name">Paper Skuba</span><div class="track-badges"></div></div>
+      <div class="track-row unregistered"><span class="track-icon">❌</span><span class="track-name">Pony Down</span><div class="track-badges"></div></div>
+      <div class="track-row registered"><span class="track-icon">✅</span><span class="track-name">Shang Tsung</span><div class="track-badges"><span class="tbadge tbadge-bmi">BMI #38466267</span></div></div>
+      <div class="track-row registered"><span class="track-icon">✅</span><span class="track-name">Skanilla Ice</span><div class="track-badges"><span class="tbadge tbadge-bmi">BMI #34084975</span></div></div>
+      <div class="track-row unregistered"><span class="track-icon">❌</span><span class="track-name">Skub N Skilla Show</span><div class="track-badges"></div></div>
+      <div class="track-row registered"><span class="track-icon">✅</span><span class="track-name">Skuba Bang</span><div class="track-badges"><span class="tbadge tbadge-pending">BMI #38466215</span><span class="tbadge tbadge-partial">~PARTIAL</span></div></div>
+      <div class="track-row unregistered"><span class="track-icon">❌</span><span class="track-name">Tien N Yamcha</span><div class="track-badges"></div></div>
+      <div class="track-row registered"><span class="track-icon">✅</span><span class="track-name">Waka Sada</span><div class="track-badges"><span class="tbadge tbadge-bmi">BMI #34084961</span></div></div>
+      <div class="track-row registered"><span class="track-icon">✅</span><span class="track-name">Whoop Me Down</span><div class="track-badges"><span class="tbadge tbadge-bmi">BMI #34085002</span></div></div>
+      <div class="track-row unregistered"><span class="track-icon">❌</span><span class="track-name">Whoop N Wham</span><div class="track-badges"></div></div>
+    </div>
+  </details>
+
+  <details class="project-card" open>
+    <summary>
+      <div class="project-header">
+        <div>
+          <div class="project-name">📁 Brolik (2019)</div>
+          <div class="project-label">DatPiff Exclusive</div>
+        </div>
+        <div class="project-stats">
+          <span class="stat-badge badge-green">✅ 7 registered</span>
+          <span class="stat-badge badge-red">❌ 9 unregistered</span>
+          <span class="stat-badge badge-yellow">16 total</span>
+        </div>
+      </div>
+      <div class="progress-bar"><div class="progress-fill" style="width:44%;background:#e94560"></div></div>
+    </summary>
+    <div class="track-list">
+      <div class="track-row unregistered"><span class="track-icon">❌</span><span class="track-name">7 Mile Shuffle</span><div class="track-badges"></div></div>
+      <div class="track-row registered"><span class="track-icon">✅</span><span class="track-name">8 Legged Ape</span><div class="track-badges"><span class="tbadge tbadge-bmi">BMI #41389767</span></div></div>
+      <div class="track-row unregistered"><span class="track-icon">❌</span><span class="track-name">Baklava</span><div class="track-badges"></div></div>
+      <div class="track-row unregistered"><span class="track-icon">❌</span><span class="track-name">Bison Dele</span><div class="track-badges"></div></div>
+      <div class="track-row unregistered"><span class="track-icon">❌</span><span class="track-name">Brolik</span><div class="track-badges"></div></div>
+      <div class="track-row registered"><span class="track-icon">✅</span><span class="track-name">Bully Ball</span><div class="track-badges"><span class="tbadge tbadge-bmi">BMI #42190775</span></div></div>
+      <div class="track-row unregistered"><span class="track-icon">❌</span><span class="track-name">Fuck Slime</span><div class="track-badges"></div></div>
+      <div class="track-row unregistered"><span class="track-icon">❌</span><span class="track-name">Kut n Kordial</span><div class="track-badges"></div></div>
+      <div class="track-row registered"><span class="track-icon">✅</span><span class="track-name">Mood</span><div class="track-badges"><span class="tbadge tbadge-bmi">BMI #43438473</span></div></div>
+      <div class="track-row registered"><span class="track-icon">✅</span><span class="track-name">Press Up</span><div class="track-badges"><span class="tbadge tbadge-bmi">BMI #41389920</span></div></div>
+      <div class="track-row unregistered"><span class="track-icon">❌</span><span class="track-name">Red Whoop</span><div class="track-badges"></div></div>
+      <div class="track-row registered"><span class="track-icon">✅</span><span class="track-name">SkubaHoodBlocKlub</span><div class="track-badges"><span class="tbadge tbadge-bmi">BMI #41230834</span></div></div>
+      <div class="track-row unregistered"><span class="track-icon">❌</span><span class="track-name">The Big Red Whoop</span><div class="track-badges"></div></div>
+      <div class="track-row registered"><span class="track-icon">✅</span><span class="track-name">Toxic</span><div class="track-badges"><span class="tbadge tbadge-bmi">BMI #46707084</span></div></div>
+      <div class="track-row registered"><span class="track-icon">✅</span><span class="track-name">Triple Threat Match</span><div class="track-badges"><span class="tbadge tbadge-bmi">BMI #41389699</span></div></div>
+      <div class="track-row unregistered"><span class="track-icon">❌</span><span class="track-name">WWF</span><div class="track-badges"></div></div>
+    </div>
+  </details>
+
+  <details class="project-card" open>
+    <summary>
+      <div class="project-header">
+        <div>
+          <div class="project-name">📁 Bartier Bounty 2 (2020)</div>
+          <div class="project-label">Independent</div>
+        </div>
+        <div class="project-stats">
+          <span class="stat-badge badge-green">✅ 6 registered</span>
+          <span class="stat-badge badge-red">❌ 12 unregistered</span>
+          <span class="stat-badge badge-yellow">18 total</span>
+        </div>
+      </div>
+      <div class="progress-bar"><div class="progress-fill" style="width:33%;background:#e94560"></div></div>
+    </summary>
+    <div class="track-list">
+      <div class="track-row unregistered"><span class="track-icon">❌</span><span class="track-name">150/55</span><div class="track-badges"></div></div>
+      <div class="track-row unregistered"><span class="track-icon">❌</span><span class="track-name">50 Shades of Red</span><div class="track-badges"></div></div>
+      <div class="track-row unregistered"><span class="track-icon">❌</span><span class="track-name">5nem</span><div class="track-badges"></div></div>
+      <div class="track-row unregistered"><span class="track-icon">❌</span><span class="track-name">Aunty Stella</span><div class="track-badges"></div></div>
+      <div class="track-row registered"><span class="track-icon">✅</span><span class="track-name">Baptism</span><div class="track-badges"><span class="tbadge tbadge-bmi">BMI #46728227</span><span class="tbadge tbadge-partial">~PARTIAL</span></div></div>
+      <div class="track-row registered"><span class="track-icon">✅</span><span class="track-name">Billie Holiday</span><div class="track-badges"><span class="tbadge tbadge-pending">BMI #44681564</span></div></div>
+      <div class="track-row unregistered"><span class="track-icon">❌</span><span class="track-name">Free 8 Ball</span><div class="track-badges"></div></div>
+      <div class="track-row unregistered"><span class="track-icon">❌</span><span class="track-name">Free Jig</span><div class="track-badges"></div></div>
+      <div class="track-row registered"><span class="track-icon">✅</span><span class="track-name">Funky Kong</span><div class="track-badges"><span class="tbadge tbadge-bmi">BMI #52229556</span><span class="tbadge tbadge-partial">~PARTIAL</span></div></div>
+      <div class="track-row registered"><span class="track-icon">✅</span><span class="track-name">Half Man Half Ape</span><div class="track-badges"><span class="tbadge tbadge-bmi">BMI #44534784</span></div></div>
+      <div class="track-row unregistered"><span class="track-icon">❌</span><span class="track-name">Horse Play 2</span><div class="track-badges"></div></div>
+      <div class="track-row unregistered"><span class="track-icon">❌</span><span class="track-name">Kam and Kauri</span><div class="track-badges"></div></div>
+      <div class="track-row unregistered"><span class="track-icon">❌</span><span class="track-name">Kooler Final Form</span><div class="track-badges"></div></div>
+      <div class="track-row unregistered"><span class="track-icon">❌</span><span class="track-name">Kourtside</span><div class="track-badges"></div></div>
+      <div class="track-row unregistered"><span class="track-icon">❌</span><span class="track-name">Silver Back</span><div class="track-badges"></div></div>
+      <div class="track-row registered"><span class="track-icon">✅</span><span class="track-name">Skub</span><div class="track-badges"><span class="tbadge tbadge-bmi">BMI #26010193</span><span class="tbadge tbadge-partial">~PARTIAL</span></div></div>
+      <div class="track-row unregistered"><span class="track-icon">❌</span><span class="track-name">Trap Withdrawals</span><div class="track-badges"></div></div>
+      <div class="track-row registered"><span class="track-icon">✅</span><span class="track-name">Whoop Juice</span><div class="track-badges"><span class="tbadge tbadge-bmi">BMI #44681548</span></div></div>
+    </div>
+  </details>
+
+  <details class="project-card" open>
+    <summary>
+      <div class="project-header">
+        <div>
+          <div class="project-name">📁 Lost Tapes of Skuba Sada (2020)</div>
+          <div class="project-label">Compilation</div>
+        </div>
+        <div class="project-stats">
+          <span class="stat-badge badge-green">✅ 5 registered</span>
+          <span class="stat-badge badge-red">❌ 9 unregistered</span>
+          <span class="stat-badge badge-yellow">14 total</span>
+        </div>
+      </div>
+      <div class="progress-bar"><div class="progress-fill" style="width:36%;background:#e94560"></div></div>
+    </summary>
+    <div class="track-list">
+      <div class="track-row unregistered"><span class="track-icon">❌</span><span class="track-name">500</span><div class="track-badges"></div></div>
+      <div class="track-row registered"><span class="track-icon">✅</span><span class="track-name">Back End</span><div class="track-badges"><span class="tbadge tbadge-pending">BMI #67832024</span></div></div>
+      <div class="track-row unregistered"><span class="track-icon">❌</span><span class="track-name">Barry Lil Kuzin</span><div class="track-badges"></div></div>
+      <div class="track-row unregistered"><span class="track-icon">❌</span><span class="track-name">Bobby Bouscher</span><div class="track-badges"></div></div>
+      <div class="track-row unregistered"><span class="track-icon">❌</span><span class="track-name">Deuce Skubalo</span><div class="track-badges"></div></div>
+      <div class="track-row registered"><span class="track-icon">✅</span><span class="track-name">Gory Lanez</span><div class="track-badges"><span class="tbadge tbadge-bmi">BMI #52431588</span></div></div>
+      <div class="track-row registered"><span class="track-icon">✅</span><span class="track-name">In Real Life</span><div class="track-badges"><span class="tbadge tbadge-bmi">BMI #52111037</span></div></div>
+      <div class="track-row registered"><span class="track-icon">✅</span><span class="track-name">Press Option</span><div class="track-badges"><span class="tbadge tbadge-bmi">BMI #62468503</span></div></div>
+      <div class="track-row unregistered"><span class="track-icon">❌</span><span class="track-name">Re Rock</span><div class="track-badges"></div></div>
+      <div class="track-row unregistered"><span class="track-icon">❌</span><span class="track-name">ShoNuff</span><div class="track-badges"></div></div>
+      <div class="track-row unregistered"><span class="track-icon">❌</span><span class="track-name">Sticks & Stones Part 2</span><div class="track-badges"></div></div>
+      <div class="track-row unregistered"><span class="track-icon">❌</span><span class="track-name">Weezo</span><div class="track-badges"></div></div>
+      <div class="track-row registered"><span class="track-icon">✅</span><span class="track-name">Whoop Kamp</span><div class="track-badges"><span class="tbadge tbadge-bmi">BMI #51273230</span></div></div>
+      <div class="track-row unregistered"><span class="track-icon">❌</span><span class="track-name">Whoop N Wham</span><div class="track-badges"></div></div>
+    </div>
+  </details>
+
+  <details class="project-card" open>
+    <summary>
+      <div class="project-header">
+        <div>
+          <div class="project-name">📁 The Lost Tapes (2021)</div>
+          <div class="project-label">Compilation</div>
+        </div>
+        <div class="project-stats">
+          <span class="stat-badge badge-green">✅ 9 registered</span>
+          <span class="stat-badge badge-red">❌ 4 unregistered</span>
+          <span class="stat-badge badge-yellow">13 total</span>
+        </div>
+      </div>
+      <div class="progress-bar"><div class="progress-fill" style="width:69%;background:#ffd600"></div></div>
+    </summary>
+    <div class="track-list">
+      <div class="track-row registered"><span class="track-icon">✅</span><span class="track-name">1955</span><div class="track-badges"><span class="tbadge tbadge-bmi">BMI #52066500</span></div></div>
+      <div class="track-row registered"><span class="track-icon">✅</span><span class="track-name">2055</span><div class="track-badges"><span class="tbadge tbadge-bmi">BMI #52712161</span></div></div>
+      <div class="track-row unregistered"><span class="track-icon">❌</span><span class="track-name">Big Hot Cheeto</span><div class="track-badges"></div></div>
+      <div class="track-row registered"><span class="track-icon">✅</span><span class="track-name">Black Harlow</span><div class="track-badges"><span class="tbadge tbadge-bmi">BMI #48468172</span></div></div>
+      <div class="track-row registered"><span class="track-icon">✅</span><span class="track-name">Bloxk Vibes</span><div class="track-badges"><span class="tbadge tbadge-bmi">BMI #44852341</span><span class="tbadge tbadge-partial">~PARTIAL</span></div></div>
+      <div class="track-row unregistered"><span class="track-icon">❌</span><span class="track-name">Brazy Taxi</span><div class="track-badges"></div></div>
+      <div class="track-row registered"><span class="track-icon">✅</span><span class="track-name">Chief Keef</span><div class="track-badges"><span class="tbadge tbadge-pending">BMI #68600193</span></div></div>
+      <div class="track-row unregistered"><span class="track-icon">❌</span><span class="track-name">Friends</span><div class="track-badges"></div></div>
+      <div class="track-row unregistered"><span class="track-icon">❌</span><span class="track-name">Good Wealthy</span><div class="track-badges"></div></div>
+      <div class="track-row registered"><span class="track-icon">✅</span><span class="track-name">Heavy Press Hotel</span><div class="track-badges"><span class="tbadge tbadge-pending">BMI #52111043</span></div></div>
+      <div class="track-row registered"><span class="track-icon">✅</span><span class="track-name">In Real Life</span><div class="track-badges"><span class="tbadge tbadge-bmi">BMI #52111037</span></div></div>
+      <div class="track-row registered"><span class="track-icon">✅</span><span class="track-name">Streets Of Rage</span><div class="track-badges"><span class="tbadge tbadge-bmi">BMI #52712159</span></div></div>
+      <div class="track-row registered"><span class="track-icon">✅</span><span class="track-name">The Bool</span><div class="track-badges"><span class="tbadge tbadge-bmi">BMI #52606588</span><span class="tbadge tbadge-partial">~PARTIAL</span></div></div>
+    </div>
+  </details>
+
+  <details class="project-card" open>
+    <summary>
+      <div class="project-header">
+        <div>
+          <div class="project-name">📁 Bartier Bounty 3 (2022)</div>
+          <div class="project-label">Independent (A&R: Cody Patrick)</div>
+        </div>
+        <div class="project-stats">
+          <span class="stat-badge badge-green">✅ 10 registered</span>
+          <span class="stat-badge badge-red">❌ 10 unregistered</span>
+          <span class="stat-badge badge-yellow">20 total</span>
+        </div>
+      </div>
+      <div class="progress-bar"><div class="progress-fill" style="width:50%;background:#ffd600"></div></div>
+    </summary>
+    <div class="track-list">
+      <div class="track-row registered"><span class="track-icon">✅</span><span class="track-name">1992</span><div class="track-badges"><span class="tbadge tbadge-bmi">BMI #57152643</span></div></div>
+      <div class="track-row unregistered"><span class="track-icon">❌</span><span class="track-name">Angel And Dren</span><div class="track-badges"></div></div>
+      <div class="track-row registered"><span class="track-icon">✅</span><span class="track-name">Bad Boyz</span><div class="track-badges"><span class="tbadge tbadge-bmi">BMI #54724394</span></div></div>
+      <div class="track-row unregistered"><span class="track-icon">❌</span><span class="track-name">Bade Bunningham</span><div class="track-badges"></div></div>
+      <div class="track-row registered"><span class="track-icon">✅</span><span class="track-name">Bloody Love</span><div class="track-badges"><span class="tbadge tbadge-bmi">BMI #54726103</span></div></div>
+      <div class="track-row registered"><span class="track-icon">✅</span><span class="track-name">CJ</span><div class="track-badges"><span class="tbadge tbadge-bmi">BMI #54724433</span></div></div>
+      <div class="track-row unregistered"><span class="track-icon">❌</span><span class="track-name">HardKore Holly</span><div class="track-badges"></div></div>
+      <div class="track-row unregistered"><span class="track-icon">❌</span><span class="track-name">Internet Disease</span><div class="track-badges"></div></div>
+      <div class="track-row unregistered"><span class="track-icon">❌</span><span class="track-name">Ja Morant</span><div class="track-badges"></div></div>
+      <div class="track-row unregistered"><span class="track-icon">❌</span><span class="track-name">Karmelo Skanthony</span><div class="track-badges"></div></div>
+      <div class="track-row registered"><span class="track-icon">✅</span><span class="track-name">Magana</span><div class="track-badges"><span class="tbadge tbadge-bmi">BMI #57420545</span></div></div>
+      <div class="track-row unregistered"><span class="track-icon">❌</span><span class="track-name">Miles DeRozan</span><div class="track-badges"></div></div>
+      <div class="track-row unregistered"><span class="track-icon">❌</span><span class="track-name">Perfect Form Skub</span><div class="track-badges"></div></div>
+      <div class="track-row unregistered"><span class="track-icon">❌</span><span class="track-name">Rehab</span><div class="track-badges"></div></div>
+      <div class="track-row registered"><span class="track-icon">✅</span><span class="track-name">Sada Wada</span><div class="track-badges"><span class="tbadge tbadge-bmi">BMI #61378334</span></div></div>
+      <div class="track-row registered"><span class="track-icon">✅</span><span class="track-name">Saynomo</span><div class="track-badges"><span class="tbadge tbadge-bmi">BMI #54700399</span><span class="tbadge tbadge-partial">~PARTIAL</span></div></div>
+      <div class="track-row registered"><span class="track-icon">✅</span><span class="track-name">Skubop</span><div class="track-badges"><span class="tbadge tbadge-bmi">BMI #54740248</span></div></div>
+      <div class="track-row registered"><span class="track-icon">✅</span><span class="track-name">The Workout</span><div class="track-badges"><span class="tbadge tbadge-bmi">BMI #54921956</span><span class="tbadge tbadge-partial">~PARTIAL</span></div></div>
+      <div class="track-row registered"><span class="track-icon">✅</span><span class="track-name">Unkle Emanuel</span><div class="track-badges"><span class="tbadge tbadge-bmi">BMI #54726042</span></div></div>
+      <div class="track-row unregistered"><span class="track-icon">❌</span><span class="track-name">Unkle Hell Yea</span><div class="track-badges"></div></div>
+    </div>
+  </details>
+
+  <details class="project-card" open>
+    <summary>
+      <div class="project-header">
+        <div>
+          <div class="project-name">📁 Skuba Sada 2.5 (2022)</div>
+          <div class="project-label">Asylum Records / Warner Music Group (A&R: Cody Patrick)</div>
+        </div>
+        <div class="project-stats">
+          <span class="stat-badge badge-green">✅ 19 registered</span>
+          <span class="stat-badge badge-red">❌ 3 unregistered</span>
+          <span class="stat-badge badge-yellow">22 total</span>
+        </div>
+      </div>
+      <div class="progress-bar"><div class="progress-fill" style="width:86%;background:#00c853"></div></div>
+    </summary>
+    <div class="track-list">
+      <div class="track-row unregistered"><span class="track-icon">❌</span><span class="track-name">2 Freaks</span><div class="track-badges"></div></div>
+      <div class="track-row registered"><span class="track-icon">✅</span><span class="track-name">2K20</span><div class="track-badges"><span class="tbadge tbadge-ascap">ASCAP</span><span class="tbadge tbadge-bmi">BMI #50276575</span></div></div>
+      <div class="track-row registered"><span class="track-icon">✅</span><span class="track-name">Aktivated</span><div class="track-badges"><span class="tbadge tbadge-ascap">ASCAP</span><span class="tbadge tbadge-bmi">BMI #42530856</span></div></div>
+      <div class="track-row registered"><span class="track-icon">✅</span><span class="track-name">Black Harlow</span><div class="track-badges"><span class="tbadge tbadge-bmi">BMI #48468172</span></div></div>
+      <div class="track-row registered"><span class="track-icon">✅</span><span class="track-name">Blickelodeon</span><div class="track-badges"><span class="tbadge tbadge-bmi">BMI #56927684</span></div></div>
+      <div class="track-row registered"><span class="track-icon">✅</span><span class="track-name">Bop Stick</span><div class="track-badges"><span class="tbadge tbadge-bmi">BMI #61378354</span></div></div>
+      <div class="track-row registered"><span class="track-icon">✅</span><span class="track-name">Bully Ball</span><div class="track-badges"><span class="tbadge tbadge-bmi">BMI #42190775</span></div></div>
+      <div class="track-row registered"><span class="track-icon">✅</span><span class="track-name">Lame</span><div class="track-badges"><span class="tbadge tbadge-bmi">BMI #49758018</span></div></div>
+      <div class="track-row registered"><span class="track-icon">✅</span><span class="track-name">Leave Em There</span><div class="track-badges"><span class="tbadge tbadge-bmi">BMI #61378347</span></div></div>
+      <div class="track-row registered"><span class="track-icon">✅</span><span class="track-name">Little While</span><div class="track-badges"><span class="tbadge tbadge-pending">BMI #52132763</span><span class="tbadge tbadge-partial">~PARTIAL</span></div></div>
+      <div class="track-row registered"><span class="track-icon">✅</span><span class="track-name">No Talkin</span><div class="track-badges"><span class="tbadge tbadge-pending">BMI #49758008</span></div></div>
+      <div class="track-row registered"><span class="track-icon">✅</span><span class="track-name">Off White Whoop</span><div class="track-badges"><span class="tbadge tbadge-bmi">BMI #50100370</span></div></div>
+      <div class="track-row registered"><span class="track-icon">✅</span><span class="track-name">Outside</span><div class="track-badges"><span class="tbadge tbadge-ascap">ASCAP</span></div></div>
+      <div class="track-row unregistered"><span class="track-icon">❌</span><span class="track-name">Perfect Form Skub</span><div class="track-badges"></div></div>
+      <div class="track-row registered"><span class="track-icon">✅</span><span class="track-name">Pressin</span><div class="track-badges"><span class="tbadge tbadge-ascap">ASCAP</span><span class="tbadge tbadge-bmi">BMI #41362714</span></div></div>
+      <div class="track-row registered"><span class="track-icon">✅</span><span class="track-name">Sada Wada</span><div class="track-badges"><span class="tbadge tbadge-bmi">BMI #61378334</span></div></div>
+      <div class="track-row registered"><span class="track-icon">✅</span><span class="track-name">Say Whoop</span><div class="track-badges"><span class="tbadge tbadge-bmi">BMI #49758021</span></div></div>
+      <div class="track-row registered"><span class="track-icon">✅</span><span class="track-name">Shred Buddy</span><div class="track-badges"><span class="tbadge tbadge-bmi">BMI #61378345</span></div></div>
+      <div class="track-row registered"><span class="track-icon">✅</span><span class="track-name">Skuba Skooly</span><div class="track-badges"><span class="tbadge tbadge-pending">BMI #56675203</span></div></div>
+      <div class="track-row unregistered"><span class="track-icon">❌</span><span class="track-name">SkubaRu</span><div class="track-badges"></div></div>
+      <div class="track-row registered"><span class="track-icon">✅</span><span class="track-name">Slide</span><div class="track-badges"><span class="tbadge tbadge-ascap">ASCAP</span><span class="tbadge tbadge-bmi">BMI #42190777</span></div></div>
+      <div class="track-row registered"><span class="track-icon">✅</span><span class="track-name">Whole Lotta Choppas Remix</span><div class="track-badges"><span class="tbadge tbadge-ascap">ASCAP</span><span class="tbadge tbadge-bmi">BMI #43975406</span></div></div>
+    </div>
+  </details>
+
+  <details class="project-card" open>
+    <summary>
+      <div class="project-header">
+        <div>
+          <div class="project-name">📁 SHONUFF (2023)</div>
+          <div class="project-label">Independent</div>
+        </div>
+        <div class="project-stats">
+          <span class="stat-badge badge-green">✅ 11 registered</span>
+          <span class="stat-badge badge-red">❌ 9 unregistered</span>
+          <span class="stat-badge badge-yellow">20 total</span>
+        </div>
+      </div>
+      <div class="progress-bar"><div class="progress-fill" style="width:55%;background:#ffd600"></div></div>
+    </summary>
+    <div class="track-list">
+      <div class="track-row unregistered"><span class="track-icon">❌</span><span class="track-name">9Fingers</span><div class="track-badges"></div></div>
+      <div class="track-row unregistered"><span class="track-icon">❌</span><span class="track-name">Bible Study</span><div class="track-badges"></div></div>
+      <div class="track-row unregistered"><span class="track-icon">❌</span><span class="track-name">Big Eastside</span><div class="track-badges"></div></div>
+      <div class="track-row registered"><span class="track-icon">✅</span><span class="track-name">Casada Jr</span><div class="track-badges"><span class="tbadge tbadge-bmi">BMI #65627150</span></div></div>
+      <div class="track-row unregistered"><span class="track-icon">❌</span><span class="track-name">Freeze Tag</span><div class="track-badges"></div></div>
+      <div class="track-row registered"><span class="track-icon">✅</span><span class="track-name">Game 5</span><div class="track-badges"><span class="tbadge tbadge-bmi">BMI #61298505</span></div></div>
+      <div class="track-row registered"><span class="track-icon">✅</span><span class="track-name">Halftime</span><div class="track-badges"><span class="tbadge tbadge-bmi">BMI #65630197</span></div></div>
+      <div class="track-row unregistered"><span class="track-icon">❌</span><span class="track-name">Heat Khekk</span><div class="track-badges"></div></div>
+      <div class="track-row registered"><span class="track-icon">✅</span><span class="track-name">Khalifa Mode</span><div class="track-badges"><span class="tbadge tbadge-conflict">BMI #60415313</span></div></div>
+      <div class="track-row unregistered"><span class="track-icon">❌</span><span class="track-name">Khoppa Khoppa</span><div class="track-badges"></div></div>
+      <div class="track-row unregistered"><span class="track-icon">❌</span><span class="track-name">Multiverse</span><div class="track-badges"></div></div>
+      <div class="track-row registered"><span class="track-icon">✅</span><span class="track-name">Old Skool Whoop</span><div class="track-badges"><span class="tbadge tbadge-bmi">BMI #60734676</span></div></div>
+      <div class="track-row registered"><span class="track-icon">✅</span><span class="track-name">Playeration</span><div class="track-badges"><span class="tbadge tbadge-bmi">BMI #61202946</span></div></div>
+      <div class="track-row unregistered"><span class="track-icon">❌</span><span class="track-name">Quit Krying</span><div class="track-badges"></div></div>
+      <div class="track-row registered"><span class="track-icon">✅</span><span class="track-name">Rojo</span><div class="track-badges"><span class="tbadge tbadge-bmi">BMI #65630326</span></div></div>
+      <div class="track-row registered"><span class="track-icon">✅</span><span class="track-name">SukiSada</span><div class="track-badges"><span class="tbadge tbadge-bmi">BMI #59895070</span></div></div>
+      <div class="track-row registered"><span class="track-icon">✅</span><span class="track-name">The Intervention</span><div class="track-badges"><span class="tbadge tbadge-bmi">BMI #61296692</span><span class="tbadge tbadge-partial">~PARTIAL</span></div></div>
+      <div class="track-row registered"><span class="track-icon">✅</span><span class="track-name">Titans</span><div class="track-badges"><span class="tbadge tbadge-bmi">BMI #61202948</span></div></div>
+      <div class="track-row registered"><span class="track-icon">✅</span><span class="track-name">Top Side</span><div class="track-badges"><span class="tbadge tbadge-bmi">BMI #61296792</span></div></div>
+      <div class="track-row unregistered"><span class="track-icon">❌</span><span class="track-name">Unkle TJ</span><div class="track-badges"></div></div>
+    </div>
+  </details>
+
+  <div class="section-title">❌ Unregistered Tracks — Action Required (75 tracks)</div>
+  <div class="alert danger">
+    These 75 tracks have NO registration with ASCAP or BMI. Performance royalties from radio, streaming, TV sync, and live performance cannot be collected without PRO registration.
+  </div>
+  <div class="unreg-grid">
+    <div class="unreg-project"><h4>📁 Skuba Baby (2017) (1)</h4>      <div class="unreg-track">Sticks & Stones</div>
+    </div>
+    <div class="unreg-project"><h4>📁 D.O.N / Dat One Nigga (2017) (3)</h4>      <div class="unreg-track">Death Row</div>
+      <div class="unreg-track">In Jig's Voice</div>
+      <div class="unreg-track">Sorrell Inc.</div>
+    </div>
+    <div class="unreg-project"><h4>📁 WHOOP Tape (2019) (15)</h4>      <div class="unreg-track">007</div>
+      <div class="unreg-track">Bersatile</div>
+      <div class="unreg-track">Bloxk Day</div>
+      <div class="unreg-track">Bolumbus Day</div>
+      <div class="unreg-track">Helluva</div>
+      <div class="unreg-track">Katch If You Kan</div>
+      <div class="unreg-track">Kold Lil Choppa</div>
+      <div class="unreg-track">Lil Blood Nem</div>
+      <div class="unreg-track">Mega Tron</div>
+      <div class="unreg-track">Offensive Threat</div>
+      <div class="unreg-track">Paper Skuba</div>
+      <div class="unreg-track">Pony Down</div>
+      <div class="unreg-track">Skub N Skilla Show</div>
+      <div class="unreg-track">Tien N Yamcha</div>
+      <div class="unreg-track">Whoop N Wham</div>
+    </div>
+    <div class="unreg-project"><h4>📁 Brolik (2019) (9)</h4>      <div class="unreg-track">7 Mile Shuffle</div>
+      <div class="unreg-track">Baklava</div>
+      <div class="unreg-track">Bison Dele</div>
+      <div class="unreg-track">Brolik</div>
+      <div class="unreg-track">Fuck Slime</div>
+      <div class="unreg-track">Kut n Kordial</div>
+      <div class="unreg-track">Red Whoop</div>
+      <div class="unreg-track">The Big Red Whoop</div>
+      <div class="unreg-track">WWF</div>
+    </div>
+    <div class="unreg-project"><h4>📁 Bartier Bounty 2 (2020) (12)</h4>      <div class="unreg-track">150/55</div>
+      <div class="unreg-track">50 Shades of Red</div>
+      <div class="unreg-track">5nem</div>
+      <div class="unreg-track">Aunty Stella</div>
+      <div class="unreg-track">Free 8 Ball</div>
+      <div class="unreg-track">Free Jig</div>
+      <div class="unreg-track">Horse Play 2</div>
+      <div class="unreg-track">Kam and Kauri</div>
+      <div class="unreg-track">Kooler Final Form</div>
+      <div class="unreg-track">Kourtside</div>
+      <div class="unreg-track">Silver Back</div>
+      <div class="unreg-track">Trap Withdrawals</div>
+    </div>
+    <div class="unreg-project"><h4>📁 Lost Tapes of Skuba Sada (2020) (9)</h4>      <div class="unreg-track">500</div>
+      <div class="unreg-track">Barry Lil Kuzin</div>
+      <div class="unreg-track">Bobby Bouscher</div>
+      <div class="unreg-track">Deuce Skubalo</div>
+      <div class="unreg-track">Re Rock</div>
+      <div class="unreg-track">ShoNuff</div>
+      <div class="unreg-track">Sticks & Stones Part 2</div>
+      <div class="unreg-track">Weezo</div>
+      <div class="unreg-track">Whoop N Wham</div>
+    </div>
+    <div class="unreg-project"><h4>📁 The Lost Tapes (2021) (4)</h4>      <div class="unreg-track">Big Hot Cheeto</div>
+      <div class="unreg-track">Brazy Taxi</div>
+      <div class="unreg-track">Friends</div>
+      <div class="unreg-track">Good Wealthy</div>
+    </div>
+    <div class="unreg-project"><h4>📁 Bartier Bounty 3 (2022) (10)</h4>      <div class="unreg-track">Angel And Dren</div>
+      <div class="unreg-track">Bade Bunningham</div>
+      <div class="unreg-track">HardKore Holly</div>
+      <div class="unreg-track">Internet Disease</div>
+      <div class="unreg-track">Ja Morant</div>
+      <div class="unreg-track">Karmelo Skanthony</div>
+      <div class="unreg-track">Miles DeRozan</div>
+      <div class="unreg-track">Perfect Form Skub</div>
+      <div class="unreg-track">Rehab</div>
+      <div class="unreg-track">Unkle Hell Yea</div>
+    </div>
+    <div class="unreg-project"><h4>📁 Skuba Sada 2.5 (2022) (3)</h4>      <div class="unreg-track">2 Freaks</div>
+      <div class="unreg-track">Perfect Form Skub</div>
+      <div class="unreg-track">SkubaRu</div>
+    </div>
+    <div class="unreg-project"><h4>📁 SHONUFF (2023) (9)</h4>      <div class="unreg-track">9Fingers</div>
+      <div class="unreg-track">Bible Study</div>
+      <div class="unreg-track">Big Eastside</div>
+      <div class="unreg-track">Freeze Tag</div>
+      <div class="unreg-track">Heat Khekk</div>
+      <div class="unreg-track">Khoppa Khoppa</div>
+      <div class="unreg-track">Multiverse</div>
+      <div class="unreg-track">Quit Krying</div>
+      <div class="unreg-track">Unkle TJ</div>
+    </div>
+  </div>
+
+  <div class="section-title">⚠️ BMI Works With Issues (8 Conflicts, 70 Pending)</div>
+  
+  <div class="alert warning">
+    <strong>Share/Participant Conflicts (8 works):</strong> These works are registered but have unresolved ownership disputes. Royalties are likely being held in suspense until resolved.
+  </div>
+  
+  <table>
+    <tr><th>Title</th><th>BMI #</th><th>Reg Date</th><th>Status</th></tr>
+    <tr><td>CAMPAIGING</td><td>42653258</td><td>01/12/2021</td><td class="status-conflict">⚠️ Conflict</td></tr>
+    <tr><td>CHULO BROS</td><td>31459220</td><td>08/27/2019</td><td class="status-conflict">⚠️ Conflict</td></tr>
+    <tr><td>EVERY OPP SHOT</td><td>56471251</td><td>08/02/2023</td><td class="status-conflict">⚠️ Conflict</td></tr>
+    <tr><td>FRIDAY NIGHT CYPHER</td><td>52776499</td><td>11/12/2021</td><td class="status-conflict">⚠️ Conflict</td></tr>
+    <tr><td>HOT 107 5</td><td>39202320</td><td>10/02/2019</td><td class="status-conflict">⚠️ Conflict</td></tr>
+    <tr><td>KHALIFA MODE</td><td>60415313</td><td>03/14/2023</td><td class="status-conflict">⚠️ Conflict</td></tr>
+    <tr><td>NEXT UP FEATURING T GRIZZLEY</td><td>49758038</td><td>04/13/2021</td><td class="status-conflict">⚠️ Conflict</td></tr>
+    <tr><td>TEST YA NUTS</td><td>62611712</td><td>07/14/2023</td><td class="status-conflict">⚠️ Conflict</td></tr>
+  </table>
+  
+  <div class="alert info">
+    <strong>Pending Society Review (70 works):</strong> Registered but awaiting final PRO reconciliation. Some have been pending since 2020–2021.
+  </div>
+  <table>
+    <tr><th>Title</th><th>BMI #</th><th>Reg Date</th><th>Status</th></tr>
+    <tr><td>305</td><td>50524219</td><td>06/11/2021</td><td class="status-pending">🔄 Pending</td></tr>
+    <tr><td>ACTIN BAD</td><td>68595692</td><td>09/25/2024</td><td class="status-pending">🔄 Pending</td></tr>
+    <tr><td>BACK END</td><td>67832024</td><td>08/07/2024</td><td class="status-pending">🔄 Pending</td></tr>
+    <tr><td>BANG</td><td>38466215</td><td>10/02/2019</td><td class="status-pending">🔄 Pending</td></tr>
+    <tr><td>BIG BERTHA</td><td>52871165</td><td>10/27/2021</td><td class="status-pending">🔄 Pending</td></tr>
+    <tr><td>BIG DAWG STATUS REMIX</td><td>71487298</td><td>04/25/2025</td><td class="status-pending">🔄 Pending</td></tr>
+    <tr><td>BIG SHO</td><td>77576997</td><td>03/05/2026</td><td class="status-pending">🔄 Pending</td></tr>
+    <tr><td>BILLIE HOLIDAY</td><td>44681564</td><td>08/04/2020</td><td class="status-pending">🔄 Pending</td></tr>
+    <tr><td>BLITZ</td><td>67831958</td><td>08/07/2024</td><td class="status-pending">🔄 Pending</td></tr>
+    <tr><td>BLOXK PARTY</td><td>27444602</td><td>06/10/2018</td><td class="status-pending">🔄 Pending</td></tr>
+    <tr><td>BLOXKSIDE</td><td>76909255</td><td>03/05/2026</td><td class="status-pending">🔄 Pending</td></tr>
+    <tr><td>CARMELO BRYANT</td><td>42416131</td><td>03/13/2020</td><td class="status-pending">🔄 Pending</td></tr>
+    <tr><td>CHIEF KEEF</td><td>68600193</td><td>01/09/2025</td><td class="status-pending">🔄 Pending</td></tr>
+    <tr><td>CLAP FOR EM</td><td>49804035</td><td>04/02/2021</td><td class="status-pending">🔄 Pending</td></tr>
+    <tr><td>DOES IT AGAIN</td><td>76583396</td><td>01/28/2026</td><td class="status-pending">🔄 Pending</td></tr>
+    <tr><td>DOGGIN</td><td>48497367</td><td>01/25/2021</td><td class="status-pending">🔄 Pending</td></tr>
+    <tr><td>DRIP SQUAD MEMBERS</td><td>48680141</td><td>02/15/2021</td><td class="status-pending">🔄 Pending</td></tr>
+    <tr><td>DRIPPLE DRAGONS</td><td>65398390</td><td>03/08/2024</td><td class="status-pending">🔄 Pending</td></tr>
+    <tr><td>EASTSIDE JUMP SHOT</td><td>42776404</td><td>04/07/2020</td><td class="status-pending">🔄 Pending</td></tr>
+    <tr><td>FIRST NAME BASIS</td><td>45025376</td><td>01/03/2021</td><td class="status-pending">🔄 Pending</td></tr>
+    <tr><td>FREAKY NIKE</td><td>25407366</td><td>10/02/2017</td><td class="status-pending">🔄 Pending</td></tr>
+    <tr><td>FREE RISKY</td><td>77435496</td><td>03/04/2026</td><td class="status-pending">🔄 Pending</td></tr>
+    <tr><td>GAME 7</td><td>50750740</td><td>07/02/2021</td><td class="status-pending">🔄 Pending</td></tr>
+    <tr><td>GAME TIME</td><td>30344094</td><td>06/13/2019</td><td class="status-pending">🔄 Pending</td></tr>
+    <tr><td>GOT GOT</td><td>47800725</td><td>11/23/2020</td><td class="status-pending">🔄 Pending</td></tr>
+    <tr><td>GRIZZLEY GANG</td><td>67371522</td><td>01/09/2025</td><td class="status-pending">🔄 Pending</td></tr>
+    <tr><td>HEAVY PRESS HOTEL</td><td>52111043</td><td>09/20/2021</td><td class="status-pending">🔄 Pending</td></tr>
+    <tr><td>HELL KAT SKUBA</td><td>61985716</td><td>05/25/2023</td><td class="status-pending">🔄 Pending</td></tr>
+    <tr><td>I COME FROM THE GAME</td><td>31367877</td><td>08/19/2019</td><td class="status-pending">🔄 Pending</td></tr>
+    <tr><td>ICEWEAR VEZZO FT SADA BABY 2 HANDS</td><td>43946966</td><td>06/22/2020</td><td class="status-pending">🔄 Pending</td></tr>
+    <tr><td colspan="4" style="color:#aaa;text-align:center">... and 40 more pending works</td></tr>
+  </table>
+
+  <div class="section-title">🎯 Priority Action Items</div>
+  
+  <div class="action-item priority-1">
+    <div class="action-num">1</div>
+    <div class="action-title">Register 75 Unregistered Tracks with BMI</div>
+    <div class="action-desc">
+      <ul>
+        <li>WHOOP Tape (15 tracks) — ft. Waka Flocka Flame; significant commercial value</li>
+        <li>Bartier Bounty 2 (12 tracks) — independent release with streaming presence</li>
+        <li>Brolik (9 tracks) — DatPiff exclusive; still generates streams</li>
+        <li>SHONUFF (8 tracks) — ft. Wiz Khalifa, Lil Yachty; recent release</li>
+        <li>Skuba Sada 2.5 (3 tracks) — Warner/Asylum major label release = highest royalty volume</li>
+        <li>Register at: <strong>bmi.com/songwriter</strong></li>
+      </ul>
+    </div>
+  </div>
+  
+  <div class="action-item priority-1">
+    <div class="action-num">2</div>
+    <div class="action-title">Resolve 8 BMI Share/Participant Conflicts</div>
+    <div class="action-desc">
+      <ul>
+        <li>Royalties on conflicted works are being held in suspense — money is sitting uncollected</li>
+        <li>Key conflict: <strong>KHALIFA MODE</strong> [#60415313] — Wiz Khalifa collaboration</li>
+        <li>Contact BMI Licensing at 1-800-925-8451 or bmi.com to resolve each conflict</li>
+        <li>Provide documentation of ownership splits for each disputed work</li>
+      </ul>
+    </div>
+  </div>
+  
+  <div class="action-item priority-2">
+    <div class="action-num">3</div>
+    <div class="action-title">Follow Up on 70 Pending Society Reviews</div>
+    <div class="action-desc">
+      <ul>
+        <li>Several works have been pending since 2020–2021 — escalation may be needed</li>
+        <li>Priority: <strong>LITTLE WHILE FEAT BIG SEAN AND HIT BOY</strong> [#52132763] — major collab</li>
+        <li>Priority: <strong>EASTSIDE JUMP SHOT</strong> [#42776404] — pending since April 2020</li>
+        <li>Contact BMI to check status and expedite review</li>
+      </ul>
+    </div>
+  </div>
+  
+  <div class="action-item priority-2">
+    <div class="action-num">4</div>
+    <div class="action-title">Register with The MLC (Mechanical Royalties)</div>
+    <div class="action-desc">
+      <ul>
+        <li>The MLC handles digital mechanical royalties — separate from ASCAP/BMI performance royalties</li>
+        <li>Every stream on Spotify, Apple Music, etc. generates mechanical royalties</li>
+        <li>Skuba Sada 2.5 (Warner/Asylum) is highest priority — major label distribution = high stream counts</li>
+        <li>Register at: <strong>themlc.com</strong></li>
+      </ul>
+    </div>
+  </div>
+  
+  <div class="action-item priority-3">
+    <div class="action-num">5</div>
+    <div class="action-title">Verify SoundExchange Registration</div>
+    <div class="action-desc">
+      <ul>
+        <li>SoundExchange collects digital performance royalties (Pandora, SiriusXM, internet radio)</li>
+        <li>Completely separate from ASCAP/BMI — requires independent registration</li>
+        <li>"Whole Lotta Choppas" (Platinum) and other hits likely generating significant SoundExchange royalties</li>
+        <li>Register at: <strong>soundexchange.com</strong></li>
+      </ul>
+    </div>
+  </div>
+  
+  <div class="action-item priority-3">
+    <div class="action-num">6</div>
+    <div class="action-title">Audit Publishing Splits on All BMI Works</div>
+    <div class="action-desc">
+      <ul>
+        <li>Multiple BMI works show "NA" affiliation for co-writers — those writers cannot collect their share</li>
+        <li>Verify all collaborators (producers, featured artists, co-writers) are properly PRO-affiliated</li>
+        <li>Ensure publishing entity (CASADA AARON SORRELL PUB DESIG) is properly set up</li>
+        <li>Consider establishing a formal publishing company for better catalog management</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Additional BMI Works -->
+  <div class="section-title">📋 Additional BMI Works Outside Audited Projects (265 works)</div>
+  <div class="alert info">
+    These 265 works are registered in BMI but were not part of the 10 audited projects. They may be singles, features on other artists' projects, or works from unaudited releases.
+  </div>
+  <table>
+    <tr><th>Title</th><th>BMI #</th><th>Reg Date</th><th>Status</th></tr>
+    <tr><td>100 ROUND</td><td>68594280</td><td>08/08/2024</td><td class="status-reconciled">Reconciled</td></tr>
+    <tr><td>2016</td><td>72326255</td><td>10/01/2025</td><td class="status-reconciled">Reconciled</td></tr>
+    <tr><td>2K 17</td><td>42776419</td><td>04/06/2020</td><td class="status-reconciled">Reconciled</td></tr>
+    <tr><td>2K24</td><td>71223261</td><td>01/27/2025</td><td class="status-reconciled">Reconciled</td></tr>
+    <tr><td>305</td><td>50524219</td><td>06/11/2021</td><td class="status-pending">Pending Society Review</td></tr>
+    <tr><td>3AM IN ATL</td><td>59360655</td><td>11/28/2022</td><td class="status-reconciled">Reconciled</td></tr>
+    <tr><td>762 S FEATURING SADA BABY</td><td>61653348</td><td>09/14/2023</td><td class="status-reconciled">Reconciled</td></tr>
+    <tr><td>9 FINGERS</td><td>61202953</td><td>05/19/2023</td><td class="status-reconciled">Reconciled</td></tr>
+    <tr><td>ACTIN BAD</td><td>68595692</td><td>09/25/2024</td><td class="status-pending">Pending Society Review</td></tr>
+    <tr><td>ACTING</td><td>47918553</td><td>12/01/2020</td><td class="status-reconciled">Reconciled</td></tr>
+    <tr><td>AKD 5V5 TED REMIX</td><td>52229561</td><td>09/30/2021</td><td class="status-reconciled">Reconciled</td></tr>
+    <tr><td>AKUNA</td><td>57979662</td><td>09/14/2022</td><td class="status-reconciled">Reconciled</td></tr>
+    <tr><td>ANTHEM</td><td>66100014</td><td>03/22/2024</td><td class="status-reconciled">Reconciled</td></tr>
+    <tr><td>APE MODE</td><td>49758055</td><td>04/13/2021</td><td class="status-reconciled">Reconciled</td></tr>
+    <tr><td>APETOVEN</td><td>64708348</td><td>04/01/2024</td><td class="status-reconciled">Reconciled</td></tr>
+    <tr><td>ASHLEY BROTHA</td><td>72677042</td><td>09/12/2025</td><td class="status-reconciled">Reconciled</td></tr>
+    <tr><td>ATHEM</td><td>63558428</td><td>10/09/2023</td><td class="status-reconciled">Reconciled</td></tr>
+    <tr><td>ATTITUDINAL</td><td>64708374</td><td>02/14/2024</td><td class="status-reconciled">Reconciled</td></tr>
+    <tr><td>AUNTY MELODY</td><td>29653382</td><td>03/19/2019</td><td class="status-reconciled">Reconciled</td></tr>
+    <tr><td>BANDGANG JAVAR FT SADA BABY HOW</td><td>41011829</td><td>12/03/2019</td><td class="status-reconciled">Reconciled</td></tr>
+    <tr><td>BANG</td><td>38466215</td><td>10/02/2019</td><td class="status-pending">Pending Society Review</td></tr>
+    <tr><td>BAW BAW</td><td>42846589</td><td>04/09/2020</td><td class="status-reconciled">Reconciled</td></tr>
+    <tr><td>BBS</td><td>66135491</td><td>03/22/2024</td><td class="status-reconciled">Reconciled</td></tr>
+    <tr><td>BEEN KAME</td><td>48445566</td><td>01/20/2021</td><td class="status-reconciled">Reconciled</td></tr>
+    <tr><td>BELIEVE IT</td><td>44007287</td><td>07/07/2020</td><td class="status-reconciled">Reconciled</td></tr>
+    <tr><td>BENCH PRESSIN</td><td>59047703</td><td>11/10/2022</td><td class="status-reconciled">Reconciled</td></tr>
+    <tr><td>BIDNIZZ DAY</td><td>58101599</td><td>09/18/2022</td><td class="status-reconciled">Reconciled</td></tr>
+    <tr><td>BIG BERTHA</td><td>52871165</td><td>10/27/2021</td><td class="status-pending">Pending Society Review</td></tr>
+    <tr><td>BIG BIDNIZZ</td><td>58101600</td><td>09/18/2022</td><td class="status-reconciled">Reconciled</td></tr>
+    <tr><td>BIG DAWG STATUS REMIX</td><td>71487298</td><td>04/25/2025</td><td class="status-pending">Pending Society Review</td></tr>
+    <tr><td>BIG MAN FEAT SADA BABY</td><td>55760090</td><td>06/20/2022</td><td class="status-reconciled">Reconciled</td></tr>
+    <tr><td>BIG SHO</td><td>77576997</td><td>03/05/2026</td><td class="status-pending">Pending Society Review</td></tr>
+    <tr><td>BIG STEPPA FEAT SADA BABY</td><td>49901892</td><td>04/23/2021</td><td class="status-reconciled">Reconciled</td></tr>
+    <tr><td>BIGSKUBA</td><td>74845226</td><td>09/12/2025</td><td class="status-reconciled">Reconciled</td></tr>
+    <tr><td>BLACK HARLOW REMIX</td><td>52229554</td><td>08/30/2021</td><td class="status-reconciled">Reconciled</td></tr>
+    <tr><td>BLITZ</td><td>67831958</td><td>08/07/2024</td><td class="status-pending">Pending Society Review</td></tr>
+    <tr><td>BLOXK PARTY</td><td>27444602</td><td>06/10/2018</td><td class="status-pending">Pending Society Review</td></tr>
+    <tr><td>BLOXKSIDE</td><td>76909255</td><td>03/05/2026</td><td class="status-pending">Pending Society Review</td></tr>
+    <tr><td>BOKIENA</td><td>68597135</td><td>11/18/2025</td><td class="status-reconciled">Reconciled</td></tr>
+    <tr><td>BONNIE AND BLYDE</td><td>29653381</td><td>04/15/2019</td><td class="status-reconciled">Reconciled</td></tr>
+    <tr><td>BOOL</td><td>52606588</td><td>11/01/2021</td><td class="status-reconciled">Reconciled</td></tr>
+    <tr><td>BOOTY TALK FIFTYFIVE</td><td>48351710</td><td>01/03/2021</td><td class="status-reconciled">Reconciled</td></tr>
+    <tr><td>BRACKING</td><td>43970840</td><td>06/23/2020</td><td class="status-reconciled">Reconciled</td></tr>
+    <tr><td>BREADED</td><td>68594284</td><td>11/05/2025</td><td class="status-reconciled">Reconciled</td></tr>
+    <tr><td>BROLIC</td><td>41389851</td><td>01/21/2020</td><td class="status-reconciled">Reconciled</td></tr>
+    <tr><td>BUCKHEAD BOUNTY</td><td>52426975</td><td>10/20/2021</td><td class="status-reconciled">Reconciled</td></tr>
+    <tr><td>BUSINESS OWNER FEAT BAND GANGLONNIE BANDS AND SADA BABY</td><td>50856769</td><td>07/21/2021</td><td class="status-reconciled">Reconciled</td></tr>
+    <tr><td>CAMPAIGING</td><td>42653258</td><td>01/12/2021</td><td class="status-conflict">Share and/or Participant Conflict</td></tr>
+    <tr><td>CAN I</td><td>70358449</td><td>01/27/2025</td><td class="status-reconciled">Reconciled</td></tr>
+    <tr><td>CAPTAIN CRUNCH</td><td>55410988</td><td>05/19/2022</td><td class="status-reconciled">Reconciled</td></tr>
+    <tr><td>CARMELO BRYANT</td><td>42416131</td><td>03/13/2020</td><td class="status-pending">Pending Society Review</td></tr>
+    <tr><td>CATEGORY FIVE</td><td>63028249</td><td>09/20/2023</td><td class="status-reconciled">Reconciled</td></tr>
+    <tr><td>CHEAT CODE</td><td>28779498</td><td>02/04/2019</td><td class="status-reconciled">Reconciled</td></tr>
+    <tr><td>CHECK REMIX</td><td>42359782</td><td>03/23/2020</td><td class="status-reconciled">Reconciled</td></tr>
+    <tr><td>CHUCK MONEY</td><td>73958552</td><td>08/28/2025</td><td class="status-reconciled">Reconciled</td></tr>
+    <tr><td>CHULO BROS</td><td>31459220</td><td>08/27/2019</td><td class="status-conflict">Share and/or Participant Conflict</td></tr>
+    <tr><td>CLAP FOR EM</td><td>49804035</td><td>04/02/2021</td><td class="status-pending">Pending Society Review</td></tr>
+    <tr><td>COLD WORLD</td><td>59858267</td><td>05/11/2023</td><td class="status-reconciled">Reconciled</td></tr>
+    <tr><td>CONEYBPM184 MP3</td><td>44532912</td><td>07/25/2020</td><td class="status-reconciled">Reconciled</td></tr>
+    <tr><td>DADA</td><td>70358452</td><td>01/27/2025</td><td class="status-reconciled">Reconciled</td></tr>
+    <tr><td>DAWG IN THE CAR</td><td>68597134</td><td>10/03/2025</td><td class="status-reconciled">Reconciled</td></tr>
+    <tr><td>DEAD 200 BPM MP3</td><td>44765884</td><td>08/07/2020</td><td class="status-reconciled">Reconciled</td></tr>
+    <tr><td>DIRTY DIRTY</td><td>70358379</td><td>01/31/2025</td><td class="status-reconciled">Reconciled</td></tr>
+    <tr><td>DIZZY</td><td>52652175</td><td>10/03/2021</td><td class="status-reconciled">Reconciled</td></tr>
+    <tr><td>DMX</td><td>52318026</td><td>09/08/2021</td><td class="status-reconciled">Reconciled</td></tr>
+    <tr><td>DOES IT AGAIN</td><td>76583396</td><td>01/28/2026</td><td class="status-pending">Pending Society Review</td></tr>
+    <tr><td>DOGGIN</td><td>48497367</td><td>01/25/2021</td><td class="status-pending">Pending Society Review</td></tr>
+    <tr><td>DOLLA KUZIN</td><td>72677152</td><td>09/02/2025</td><td class="status-reconciled">Reconciled</td></tr>
+    <tr><td>DOUBLE HEADED DRAGON</td><td>68597682</td><td>09/03/2024</td><td class="status-reconciled">Reconciled</td></tr>
+    <tr><td>DRAYMOND</td><td>50303059</td><td>05/25/2021</td><td class="status-reconciled">Reconciled</td></tr>
+    <tr><td>DRIP SQUAD MEMBERS</td><td>48680141</td><td>02/15/2021</td><td class="status-pending">Pending Society Review</td></tr>
+    <tr><td>DRIPLE DOUBLE</td><td>42776697</td><td>04/06/2020</td><td class="status-reconciled">Reconciled</td></tr>
+    <tr><td>DRIPPLE DRAGONS</td><td>65398390</td><td>03/08/2024</td><td class="status-pending">Pending Society Review</td></tr>
+    <tr><td>DT VOICE</td><td>72677116</td><td>09/16/2025</td><td class="status-reconciled">Reconciled</td></tr>
+    <tr><td>DUMBASS</td><td>29740913</td><td>03/15/2019</td><td class="status-reconciled">Reconciled</td></tr>
+    <tr><td>DUMBASS REMIX</td><td>52229560</td><td>09/30/2021</td><td class="status-reconciled">Reconciled</td></tr>
+    <tr><td>EDMORE</td><td>42776593</td><td>04/06/2020</td><td class="status-reconciled">Reconciled</td></tr>
+    <tr><td>ENTANGLEMENT</td><td>48351653</td><td>01/03/2021</td><td class="status-reconciled">Reconciled</td></tr>
+    <tr><td>EROTIK BITY</td><td>57265729</td><td>08/02/2022</td><td class="status-reconciled">Reconciled</td></tr>
+    <tr><td>ESPN</td><td>60904738</td><td>10/11/2023</td><td class="status-reconciled">Reconciled</td></tr>
+    <tr><td>EVERY OPP SHOT</td><td>56471251</td><td>08/02/2023</td><td class="status-conflict">Share and/or Participant Conflict</td></tr>
+    <tr><td>FAST MONEY SKUBA</td><td>26645528</td><td>03/03/2018</td><td class="status-reconciled">Reconciled</td></tr>
+    <tr><td>FASTLANE</td><td>50778196</td><td>06/22/2021</td><td class="status-reconciled">Reconciled</td></tr>
+    <tr><td>FAZE BAG</td><td>57988454</td><td>11/10/2022</td><td class="status-reconciled">Reconciled</td></tr>
+    <tr><td>FIELD</td><td>68596142</td><td>09/24/2024</td><td class="status-reconciled">Reconciled</td></tr>
+    <tr><td>FIRST NAME BASIS</td><td>45025376</td><td>01/03/2021</td><td class="status-pending">Pending Society Review</td></tr>
+    <tr><td>FMBROTHAS</td><td>71487081</td><td>01/27/2026</td><td class="status-reconciled">Reconciled</td></tr>
+    <tr><td>FOE MINUTES OF HELL</td><td>48664943</td><td>02/11/2021</td><td class="status-reconciled">Reconciled</td></tr>
+    <tr><td>FOOD STAMP FELONS</td><td>72677150</td><td>10/02/2025</td><td class="status-reconciled">Reconciled</td></tr>
+    <tr><td>FREAKY NIKE</td><td>25407366</td><td>10/02/2017</td><td class="status-pending">Pending Society Review</td></tr>
+    <tr><td>FREE JOE EXOTIC</td><td>48480243</td><td>04/16/2021</td><td class="status-reconciled">Reconciled</td></tr>
+    <tr><td>FREE RISKY</td><td>77435496</td><td>03/04/2026</td><td class="status-pending">Pending Society Review</td></tr>
+    <tr><td>FRESH LIKE ME</td><td>71528016</td><td>03/12/2025</td><td class="status-reconciled">Reconciled</td></tr>
+    <tr><td>FRIDAY NIGHT CYPHER</td><td>52776499</td><td>11/12/2021</td><td class="status-conflict">Share and/or Participant Conflict</td></tr>
+    <tr><td>FUNKY KONG REMIX</td><td>52229556</td><td>09/30/2021</td><td class="status-reconciled">Reconciled</td></tr>
+    <tr><td>GAME 7</td><td>50750740</td><td>07/02/2021</td><td class="status-pending">Pending Society Review</td></tr>
+    <tr><td>GAME TIME</td><td>30344094</td><td>06/13/2019</td><td class="status-pending">Pending Society Review</td></tr>
+    <tr><td>GATOR SKUB</td><td>52814922</td><td>10/20/2021</td><td class="status-reconciled">Reconciled</td></tr>
+    <tr><td>GOOD VIBES 142 BPM MP3</td><td>44532947</td><td>07/25/2020</td><td class="status-reconciled">Reconciled</td></tr>
+    <tr><td>GOREY LANEZ</td><td>54516067</td><td>02/08/2022</td><td class="status-reconciled">Reconciled</td></tr>
+    <tr><td colspan="4" style="color:#aaa;text-align:center">... and 165 more works</td></tr>
+  </table>
+
+</div>
+
+<div class="footer">
+  <strong>Sada Baby (Casada Aaron Sorrell) — Comprehensive Royalty Audit Report</strong><br>
+  Prepared for: Cody Patrick &nbsp;|&nbsp; Generated: March 07, 2026<br>
+  Data Sources: ASCAP ACE Repertory, BMI Songview Catalog Export (348 works), Genius.com tracklists<br>
+  <em>This report is for internal use only. All registration data sourced from official PRO databases.</em>
+</div>
+
+</body>
+</html>
