@@ -44,6 +44,7 @@ model Organization {
   workAcknowledgements WorkAcknowledgement[]
   cwrExports       CwrExport[]
   ackImports       AckImport[]
+  webhooks         Webhook[]
   currency      String         @default("USD")
   
   // Stripe Billing Fields
@@ -457,6 +458,49 @@ model WebhookEvent {
   createdAt DateTime @default(now())
 
   @@index([createdAt])
+}
+
+// ---------- Webhook System ----------
+
+model Webhook {
+  id               String             @id @default(cuid())
+  orgId            String
+  url              String             @db.VarChar(2048)
+  secret           String             // HMAC signing secret (whsec_...)
+  events           String[]           // Event types to subscribe to ("*" for all)
+  enabled          Boolean            @default(true)
+  description      String?            @db.VarChar(500)
+  failureCount     Int                @default(0) // Consecutive failures, auto-disable at 10
+  lastDeliveredAt  DateTime?
+  lastFailedAt     DateTime?
+  lastStatusCode   Int?
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+
+  organization     Organization       @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  deliveries       WebhookDelivery[]
+
+  @@index([orgId])
+  @@index([enabled, failureCount])
+}
+
+model WebhookDelivery {
+  id           String    @id @default(cuid())
+  webhookId    String
+  event        String    // Event type (e.g., "finding.created")
+  payload      String    @db.Text // JSON payload sent
+  statusCode   Int?      // HTTP response status
+  responseBody String?   @db.VarChar(1024) // First 1KB of response
+  duration     Int?      // Request duration in ms
+  success      Boolean   @default(false)
+  attempts     Int       @default(1) // Number of delivery attempts
+  nextRetryAt  DateTime? // For retry scheduling
+  createdAt    DateTime  @default(now())
+
+  webhook      Webhook   @relation(fields: [webhookId], references: [id], onDelete: Cascade)
+
+  @@index([webhookId, createdAt])
+  @@index([success, createdAt])
 }
 
 model Notification {

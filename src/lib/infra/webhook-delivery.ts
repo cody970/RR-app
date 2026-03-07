@@ -4,6 +4,11 @@
  * Handles signing, sending, and recording webhook deliveries.
  * Integrates with the event bus so that published events are
  * automatically dispatched to matching webhook subscriptions.
+ *
+ * Features:
+ * - HMAC-SHA256 signature verification
+ * - Exponential backoff retry with jitter
+ * - Delivery logging and failure tracking
  */
 
 import crypto from "crypto";
@@ -19,6 +24,14 @@ export interface WebhookPayload {
     data: Record<string, unknown>;
 }
 
+// ---------- Constants ----------
+
+const DELIVERY_TIMEOUT_MS = 10_000; // 10 seconds
+const MAX_RESPONSE_BODY = 1024; // Store first 1KB of response
+const MAX_RETRY_ATTEMPTS = 5; // Maximum retry attempts
+const BASE_RETRY_DELAY_MS = 1000; // 1 second base delay
+const MAX_RETRY_DELAY_MS = 300_000; // 5 minutes max delay
+
 // ---------- Signing ----------
 
 /**
@@ -32,21 +45,67 @@ export function signPayload(payload: string, secret: string): string {
         .digest("hex");
 }
 
-// ---------- Delivery ----------
+/**
+ * Verify a webhook signature.
+ * Useful for webhook receivers to validate incoming requests.
+ */
+export function verifySignature(
+    payload: string,
+    signature: string,
+    secret: string,
+): boolean {
+    const expected = signPayload(payload, secret);
+    // Use timing-safe comparison to prevent timing attacks
+    try {
+        return crypto.timingSafeEqual(
+            Buffer.from(signature),
+            Buffer.from(expected),
+        );
+    } catch {
+        return false;
+    }
+}
 
-const DELIVERY_TIMEOUT_MS = 10_000; // 10 seconds
-const MAX_RESPONSE_BODY = 1024; // Store first 1KB of response
+// ---------- Retry Logic ----------
+
+/**
+ * Calculate the next retry delay using exponential backoff with jitter.
+ * Formula: min(MAX_DELAY, BASE_DELAY * 2^attempt + random_jitter)
+ */
+export function calculateRetryDelay(attempt: number): number {
+    const exponentialDelay = BASE_RETRY_DELAY_MS * Math.pow(2, attempt);
+    const jitter = Math.random() * 1000; // 0-1 second random jitter
+    return Math.min(MAX_RETRY_DELAY_MS, exponentialDelay + jitter);
+}
+
+/**
+ * Calculate when the next retry should occur.
+ */
+export function getNextRetryTime(attempt: number): Date {
+    const delay = calculateRetryDelay(attempt);
+    return new Date(Date.now() + delay);
+}
+
+// ---------- Delivery ----------
 
 /**
  * Deliver a webhook payload to a single endpoint.
  * Records the delivery attempt in the database.
+ *
+ * @param webhookId - The webhook ID
+ * @param url - Target URL to deliver to
+ * @param secret - Signing secret
+ * @param payload - The webhook payload
+ * @param attempt - Current attempt number (1-based)
+ * @returns Delivery result with success status and status code
  */
 async function deliverToEndpoint(
     webhookId: string,
     url: string,
     secret: string,
     payload: WebhookPayload,
-): Promise<{ success: boolean; statusCode?: number }> {
+    attempt: number = 1,
+): Promise<{ success: boolean; statusCode?: number; deliveryId: string }> {
     const body = JSON.stringify(payload);
     const signature = signPayload(body, secret);
     const deliveryId = crypto.randomUUID();
@@ -95,6 +154,10 @@ async function deliverToEndpoint(
 
     const duration = Date.now() - startTime;
 
+    // Calculate next retry time if delivery failed and retries remaining
+    const shouldRetry = !success && attempt < MAX_RETRY_ATTEMPTS;
+    const nextRetryAt = shouldRetry ? getNextRetryTime(attempt) : null;
+
     // Record the delivery attempt
     try {
         await db.webhookDelivery.create({
@@ -106,6 +169,8 @@ async function deliverToEndpoint(
                 responseBody: responseBody ?? null,
                 duration,
                 success,
+                attempts: attempt,
+                nextRetryAt,
             },
         });
 
@@ -133,7 +198,58 @@ async function deliverToEndpoint(
         );
     }
 
-    return { success, statusCode };
+    return { success, statusCode, deliveryId };
+}
+
+/**
+ * Deliver a webhook with automatic retry using exponential backoff.
+ * Retries are attempted inline for faster feedback on transient failures.
+ */
+async function deliverWithRetry(
+    webhookId: string,
+    url: string,
+    secret: string,
+    payload: WebhookPayload,
+): Promise<{ success: boolean; attempts: number }> {
+    let attempt = 1;
+
+    while (attempt <= MAX_RETRY_ATTEMPTS) {
+        const result = await deliverToEndpoint(webhookId, url, secret, payload, attempt);
+
+        if (result.success) {
+            return { success: true, attempts: attempt };
+        }
+
+        // Don't retry on client errors (4xx) except 429 (rate limit)
+        if (result.statusCode && result.statusCode >= 400 && result.statusCode < 500 && result.statusCode !== 429) {
+            logger.info(
+                { webhookId, statusCode: result.statusCode, attempt },
+                "Webhook delivery failed with client error, not retrying",
+            );
+            return { success: false, attempts: attempt };
+        }
+
+        // Calculate delay and wait before retry
+        if (attempt < MAX_RETRY_ATTEMPTS) {
+            const delay = calculateRetryDelay(attempt);
+            logger.info(
+                { webhookId, attempt, nextRetryDelay: delay },
+                "Webhook delivery failed, scheduling retry",
+            );
+            await sleep(delay);
+        }
+
+        attempt++;
+    }
+
+    return { success: false, attempts: MAX_RETRY_ATTEMPTS };
+}
+
+/**
+ * Sleep for a given number of milliseconds.
+ */
+function sleep(ms: number): Promise<void> {
+    return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 // ---------- Dispatch ----------
@@ -147,13 +263,21 @@ async function deliverToEndpoint(
  * 2. Being enabled
  * 3. Having the event type in their subscribed events list (or "*" for all)
  * 4. Not having exceeded the failure threshold (10 consecutive failures)
+ *
+ * @param orgId - Organization ID
+ * @param event - Event type (e.g., "finding.created")
+ * @param data - Event payload data
+ * @param options - Optional dispatch settings
+ * @returns Delivery statistics
  */
 export async function dispatchWebhooks(
     orgId: string,
     event: string,
     data: Record<string, unknown>,
+    options?: { retry?: boolean },
 ): Promise<{ delivered: number; failed: number }> {
     const MAX_CONSECUTIVE_FAILURES = 10;
+    const shouldRetry = options?.retry ?? false;
 
     try {
         // Find all active webhooks for this org that subscribe to this event
@@ -182,9 +306,12 @@ export async function dispatchWebhooks(
         };
 
         // Deliver to all matching webhooks concurrently
+        // Use retry logic if enabled, otherwise single attempt
         const results = await Promise.allSettled(
             matching.map((wh) =>
-                deliverToEndpoint(wh.id, wh.url, wh.secret, payload),
+                shouldRetry
+                    ? deliverWithRetry(wh.id, wh.url, wh.secret, payload)
+                    : deliverToEndpoint(wh.id, wh.url, wh.secret, payload, 1),
             ),
         );
 
@@ -203,7 +330,7 @@ export async function dispatchWebhooks(
         }
 
         logger.info(
-            { orgId, event, delivered, failed, total: matching.length },
+            { orgId, event, delivered, failed, total: matching.length, retry: shouldRetry },
             "Webhook dispatch complete",
         );
 
