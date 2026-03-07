@@ -67,7 +67,7 @@ export default function AuditEnginePage() {
                 fetchFindings();
             } else if (event.type === "audit.failed") {
                 setError(event.data.error || "Audit job failed");
-                toast.error("Audit performance error");
+                toast.error("Audit job failed");
                 setAuditProgress(null);
                 setRunning(false);
                 currentJobIdRef.current = null;
@@ -277,7 +277,7 @@ export default function AuditEnginePage() {
                             currentJobIdRef.current = null;
                         } else if (job.status === "FAILED") {
                             setError(job.error || "Audit job failed");
-                            toast.error("Audit performance error");
+                            toast.error("Audit job failed");
                             setRunning(false);
                             setAuditProgress(null);
                             currentJobIdRef.current = null;
