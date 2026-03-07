@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { POST as calculatePost } from '../app/api/accounting/calculate/route';
 import { POST as splitResolvePost } from '../app/api/splits/resolve/route';
 import { POST as splitRequestPost } from '../app/api/splits/request/route';
@@ -8,25 +8,13 @@ import { PATCH as findingsBulkPatch } from '../app/api/findings/bulk/route';
 // Mock dependencies
 vi.mock('@/lib/infra/db', () => ({
     db: {
-        statement: {
-            findUnique: vi.fn(),
-        },
-        license: {
-            findUnique: vi.fn(),
-        },
-        splitSignoff: {
-            findUnique: vi.fn(),
-            update: vi.fn(),
-            create: vi.fn(),
-        },
-        finding: {
-            update: vi.fn(),
-            updateMany: vi.fn(),
-            findMany: vi.fn(),
-        },
-        task: {
-            createMany: vi.fn(),
-        },
+        statement: { findUnique: vi.fn() },
+        license: { findUnique: vi.fn() },
+        splitSignoff: { findUnique: vi.fn(), update: vi.fn(), create: vi.fn() },
+        finding: { update: vi.fn(), updateMany: vi.fn(), findMany: vi.fn() },
+        task: { createMany: vi.fn() },
+        auditLog: { create: vi.fn() },
+        activity: { create: vi.fn() },
     },
 }));
 
@@ -43,6 +31,42 @@ vi.mock('@/lib/music/split-engine', () => ({
     processLicenseSplits: vi.fn(),
 }));
 
+vi.mock('@/lib/infra/rate-limit', () => ({
+    checkRateLimit: vi.fn().mockResolvedValue({ success: true, count: 1, limit: 10 }),
+}));
+
+vi.mock('@/lib/infra/redis', () => ({
+    redis: {
+        multi: vi.fn().mockReturnValue({
+            incr: vi.fn(),
+            pexpire: vi.fn(),
+            exec: vi.fn().mockResolvedValue([[null, 1]]),
+        }),
+    },
+}));
+
+vi.mock('@/lib/email/send-email', () => ({
+    sendEmail: vi.fn().mockResolvedValue({ success: true }),
+}));
+
+// Helper to create consistent auth mock
+function mockAuth(overrides: Record<string, any> = {}) {
+    return {
+        session: {
+            user: {
+                id: 'user-123',
+                orgId: 'org-123',
+                role: 'ADMIN',
+                email: 'test@example.com',
+            },
+        },
+        userId: 'user-123',
+        orgId: 'org-123',
+        role: 'ADMIN',
+        ...overrides,
+    };
+}
+
 describe('API Integration Tests', () => {
     beforeEach(() => {
         vi.clearAllMocks();
@@ -55,11 +79,7 @@ describe('API Integration Tests', () => {
             const { processStatementLineSplits } = await import('@/lib/music/split-engine');
             const { db } = await import('@/lib/infra/db');
 
-            vi.mocked(requireAuth).mockResolvedValue({
-                orgId: 'org-123',
-                role: 'ADMIN',
-                userId: 'user-123'
-            });
+            vi.mocked(requireAuth).mockResolvedValue(mockAuth());
             vi.mocked(validatePermission).mockReturnValue(undefined);
             vi.mocked(db.statement.findUnique).mockResolvedValue({
                 id: 'stmt-123',
@@ -89,10 +109,7 @@ describe('API Integration Tests', () => {
 
         it('should validate required fields', async () => {
             const { requireAuth } = await import('@/lib/auth/get-session');
-            vi.mocked(requireAuth).mockResolvedValue({
-                orgId: 'org-123',
-                role: 'ADMIN'
-            });
+            vi.mocked(requireAuth).mockResolvedValue(mockAuth());
 
             const request = new Request('http://localhost/api/accounting/calculate', {
                 method: 'POST',
@@ -109,12 +126,7 @@ describe('API Integration Tests', () => {
             const { requireAuth } = await import('@/lib/auth/get-session');
             const { db } = await import('@/lib/infra/db');
 
-            vi.mocked(requireAuth).mockResolvedValue({
-                orgId: 'org-123',
-                role: 'ADMIN',
-                userId: 'user-123',
-                user: { email: 'test@example.com' }
-            });
+            vi.mocked(requireAuth).mockResolvedValue(mockAuth());
             vi.mocked(db.splitSignoff.findUnique).mockResolvedValue({
                 id: 'signoff-123',
                 token: 'valid-token',
@@ -147,12 +159,7 @@ describe('API Integration Tests', () => {
             const { requireAuth } = await import('@/lib/auth/get-session');
             const { db } = await import('@/lib/infra/db');
 
-            vi.mocked(requireAuth).mockResolvedValue({
-                orgId: 'org-123',
-                role: 'ADMIN',
-                userId: 'user-123',
-                user: { email: 'test@example.com' }
-            });
+            vi.mocked(requireAuth).mockResolvedValue(mockAuth());
             vi.mocked(db.splitSignoff.findUnique).mockResolvedValue({
                 id: 'signoff-123',
                 token: 'valid-token',
@@ -179,10 +186,7 @@ describe('API Integration Tests', () => {
             const { requireAuth } = await import('@/lib/auth/get-session');
             const { db } = await import('@/lib/infra/db');
 
-            vi.mocked(requireAuth).mockResolvedValue({
-                orgId: 'org-123',
-                role: 'ADMIN'
-            });
+            vi.mocked(requireAuth).mockResolvedValue(mockAuth());
             vi.mocked(db.splitSignoff.create).mockResolvedValue({
                 id: 'signoff-123',
                 token: 'new-token'
@@ -208,10 +212,7 @@ describe('API Integration Tests', () => {
 
         it('should validate required fields', async () => {
             const { requireAuth } = await import('@/lib/auth/get-session');
-            vi.mocked(requireAuth).mockResolvedValue({
-                orgId: 'org-123',
-                role: 'ADMIN'
-            });
+            vi.mocked(requireAuth).mockResolvedValue(mockAuth());
 
             const request = new Request('http://localhost/api/splits/request', {
                 method: 'POST',
@@ -229,11 +230,7 @@ describe('API Integration Tests', () => {
             const { validatePermission } = await import('@/lib/auth/rbac');
             const { db } = await import('@/lib/infra/db');
 
-            vi.mocked(requireAuth).mockResolvedValue({
-                orgId: 'org-123',
-                role: 'ADMIN',
-                userId: 'user-123'
-            });
+            vi.mocked(requireAuth).mockResolvedValue(mockAuth());
             vi.mocked(validatePermission).mockReturnValue(undefined);
             vi.mocked(db.finding.update).mockResolvedValue({
                 id: 'finding-123',
@@ -262,11 +259,7 @@ describe('API Integration Tests', () => {
             const { requireAuth } = await import('@/lib/auth/get-session');
             const { validatePermission } = await import('@/lib/auth/rbac');
 
-            vi.mocked(requireAuth).mockResolvedValue({
-                orgId: 'org-123',
-                role: 'VIEWER',
-                userId: 'user-123'
-            });
+            vi.mocked(requireAuth).mockResolvedValue(mockAuth({ role: 'VIEWER' }));
             vi.mocked(validatePermission).mockImplementation(() => {
                 throw new Error('Forbidden');
             });
@@ -288,10 +281,7 @@ describe('API Integration Tests', () => {
             const { requireAuth } = await import('@/lib/auth/get-session');
             const { db } = await import('@/lib/infra/db');
 
-            vi.mocked(requireAuth).mockResolvedValue({
-                orgId: 'org-123',
-                role: 'OWNER'
-            });
+            vi.mocked(requireAuth).mockResolvedValue(mockAuth({ role: 'OWNER' }));
             vi.mocked(db.finding.updateMany).mockResolvedValue({ count: 5 });
 
             const request = new Request('http://localhost/api/findings/bulk', {
@@ -314,10 +304,7 @@ describe('API Integration Tests', () => {
         it('should enforce OWNER/ADMIN role for bulk actions', async () => {
             const { requireAuth } = await import('@/lib/auth/get-session');
 
-            vi.mocked(requireAuth).mockResolvedValue({
-                orgId: 'org-123',
-                role: 'VIEWER'
-            });
+            vi.mocked(requireAuth).mockResolvedValue(mockAuth({ role: 'VIEWER' }));
 
             const request = new Request('http://localhost/api/findings/bulk', {
                 method: 'PATCH',
@@ -336,10 +323,7 @@ describe('API Integration Tests', () => {
             const { requireAuth } = await import('@/lib/auth/get-session');
             const { db } = await import('@/lib/infra/db');
 
-            vi.mocked(requireAuth).mockResolvedValue({
-                orgId: 'org-123',
-                role: 'ADMIN'
-            });
+            vi.mocked(requireAuth).mockResolvedValue(mockAuth());
             vi.mocked(db.finding.findMany).mockResolvedValue([
                 { id: 'f1' },
                 { id: 'f2' },
