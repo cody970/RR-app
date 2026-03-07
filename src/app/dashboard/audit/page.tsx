@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { Button } from "@/components/ui/button";
-import { AlertTriangle, CheckCircle, FileWarning, Play, RefreshCw, Download, Coins, ShieldAlert, History as HistoryIcon, Share, Search, Filter, X, CheckSquare } from "lucide-react";
+import { AlertTriangle, CheckCircle, FileWarning, Play, RefreshCw, Download, Coins, ShieldAlert, History as HistoryIcon, Share, Search, Filter, X, CheckSquare, Wifi } from "lucide-react";
 import { useToast } from "@/components/ui/toast-provider";
 import { Finding } from "@/types";
 import { exportToCSV, exportToJSON, generateDisputeLetter } from "@/lib/reports/export-utils";
@@ -11,6 +11,7 @@ import { useSession } from "next-auth/react";
 import { TaskBoard } from "@/components/dashboard/task-board";
 import { BulkActionBar, findingsBulkActions } from "@/components/dashboard/bulk-action-bar";
 import { LayoutGrid, List as ListIcon, Sparkles } from "lucide-react";
+import { useEventStream } from "@/hooks/useEventStream";
 
 // ---------- Types ----------
 
@@ -38,6 +39,41 @@ export default function AuditEnginePage() {
     const [filterSeverity, setFilterSeverity] = useState("");
     const [filterStatus, setFilterStatus] = useState("");
     const [searchQuery, setSearchQuery] = useState("");
+
+    // Real-time audit progress state
+    const [auditProgress, setAuditProgress] = useState<{
+        phase: string;
+        progress: number;
+    } | null>(null);
+    const currentJobIdRef = useRef<string | null>(null);
+
+    // Real-time audit updates via SSE (replaces polling)
+    const { isConnected } = useEventStream({
+        filter: ["audit.progress", "audit.completed", "audit.failed"],
+        onEvent: (event) => {
+            // Only handle events for the current job
+            if (currentJobIdRef.current && event.data.jobId !== currentJobIdRef.current) return;
+
+            if (event.type === "audit.progress") {
+                setAuditProgress({
+                    phase: event.data.phase,
+                    progress: event.data.progress,
+                });
+            } else if (event.type === "audit.completed") {
+                toast.success(`Audit complete — ${event.data.findingsCount} findings detected`);
+                setAuditProgress(null);
+                setRunning(false);
+                currentJobIdRef.current = null;
+                fetchFindings();
+            } else if (event.type === "audit.failed") {
+                setError(event.data.error || "Audit job failed");
+                toast.error("Audit performance error");
+                setAuditProgress(null);
+                setRunning(false);
+                currentJobIdRef.current = null;
+            }
+        },
+    });
 
     // Bulk selection state
     const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -206,6 +242,8 @@ export default function AuditEnginePage() {
     const runAudit = async () => {
         setRunning(true);
         setError("");
+        setAuditProgress(null);
+        
         try {
             const res = await fetch("/api/audit/run", { method: "POST" });
             if (!res.ok) {
@@ -218,42 +256,53 @@ export default function AuditEnginePage() {
             }
 
             const { jobId } = await res.json();
+            currentJobIdRef.current = jobId;
             toast.success("Audit job started...");
 
-            // Poll for job status
-            const pollJob = async () => {
-                try {
-                    const statusRes = await fetch(`/api/audit/jobs/${jobId}`);
-                    if (!statusRes.ok) throw new Error("Failed to poll job status");
+            // If SSE is connected, real-time events will handle the rest
+            // Fallback polling only if SSE is not connected
+            if (!isConnected) {
+                const pollJob = async () => {
+                    try {
+                        const statusRes = await fetch(`/api/audit/jobs/${jobId}`);
+                        if (!statusRes.ok) throw new Error("Failed to poll job status");
 
-                    const job = await statusRes.json();
+                        const job = await statusRes.json();
 
-                    if (job.status === "COMPLETED") {
-                        toast.success(`Audit complete — ${job.findingsCount} findings detected`);
-                        await fetchFindings();
+                        if (job.status === "COMPLETED") {
+                            toast.success(`Audit complete — ${job.findingsCount} findings detected`);
+                            await fetchFindings();
+                            setRunning(false);
+                            setAuditProgress(null);
+                            currentJobIdRef.current = null;
+                        } else if (job.status === "FAILED") {
+                            setError(job.error || "Audit job failed");
+                            toast.error("Audit performance error");
+                            setRunning(false);
+                            setAuditProgress(null);
+                            currentJobIdRef.current = null;
+                        } else {
+                            // Still processing, poll again in 5s (reduced frequency as SSE should handle it)
+                            setTimeout(pollJob, 5000);
+                        }
+                    } catch (e) {
+                        console.error("Polling error:", e);
+                        setError("Lost connection to audit worker during polling");
                         setRunning(false);
-                    } else if (job.status === "FAILED") {
-                        setError(job.error || "Audit job failed");
-                        toast.error("Audit performance error");
-                        setRunning(false);
-                    } else {
-                        // Still processing, poll again in 2s
-                        setTimeout(pollJob, 2000);
+                        setAuditProgress(null);
+                        currentJobIdRef.current = null;
                     }
-                } catch (e) {
-                    console.error("Polling error:", e);
-                    setError("Lost connection to audit worker during polling");
-                    setRunning(false);
-                }
-            };
+                };
 
-            pollJob();
+                pollJob();
+            }
 
         } catch (err) {
             console.error(err);
             setError("An unexpected error occurred during audit start");
             toast.error("An unexpected error occurred");
             setRunning(false);
+            currentJobIdRef.current = null;
         }
     };
 
@@ -374,6 +423,30 @@ export default function AuditEnginePage() {
                 <div className="p-4 bg-red-50 border border-red-200 rounded-xl text-red-700 flex items-center gap-3 animate-toast-in mx-2">
                     <AlertTriangle className="h-5 w-5 text-red-500" />
                     <p>{error}</p>
+                </div>
+            )}
+
+            {/* Real-time audit progress indicator */}
+            {running && (
+                <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl mx-2 shadow-sm">
+                    <div className="flex items-center gap-3 mb-3">
+                        <RefreshCw className="h-5 w-5 text-amber-600 animate-spin" />
+                        <p className="font-semibold text-amber-900">Audit in Progress</p>
+                        {isConnected && (
+                            <span className="flex items-center gap-1 text-[10px] bg-emerald-50 text-emerald-600 border border-emerald-200 rounded-full px-2 py-0.5">
+                                <Wifi className="w-2.5 h-2.5" /> Live
+                            </span>
+                        )}
+                    </div>
+                    <div className="w-full bg-amber-100 rounded-full h-2.5">
+                        <div
+                            className="bg-amber-500 h-2.5 rounded-full transition-all duration-300"
+                            style={{ width: `${auditProgress?.progress ?? 5}%` }}
+                        />
+                    </div>
+                    <p className="text-sm text-amber-700 mt-2 capitalize">
+                        {auditProgress?.phase?.replace(/_/g, " ") ?? "Starting..."} • {auditProgress?.progress ?? 0}% complete
+                    </p>
                 </div>
             )}
 

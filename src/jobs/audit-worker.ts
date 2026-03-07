@@ -9,6 +9,11 @@ import { ESTIMATES } from '@/lib/music/constants';
 import { notifyOrg } from '@/lib/infra/notify';
 import { pMap } from "@/lib/infra/utils";
 import { searchByISRC } from "@/lib/clients/songview-client";
+import {
+    publishAuditProgress,
+    publishAuditCompleted,
+    publishAuditFailed,
+} from "@/lib/infra/event-bus";
 
 interface AuditJobData {
     jobId: string;
@@ -46,6 +51,9 @@ export const processAuditJob = async (job: Job<AuditJobData>) => {
     logger.info({ jobId, orgId }, `Processing audit job ${jobId} for org ${orgId}`);
 
     try {
+        // Publish initial progress
+        await publishAuditProgress(orgId, jobId, "initializing", 0);
+
         // Get organization base currency
         const org = await db.organization.findUnique({
             where: { id: orgId },
@@ -54,6 +62,7 @@ export const processAuditJob = async (job: Job<AuditJobData>) => {
         const currency = org?.currency || "USD";
 
         // Fetch all data for analysis
+        await publishAuditProgress(orgId, jobId, "loading_data", 5);
         const [works, recordings, statementLines] = await Promise.all([
             db.work.findMany({
                 where: { orgId },
@@ -74,6 +83,7 @@ export const processAuditJob = async (job: Job<AuditJobData>) => {
         const catalogISRCs = new Set(recordings.filter((r: any) => r.isrc).map((r: any) => r.isrc!.toUpperCase()));
 
         // ── WORK-LEVEL RULES ──
+        await publishAuditProgress(orgId, jobId, "analyzing_works", 15);
         for (const work of works) {
             // Rule 1: Missing ISWC
             if (!work.iswc) {
@@ -166,6 +176,7 @@ export const processAuditJob = async (job: Job<AuditJobData>) => {
 
         // ── RECORDING-LEVEL RULES ──
         // Process recordings in parallel with concurrency control
+        await publishAuditProgress(orgId, jobId, "analyzing_recordings", 35);
         const recordingGaps = await pMap(recordings, async (rec: any) => {
             let localFindings = 0;
 
@@ -258,6 +269,7 @@ export const processAuditJob = async (job: Job<AuditJobData>) => {
         findingsCount += recordingGaps.reduce((sum, count) => sum + count, 0);
 
         // ── STATEMENT-LEVEL RULES ──
+        await publishAuditProgress(orgId, jobId, "analyzing_statements", 55);
         for (const line of statementLines) {
             if (!line.isrc) continue;
             const isrcUpper = line.isrc.toUpperCase();
@@ -281,6 +293,7 @@ export const processAuditJob = async (job: Job<AuditJobData>) => {
         }
 
         // ── DISTRIBUTOR LEAKAGE DETECTION ──
+        await publishAuditProgress(orgId, jobId, "detecting_leakage", 75);
         const { detectDistributorLeaks } = await import('../lib/reports/import-discrepancy-engine');
         const leakResult = await detectDistributorLeaks(orgId);
         if (leakResult?.success && leakResult.finding) {
@@ -288,6 +301,7 @@ export const processAuditJob = async (job: Job<AuditJobData>) => {
         }
 
         // Update job status
+        await publishAuditProgress(orgId, jobId, "finalizing", 90);
         await db.auditJob.update({
             where: { id: jobId },
             data: {
@@ -313,6 +327,9 @@ export const processAuditJob = async (job: Job<AuditJobData>) => {
             }
         });
 
+        // Publish audit completed event via Redis Pub/Sub
+        await publishAuditCompleted(orgId, jobId, findingsCount);
+
         // Send notification
         await notifyOrg({
             orgId,
@@ -324,11 +341,16 @@ export const processAuditJob = async (job: Job<AuditJobData>) => {
 
     } catch (error) {
         logger.error({ err: error, jobId, orgId }, "Audit background job failed");
+        
+        // Publish audit failed event via Redis Pub/Sub
+        const errorMessage = error instanceof Error ? error.message : "Internal error";
+        await publishAuditFailed(orgId, jobId, errorMessage);
+        
         await db.auditJob.update({
             where: { id: jobId },
             data: {
                 status: "FAILED",
-                error: error instanceof Error ? error.message : "Internal error"
+                error: errorMessage
             }
         });
         throw error;

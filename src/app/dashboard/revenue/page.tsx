@@ -1,11 +1,12 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import { DollarSign, Building2, Upload, BarChart3, AlertTriangle, Loader2, FileText, CheckCircle2, ArrowUpRight, ArrowDownRight, Sparkles, X } from "lucide-react";
+import { DollarSign, Building2, Upload, BarChart3, AlertTriangle, Loader2, FileText, CheckCircle2, ArrowUpRight, ArrowDownRight, Sparkles, X, Wifi } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { DataState } from "@/components/ui/data-state";
+import { useEventStream } from "@/hooks/useEventStream";
 
 // ---------- Types ----------
 
@@ -77,6 +78,23 @@ export default function RevenuePage() {
     const [showUpload, setShowUpload] = useState(false);
     const [fetchError, setFetchError] = useState<string | null>(null);
     const abortControllerRef = useRef<AbortController | null>(null);
+
+    // Real-time statement import notifications via SSE
+    const { isConnected } = useEventStream({
+        filter: ["statement.imported", "statement.matched"],
+        onEvent: (event) => {
+            if (event.type === "statement.imported") {
+                // Auto-update data when a new statement is imported
+                setUploadResult({
+                    success: true,
+                    source: event.data.source,
+                    matched: event.data.matched,
+                    unmatched: event.data.unmatched,
+                });
+                fetchData();
+            }
+        },
+    });
 
     const fetchData = useCallback(async () => {
         if (abortControllerRef.current) {

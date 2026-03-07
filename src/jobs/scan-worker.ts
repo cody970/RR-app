@@ -10,6 +10,11 @@ import { redis } from "@/lib/infra/redis";
 import { db } from "@/lib/infra/db";
 import { runCatalogScan } from "@/lib/music/catalog-scanner";
 import { notifyOrg } from "@/lib/infra/notify";
+import {
+    publishScanProgress,
+    publishScanCompleted,
+    publishScanFailed,
+} from "@/lib/infra/event-bus";
 
 interface ScanJobData {
     scanId: string;
@@ -36,6 +41,15 @@ export async function processScanJob(job: Job<ScanJobData>) {
                 gaps: progress.gapsFound,
             });
 
+            // Publish real-time progress event via Redis Pub/Sub
+            await publishScanProgress(
+                orgId,
+                scanId,
+                progress.scannedItems,
+                progress.totalItems,
+                progress.gapsFound
+            );
+
             // Update scan record periodically
             await db.catalogScan.update({
                 where: { id: scanId },
@@ -45,6 +59,9 @@ export async function processScanJob(job: Job<ScanJobData>) {
                 },
             });
         });
+
+        // Publish scan completed event via Redis Pub/Sub
+        await publishScanCompleted(orgId, scanId, result.totalGaps);
 
         // Notify the user
         await notifyOrg({
@@ -61,6 +78,9 @@ export async function processScanJob(job: Job<ScanJobData>) {
     } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
         console.error(`[ScanWorker] Scan ${scanId} failed:`, message);
+
+        // Publish scan failed event via Redis Pub/Sub
+        await publishScanFailed(orgId, scanId, message);
 
         await db.catalogScan.update({
             where: { id: scanId },
