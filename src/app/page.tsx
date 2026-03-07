@@ -13,7 +13,7 @@ import {
   Linkedin,
   Bot
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { SparkButton } from "@/components/spark/spark-button";
 
 import { HeroVisualizer } from "@/components/landing/hero-visualizer";
 import { GlowingEffectDemo } from "@/components/landing/glowing-features";
@@ -49,9 +49,9 @@ export default function LandingPage() {
               Log in
             </Link>
             <Link href="/register">
-              <Button className="bg-slate-900 hover:bg-indigo-600 text-white rounded-2xl shadow-xl hover:shadow-indigo-500/20 transition-all h-11 px-8 font-bold uppercase tracking-wider text-xs">
+              <SparkButton variant="secondary" size="lg" className="w-full sm:w-auto h-11 rounded-2xl uppercase tracking-wider text-xs">
                 Start Free Trial
-              </Button>
+              </SparkButton>
             </Link>
           </div>
         </div>
@@ -82,15 +82,15 @@ export default function LandingPage() {
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-6 animate-slide-up delay-300">
             <Link href="/register">
-              <Button size="lg" className="w-full sm:w-auto h-16 px-10 text-sm font-black uppercase tracking-widest bg-slate-900 text-white rounded-2xl shadow-2xl shadow-slate-900/10 hover:bg-indigo-600 hover:scale-105 transition-all">
+              <SparkButton variant="secondary" size="lg" className="w-full sm:w-auto h-16 px-10 text-sm font-black uppercase tracking-widest rounded-2xl shadow-2xl">
                 Connect Catalog Free
-                <ArrowRight className="ml-3 w-5 h-5" />
-              </Button>
+                <ArrowRight className="ml-3 w-5 h-5" aria-hidden="true" />
+              </SparkButton>
             </Link>
             <Link href="#demo">
-              <Button size="lg" variant="outline" className="w-full sm:w-auto h-16 px-10 text-sm font-black uppercase tracking-widest border-slate-200 text-slate-600 hover:bg-slate-50 rounded-2xl transition-all glass-card">
+              <SparkButton variant="tertiary" size="lg" className="w-full sm:w-auto h-16 px-10 text-sm font-black uppercase tracking-widest rounded-2xl">
                 Interactive Demo
-              </Button>
+              </SparkButton>
             </Link>
           </div>
 
@@ -206,9 +206,9 @@ export default function LandingPage() {
               ))}
             </ul>
             <Link href="/register">
-              <Button size="lg" className="bg-white text-slate-950 hover:bg-slate-100 rounded-2xl px-10 h-16 font-black uppercase tracking-widest text-xs transition-all shadow-xl shadow-white/5">
+              <SparkButton size="lg" variant="ghost" className="bg-white text-slate-950 hover:bg-slate-100 rounded-2xl px-10 h-16 font-black uppercase tracking-widest text-xs transition-all shadow-xl">
                 Learn About Security
-              </Button>
+              </SparkButton>
             </Link>
           </div>
           <div className="lg:w-1/2 relative w-full aspect-square max-w-md mx-auto">
@@ -236,15 +236,15 @@ export default function LandingPage() {
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-6">
             <Link href="/register">
-              <Button size="lg" className="h-16 px-12 text-sm font-black uppercase tracking-widest bg-slate-900 text-white hover:bg-indigo-600 rounded-2xl shadow-2xl shadow-indigo-500/10 hover:scale-105 transition-all">
+              <SparkButton size="lg" variant="secondary" className="h-16 px-12 text-sm font-black uppercase tracking-widest rounded-2xl shadow-2xl">
                 Start Free Trial
-                <ArrowRight className="ml-3 w-5 h-5" />
-              </Button>
+                <ArrowRight className="ml-3 w-5 h-5" aria-hidden="true" />
+              </SparkButton>
             </Link>
             <Link href="/login">
-              <Button size="lg" variant="outline" className="h-16 px-12 text-sm font-black uppercase tracking-widest border-slate-200 text-slate-600 hover:bg-slate-50 rounded-2xl transition-all">
+              <SparkButton size="lg" variant="tertiary" className="h-16 px-12 text-sm font-black uppercase tracking-widest rounded-2xl">
                 Sign In
-              </Button>
+              </SparkButton>
             </Link>
           </div>
         </div>
