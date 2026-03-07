@@ -2,7 +2,22 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { checkRateLimit } from "../lib/infra/rate-limit";
 import { redis } from "../lib/infra/redis";
 
-// Mock the redis client to match the pipeline-based implementation (redis.multi())
+// Mock retry to execute immediately without retries
+vi.mock("../lib/infra/retry", () => ({
+    withRetry: vi.fn(async (fn: () => Promise<any>) => fn()),
+    DistributedLock: vi.fn(),
+}));
+
+// Mock logger
+vi.mock("../lib/infra/logger-async", () => ({
+    asyncLogger: {
+        warn: vi.fn(),
+        error: vi.fn(),
+        info: vi.fn(),
+    },
+}));
+
+// Mock the redis client
 vi.mock("../lib/infra/redis", () => {
     const mockExec = vi.fn();
     return {
@@ -12,6 +27,7 @@ vi.mock("../lib/infra/redis", () => {
                 pexpire: vi.fn().mockReturnThis(),
                 exec: mockExec,
             })),
+            pttl: vi.fn().mockResolvedValue(30000),
         },
         __mockExec: mockExec,
     };
@@ -25,11 +41,10 @@ describe("Rate Limiting Utility", () => {
     };
 
     beforeEach(() => {
-        vi.resetAllMocks();
+        vi.clearAllMocks();
     });
 
     it("should allow request if count is below limit", async () => {
-        // Pipeline exec returns [[err, result], ...] for each command
         const pipeline = (redis.multi as any)();
         pipeline.exec.mockResolvedValue([[null, 1], [null, 1]]);
 
@@ -61,8 +76,9 @@ describe("Rate Limiting Utility", () => {
         const pipeline = (redis.multi as any)();
         pipeline.exec.mockResolvedValue(null);
 
+        // withRetry mock executes immediately, the function throws,
+        // and the outer catch block fails open
         const result = await checkRateLimit(options);
-        // count defaults to 0 which is <= limit, so success
         expect(result.success).toBe(true);
         expect(result.count).toBe(0);
     });
