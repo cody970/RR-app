@@ -1,7 +1,12 @@
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth/auth";
 import { db } from "@/lib/infra/db";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  SparkCard,
+  SparkCardContent,
+  SparkCardHeader,
+  SparkCardTitle,
+} from "@/components/spark";
 import { Library, CheckCircle, FileWarning, TrendingDown, ArrowUpRight, ScanSearch } from "lucide-react";
 import { DashboardAnalytics } from "@/components/dashboard/analytics-view";
 import { ActivityFeed } from "@/components/dashboard/activity-feed";
@@ -90,7 +95,7 @@ export default async function DashboardPage() {
             iconColor: "text-indigo-600 dark:text-indigo-400",
             iconBg: "from-indigo-500/15 to-violet-500/10",
             valueColor: "text-slate-900 dark:text-white",
-            borderAccent: "hover:border-indigo-300 dark:hover:border-indigo-500/30",
+            sparkVariant: "default" as const,
         },
         {
             title: "Metadata Match Rate",
@@ -100,7 +105,7 @@ export default async function DashboardPage() {
             iconColor: "text-emerald-500 dark:text-emerald-400",
             iconBg: "from-emerald-500/15 to-teal-500/10",
             valueColor: "text-emerald-600 dark:text-emerald-400",
-            borderAccent: "hover:border-emerald-300 dark:hover:border-emerald-500/30",
+            sparkVariant: "highlighted" as const,
         },
         {
             title: "High Risk Anomalies",
@@ -110,7 +115,7 @@ export default async function DashboardPage() {
             iconColor: "text-rose-500 dark:text-rose-400",
             iconBg: "from-rose-500/15 to-orange-500/10",
             valueColor: highRiskFindings > 0 ? "text-rose-600 dark:text-rose-400" : "text-slate-900 dark:text-white",
-            borderAccent: highRiskFindings > 0 ? "hover:border-rose-300 dark:hover:border-rose-500/30 animate-pulse-glow" : "hover:border-slate-300",
+            sparkVariant: "warning" as const,
         },
         {
             title: "Estimated Leakage",
@@ -120,7 +125,7 @@ export default async function DashboardPage() {
             iconColor: "text-violet-600 dark:text-violet-400",
             iconBg: "from-violet-500/15 to-fuchsia-500/10",
             valueColor: totalLeakage > 0 ? "text-violet-600 dark:text-violet-400" : "text-slate-900 dark:text-white",
-            borderAccent: "hover:border-violet-300 dark:hover:border-violet-500/30",
+            sparkVariant: "info" as const,
         },
     ];
 
@@ -146,25 +151,29 @@ export default async function DashboardPage() {
                     {/* KPI Cards */}
                     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
                         {kpiCards.map((card, i) => (
-                            <Card key={card.title} className={`group relative rounded-2xl bg-card border-border shadow-lg shadow-black/[0.03] dark:shadow-black/20 ${card.borderAccent} transition-all duration-300 hover:-translate-y-1 overflow-hidden animate-slide-up opacity-0 ${delays[i]}`}>
+                            <SparkCard
+                                key={card.title}
+                                variant={card.sparkVariant}
+                                className={`group overflow-hidden animate-slide-up opacity-0 ${delays[i]}`}
+                            >
                                 {/* Hover gradient */}
                                 <div className="absolute inset-0 bg-gradient-to-br from-muted/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-2xl" />
 
-                                <CardHeader className="relative z-10 flex flex-row items-center justify-between pb-2">
-                                    <CardTitle className="text-sm font-medium text-muted-foreground">{card.title}</CardTitle>
+                                <SparkCardHeader className="relative z-10 flex flex-row items-center justify-between pb-2">
+                                    <SparkCardTitle className="text-sm font-medium text-muted-foreground">{card.title}</SparkCardTitle>
                                     <div className={`flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br ${card.iconBg} border border-border/50`}>
-                                        <card.icon className={`h-[18px] w-[18px] ${card.iconColor}`} />
+                                        <card.icon className={`h-[18px] w-[18px] ${card.iconColor}`} aria-hidden="true" />
                                     </div>
-                                </CardHeader>
-                                <CardContent className="relative z-10">
+                                </SparkCardHeader>
+                                <SparkCardContent className="relative z-10">
                                     <div className={`text-3xl font-bold ${card.valueColor} tracking-tight animate-count-up`}>
                                         {card.value}
                                     </div>
                                     <p className="text-xs text-muted-foreground mt-1.5 font-medium">
                                         {card.sub}
                                     </p>
-                                </CardContent>
-                            </Card>
+                                </SparkCardContent>
+                            </SparkCard>
                         ))}
                     </div>
 
@@ -173,25 +182,26 @@ export default async function DashboardPage() {
 
                     {/* Bottom Grid */}
                     <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-7">
-                        <Card className="col-span-4 rounded-2xl bg-card border-border shadow-lg shadow-black/[0.03] dark:shadow-black/20">
-                            <CardHeader className="flex flex-row items-center justify-between pb-4 border-b border-border">
-                                <CardTitle className="text-slate-900 dark:text-white text-lg font-black tracking-tight">Recent Audit Findings</CardTitle>
+                        <SparkCard className="col-span-4">
+                            <SparkCardHeader className="flex flex-row items-center justify-between pb-4 border-b border-border">
+                                <SparkCardTitle className="text-slate-900 dark:text-white text-lg font-black tracking-tight">Recent Audit Findings</SparkCardTitle>
                                 {findings.length > 0 && (
                                     <a
                                         href="/dashboard/audit"
                                         className="inline-flex items-center gap-1 text-xs font-black uppercase tracking-widest text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 transition-colors"
+                                        aria-label="View all audit findings"
                                     >
-                                        View all <ArrowUpRight className="h-3.5 w-3.5" />
+                                        View all <ArrowUpRight className="h-3.5 w-3.5" aria-hidden="true" />
                                     </a>
                                 )}
-                            </CardHeader>
-                            <CardContent className="pt-6">
+                            </SparkCardHeader>
+                            <SparkCardContent className="pt-6">
                                 <div className="flex h-[320px] items-center justify-center text-slate-500 border border-dashed border-slate-200 dark:border-slate-800 rounded-2xl bg-slate-50/30 dark:bg-slate-900/10">
                                     {findings.length > 0 ? (
                                         <div className="text-center space-y-4">
                                             <div className="inline-flex items-center gap-2 text-emerald-600 dark:text-emerald-400 font-bold">
                                                 <div className="w-8 h-8 rounded-full bg-emerald-500/10 flex items-center justify-center">
-                                                    <CheckCircle className="h-4 w-4" />
+                                                    <CheckCircle className="h-4 w-4" aria-hidden="true" />
                                                 </div>
                                                 {findings.length} findings detected
                                             </div>
@@ -204,7 +214,7 @@ export default async function DashboardPage() {
                                     ) : (
                                         <div className="text-center space-y-4 pt-6 pb-6">
                                             <div className="w-16 h-16 mx-auto rounded-2xl bg-white dark:bg-slate-900 flex items-center justify-center border border-slate-200 dark:border-slate-800 shadow-sm">
-                                                <ScanSearch className="h-8 w-8 text-slate-400" />
+                                                <ScanSearch className="h-8 w-8 text-slate-400" aria-hidden="true" />
                                             </div>
                                             <div>
                                                 <span className="block text-sm text-slate-500 mb-4 font-medium">No results to display yet</span>
@@ -215,8 +225,8 @@ export default async function DashboardPage() {
                                         </div>
                                     )}
                                 </div>
-                            </CardContent>
-                        </Card>
+                            </SparkCardContent>
+                        </SparkCard>
 
                         <div className="col-span-3">
                             <ActivityFeed />

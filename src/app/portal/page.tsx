@@ -1,7 +1,13 @@
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth/auth";
 import { db } from "@/lib/infra/db";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+    SparkCard,
+    SparkCardContent,
+    SparkCardHeader,
+    SparkCardTitle,
+    SparkBadge,
+} from "@/components/spark";
 import { Music, AlertCircle, DollarSign, PieChart, TrendingUp } from "lucide-react";
 import { SplitPieChart, type SplitSlice } from "@/components/portal/split-pie-chart";
 
@@ -39,17 +45,17 @@ export default async function PortalDashboard() {
     if (!writer) {
         return (
             <div className="max-w-3xl mx-auto mt-6 sm:mt-10 px-4">
-                <Card className="border-amber-200 bg-amber-50">
-                    <CardHeader>
-                        <CardTitle className="flex items-center gap-2 text-amber-800 text-base sm:text-lg">
-                            <AlertCircle className="h-5 w-5" />
+                <SparkCard variant="warning">
+                    <SparkCardHeader>
+                        <SparkCardTitle className="flex items-center gap-2 text-amber-800 text-base sm:text-lg">
+                            <AlertCircle className="h-5 w-5" aria-hidden="true" />
                             No Writer Profile Linked
-                        </CardTitle>
-                    </CardHeader>
-                    <CardContent className="text-amber-700 text-sm sm:text-base">
+                        </SparkCardTitle>
+                    </SparkCardHeader>
+                    <SparkCardContent className="text-amber-700 text-sm sm:text-base">
                         Your account hasn&apos;t been linked to a Writer profile yet. Please contact your organization owner to link your account.
-                    </CardContent>
-                </Card>
+                    </SparkCardContent>
+                </SparkCard>
             </div>
         );
     }
@@ -70,61 +76,61 @@ export default async function PortalDashboard() {
 
             {/* Stats Cards */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
-                <Card className="border-slate-200 shadow-sm border-t-4 border-t-amber-500">
-                    <CardHeader className="pb-1 sm:pb-2">
-                        <CardTitle className="text-[10px] sm:text-sm font-medium text-slate-500 flex items-center justify-between">
+                <SparkCard variant="default" className="border-t-4 border-t-amber-500">
+                    <SparkCardHeader className="pb-1 sm:pb-2">
+                        <SparkCardTitle className="text-[10px] sm:text-sm font-medium text-slate-500 flex items-center justify-between">
                             Works
-                            <Music className="h-4 w-4 text-amber-500" />
-                        </CardTitle>
-                    </CardHeader>
-                    <CardContent>
+                            <Music className="h-4 w-4 text-amber-500" aria-hidden="true" />
+                        </SparkCardTitle>
+                    </SparkCardHeader>
+                    <SparkCardContent>
                         <div className="text-2xl sm:text-3xl font-bold text-slate-900">{linkedWorksCount}</div>
                         <p className="text-[10px] sm:text-xs text-slate-500 mt-1">Registered works</p>
-                    </CardContent>
-                </Card>
+                    </SparkCardContent>
+                </SparkCard>
 
-                <Card className="border-slate-200 shadow-sm border-t-4 border-t-emerald-500">
-                    <CardHeader className="pb-1 sm:pb-2">
-                        <CardTitle className="text-[10px] sm:text-sm font-medium text-slate-500 flex items-center justify-between">
+                <SparkCard variant="highlighted" className="border-t-4 border-t-emerald-500">
+                    <SparkCardHeader className="pb-1 sm:pb-2">
+                        <SparkCardTitle className="text-[10px] sm:text-sm font-medium text-slate-500 flex items-center justify-between">
                             Earnings
-                            <DollarSign className="h-4 w-4 text-emerald-500" />
-                        </CardTitle>
-                    </CardHeader>
-                    <CardContent>
+                            <DollarSign className="h-4 w-4 text-emerald-500" aria-hidden="true" />
+                        </SparkCardTitle>
+                    </SparkCardHeader>
+                    <SparkCardContent>
                         <div className="text-2xl sm:text-3xl font-bold text-slate-900">
                             ${totalEarnings.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         </div>
                         <p className="text-[10px] sm:text-xs text-slate-500 mt-1">Total earnings</p>
-                    </CardContent>
-                </Card>
+                    </SparkCardContent>
+                </SparkCard>
 
-                <Card className="border-slate-200 shadow-sm border-t-4 border-t-indigo-500">
-                    <CardHeader className="pb-1 sm:pb-2">
-                        <CardTitle className="text-[10px] sm:text-sm font-medium text-slate-500 flex items-center justify-between">
+                <SparkCard variant="default" className="border-t-4 border-t-indigo-500">
+                    <SparkCardHeader className="pb-1 sm:pb-2">
+                        <SparkCardTitle className="text-[10px] sm:text-sm font-medium text-slate-500 flex items-center justify-between">
                             Avg Split
-                            <PieChart className="h-4 w-4 text-indigo-500" />
-                        </CardTitle>
-                    </CardHeader>
-                    <CardContent>
+                            <PieChart className="h-4 w-4 text-indigo-500" aria-hidden="true" />
+                        </SparkCardTitle>
+                    </SparkCardHeader>
+                    <SparkCardContent>
                         <div className="text-2xl sm:text-3xl font-bold text-slate-900">{avgSplit.toFixed(1)}%</div>
                         <p className="text-[10px] sm:text-xs text-slate-500 mt-1">Average ownership</p>
-                    </CardContent>
-                </Card>
+                    </SparkCardContent>
+                </SparkCard>
 
-                <Card className="border-slate-200 shadow-sm border-t-4 border-t-violet-500">
-                    <CardHeader className="pb-1 sm:pb-2">
-                        <CardTitle className="text-[10px] sm:text-sm font-medium text-slate-500 flex items-center justify-between">
+                <SparkCard variant="info" className="border-t-4 border-t-violet-500">
+                    <SparkCardHeader className="pb-1 sm:pb-2">
+                        <SparkCardTitle className="text-[10px] sm:text-sm font-medium text-slate-500 flex items-center justify-between">
                             Per-Work Avg
-                            <TrendingUp className="h-4 w-4 text-violet-500" />
-                        </CardTitle>
-                    </CardHeader>
-                    <CardContent>
+                            <TrendingUp className="h-4 w-4 text-violet-500" aria-hidden="true" />
+                        </SparkCardTitle>
+                    </SparkCardHeader>
+                    <SparkCardContent>
                         <div className="text-2xl sm:text-3xl font-bold text-slate-900">
                             ${linkedWorksCount > 0 ? (totalEarnings / linkedWorksCount).toFixed(2) : "0.00"}
                         </div>
                         <p className="text-[10px] sm:text-xs text-slate-500 mt-1">Avg earnings/work</p>
-                    </CardContent>
-                </Card>
+                    </SparkCardContent>
+                </SparkCard>
             </div>
 
             {/* Catalog with Split Visualization */}
@@ -172,9 +178,9 @@ export default async function PortalDashboard() {
                                                     </p>
                                                 </div>
                                                 <div className="flex flex-col items-end gap-1 sm:hidden">
-                                                    <div className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold bg-green-50 text-green-700 border-green-200">
+                                                    <SparkBadge variant="success">
                                                         {ww.splitPercent}%
-                                                    </div>
+                                                    </SparkBadge>
                                                     <span className="text-[10px] text-slate-400">{ww.role || "Writer"}</span>
                                                 </div>
                                             </div>
@@ -188,9 +194,9 @@ export default async function PortalDashboard() {
 
                                             {/* Split badge — visible on larger screens */}
                                             <div className="hidden sm:flex flex-col items-end gap-1 flex-shrink-0">
-                                                <div className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold bg-green-50 text-green-700 border-green-200">
+                                                <SparkBadge variant="success">
                                                     {ww.splitPercent}% Share
-                                                </div>
+                                                </SparkBadge>
                                                 <span className="text-xs text-slate-400">{ww.role || "Writer"}</span>
                                             </div>
                                         </div>

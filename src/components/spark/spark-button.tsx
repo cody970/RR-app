@@ -66,6 +66,7 @@ const SparkButton = React.forwardRef<HTMLButtonElement, SparkButtonProps>(
         ref={ref}
         data-spark="button"
         data-variant={variant ?? "primary"}
+        data-size={size ?? "default"}
         className={cn(sparkButtonVariants({ variant, size }), className)}
         disabled={disabled || loading}
         aria-disabled={disabled || loading}

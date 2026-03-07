@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { SparkButton } from "@/components/spark/spark-button";
+import { SparkCard, SparkCardContent } from "@/components/spark/spark-card";
+import { SparkBadge } from "@/components/spark/spark-badge";
 import { useToast } from "@/components/ui/toast-provider";
 import {
     Shield,
@@ -13,7 +14,6 @@ import {
     DollarSign,
     Music,
     Upload,
-    Loader2,
     ExternalLink,
     Eye,
     ShieldCheck,
@@ -224,41 +224,37 @@ export default function ContentIdPage() {
                     </p>
                 </div>
                 <div className="flex gap-2 px-2">
-                    <Button
-                        variant="outline"
+                    <SparkButton
+                        variant="tertiary"
                         size="sm"
                         onClick={startScan}
-                        disabled={scanning}
-                        className="h-9"
+                        loading={scanning}
+                        aria-label="Scan for content ID usages"
                     >
-                        {scanning ? (
-                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                        ) : (
-                            <Play className="h-4 w-4 mr-2" />
-                        )}
+                        {!scanning && <Play className="h-4 w-4 mr-2" aria-hidden="true" />}
                         Scan for Usages
-                    </Button>
-                    <Button
-                        variant="outline"
+                    </SparkButton>
+                    <SparkButton
+                        variant="tertiary"
                         size="sm"
                         onClick={fetchData}
                         disabled={loading}
-                        className="h-9"
+                        aria-label="Refresh content ID data"
                     >
-                        <RefreshCw className={`h-4 w-4 mr-2 ${loading ? "animate-spin" : ""}`} />
+                        <RefreshCw className={`h-4 w-4 mr-2 ${loading ? "animate-spin" : ""}`} aria-hidden="true" />
                         Refresh
-                    </Button>
+                    </SparkButton>
                 </div>
             </div>
 
             {/* KPI Cards */}
             {overview && (
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 px-2">
-                    <Card className="border-slate-200">
-                        <CardContent className="p-4">
+                    <SparkCard variant="default">
+                        <SparkCardContent className="p-4">
                             <div className="flex items-center gap-2 mb-2">
                                 <div className="h-8 w-8 rounded-lg bg-indigo-50 flex items-center justify-center">
-                                    <Shield className="h-4 w-4 text-indigo-600" />
+                                    <Shield className="h-4 w-4 text-indigo-600" aria-hidden="true" />
                                 </div>
                                 <span className="text-[10px] text-slate-500 uppercase tracking-wider">Coverage</span>
                             </div>
@@ -266,14 +262,14 @@ export default function ContentIdPage() {
                             <p className="text-[10px] text-slate-400 mt-1">
                                 {overview.monitoredRecordings} of {overview.totalRecordings} recordings
                             </p>
-                        </CardContent>
-                    </Card>
+                        </SparkCardContent>
+                    </SparkCard>
 
-                    <Card className="border-slate-200">
-                        <CardContent className="p-4">
+                    <SparkCard variant="highlighted">
+                        <SparkCardContent className="p-4">
                             <div className="flex items-center gap-2 mb-2">
                                 <div className="h-8 w-8 rounded-lg bg-emerald-50 flex items-center justify-center">
-                                    <DollarSign className="h-4 w-4 text-emerald-600" />
+                                    <DollarSign className="h-4 w-4 text-emerald-600" aria-hidden="true" />
                                 </div>
                                 <span className="text-[10px] text-slate-500 uppercase tracking-wider">Revenue</span>
                             </div>
@@ -281,14 +277,14 @@ export default function ContentIdPage() {
                             <p className="text-[10px] text-slate-400 mt-1">
                                 From {overview.totalPlacements} monitors
                             </p>
-                        </CardContent>
-                    </Card>
+                        </SparkCardContent>
+                    </SparkCard>
 
-                    <Card className="border-slate-200">
-                        <CardContent className="p-4">
+                    <SparkCard variant="warning">
+                        <SparkCardContent className="p-4">
                             <div className="flex items-center gap-2 mb-2">
                                 <div className="h-8 w-8 rounded-lg bg-amber-50 flex items-center justify-center">
-                                    <AlertTriangle className="h-4 w-4 text-amber-600" />
+                                    <AlertTriangle className="h-4 w-4 text-amber-600" aria-hidden="true" />
                                 </div>
                                 <span className="text-[10px] text-slate-500 uppercase tracking-wider">Unmonitored</span>
                             </div>
@@ -296,14 +292,14 @@ export default function ContentIdPage() {
                             <p className="text-[10px] text-slate-400 mt-1">
                                 Recordings not on Content ID
                             </p>
-                        </CardContent>
-                    </Card>
+                        </SparkCardContent>
+                    </SparkCard>
 
-                    <Card className="border-slate-200">
-                        <CardContent className="p-4">
+                    <SparkCard variant="info">
+                        <SparkCardContent className="p-4">
                             <div className="flex items-center gap-2 mb-2">
                                 <div className="h-8 w-8 rounded-lg bg-red-50 flex items-center justify-center">
-                                    <ShieldAlert className="h-4 w-4 text-red-600" />
+                                    <ShieldAlert className="h-4 w-4 text-red-600" aria-hidden="true" />
                                 </div>
                                 <span className="text-[10px] text-slate-500 uppercase tracking-wider">Open Issues</span>
                             </div>
@@ -311,8 +307,8 @@ export default function ContentIdPage() {
                             <p className="text-[10px] text-slate-400 mt-1">
                                 Content ID findings
                             </p>
-                        </CardContent>
-                    </Card>
+                        </SparkCardContent>
+                    </SparkCard>
                 </div>
             )}
 
@@ -378,9 +374,9 @@ export default function ContentIdPage() {
                                         <div className="flex items-center gap-2 mt-0.5 text-[10px] text-slate-400">
                                             {claim.artist && <span>{claim.artist}</span>}
                                             <span>•</span>
-                                            <span className={`px-1.5 py-0.5 rounded ${platformBadge(claim.platform)}`}>
+                                            <SparkBadge variant={claim.platform === "YouTube" ? "error" : claim.platform === "Facebook" ? "info" : "default"}>
                                                 {claim.platform}
-                                            </span>
+                                            </SparkBadge>
                                             {claim.totalViews > 0 && (
                                                 <>
                                                     <span>•</span>
@@ -428,25 +424,21 @@ export default function ContentIdPage() {
                         <div className="p-8 text-center text-slate-500 text-sm">Loading...</div>
                     ) : usages.length === 0 ? (
                         <div className="p-8 text-center">
-                            <Video className="h-10 w-10 text-slate-300 mx-auto mb-3" />
+                            <Video className="h-10 w-10 text-slate-300 mx-auto mb-3" aria-hidden="true" />
                             <p className="text-slate-500 text-sm">No usages detected yet.</p>
                             <p className="text-slate-400 text-xs mt-1">
                                 Run a scan to detect where your content is being used.
                             </p>
-                            <Button
-                                variant="outline"
+                            <SparkButton
+                                variant="tertiary"
                                 size="sm"
                                 onClick={startScan}
-                                disabled={scanning}
+                                loading={scanning}
                                 className="mt-4"
                             >
-                                {scanning ? (
-                                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                ) : (
-                                    <Play className="h-4 w-4 mr-2" />
-                                )}
+                                {!scanning && <Play className="h-4 w-4 mr-2" aria-hidden="true" />}
                                 Scan for Usages
-                            </Button>
+                            </SparkButton>
                         </div>
                     ) : (
                         <div className="divide-y divide-slate-100">
@@ -472,9 +464,9 @@ export default function ContentIdPage() {
                                             </span>
                                         </div>
                                         <div className="flex items-center gap-2 mt-0.5 text-[10px] text-slate-400">
-                                            <span className={`px-1.5 py-0.5 rounded ${platformBadge(usage.platform)}`}>
+                                            <SparkBadge variant={usage.platform === "YouTube" ? "error" : usage.platform === "Facebook" ? "info" : "default"}>
                                                 {usage.platform}
-                                            </span>
+                                            </SparkBadge>
                                             {usage.channelName && (
                                                 <>
                                                     <span>•</span>
@@ -496,13 +488,13 @@ export default function ContentIdPage() {
                                         <p className="text-sm font-medium text-emerald-600">
                                             {formatMoney(usage.estimatedRevenue)}
                                         </p>
-                                        <p className={`text-[10px] px-1.5 py-0.5 rounded inline-block ${
-                                            usage.claimStatus === "ACTIVE" ? "bg-emerald-50 text-emerald-700" :
-                                            usage.claimStatus === "DISPUTED" ? "bg-amber-50 text-amber-700" :
-                                            "bg-slate-100 text-slate-600"
-                                        }`}>
+                                        <SparkBadge variant={
+                                            usage.claimStatus === "ACTIVE" ? "success" :
+                                            usage.claimStatus === "DISPUTED" ? "warning" :
+                                            "outline"
+                                        }>
                                             {usage.claimStatus}
-                                        </p>
+                                        </SparkBadge>
                                     </div>
                                 </div>
                             ))}
@@ -521,19 +513,16 @@ export default function ContentIdPage() {
                             <span className="text-xs text-slate-400 font-normal">({unregistered.length})</span>
                         </h2>
                         {selectedIds.size > 0 && (
-                            <Button
+                            <SparkButton
                                 size="sm"
+                                variant="primary"
                                 onClick={submitForMonitoring}
-                                disabled={submitting}
-                                className="h-8 bg-indigo-600 hover:bg-indigo-700 text-white text-xs"
+                                loading={submitting}
+                                aria-label={`Submit ${selectedIds.size} recording(s) for Content ID monitoring`}
                             >
-                                {submitting ? (
-                                    <Loader2 className="h-3 w-3 mr-1.5 animate-spin" />
-                                ) : (
-                                    <Upload className="h-3 w-3 mr-1.5" />
-                                )}
+                                {!submitting && <Upload className="h-3 w-3 mr-1.5" aria-hidden="true" />}
                                 Submit {selectedIds.size} for Monitoring
-                            </Button>
+                            </SparkButton>
                         )}
                     </div>
 
@@ -581,9 +570,9 @@ export default function ContentIdPage() {
                                                 )}
                                             </div>
                                         </div>
-                                        <span className="text-[10px] text-amber-600 bg-amber-50 px-2 py-0.5 rounded flex-shrink-0">
+                                        <SparkBadge variant="warning" className="flex-shrink-0">
                                             Not monitored
-                                        </span>
+                                        </SparkBadge>
                                     </div>
                                 ))}
                             </div>
