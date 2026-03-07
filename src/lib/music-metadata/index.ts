@@ -103,3 +103,36 @@ export {
   getWellKnownCode,
   type WellKnownSociety,
 } from './societies';
+// ──── Society Lookup (Cached) ─────────────────────────────────────────────────────
+export {
+  getSocietyByCode as getSocietyByCodeCached,
+  getSocietyByName as getSocietyByNameCached,
+  searchSocieties as searchSocietiesCached,
+  getSocietiesByCountry as getSocietiesByCountryCached,
+  clearSocietyCache,
+  getSocietyCacheStats,
+  type SocietyCacheStats,
+} from './societies-cached';
+
+// ──── CWR Compression ────────────────────────────────────────────────────────
+export {
+  compressCwr,
+  decompressCwr,
+  compressCwrFile,
+  decompressCwrFile,
+  getCompressionStats,
+  type CompressionOptions,
+  type CompressionStats,
+} from './cwr-compression';
+
+// ──── Bulk ACK Import ────────────────────────────────────────────────────────
+export {
+  importAckFiles,
+  validateAckFiles,
+  AckImportBatchProcessor,
+  type AckFileItem,
+  type AckProcessResult,
+  type BatchImportResult,
+  type BulkAckImportOptions,
+  type AckValidationError,
+} from './bulk-ack-import';
