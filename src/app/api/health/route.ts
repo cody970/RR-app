@@ -20,13 +20,14 @@ export async function GET() {
                 redis: "up"
             }
         });
-    } catch (error: any) {
+    } catch (error: unknown) {
+        const errorMessage = error instanceof Error ? error.message : "Unknown error";
         console.error("Health check failed:", error);
         return NextResponse.json(
             {
                 status: "unhealthy",
                 timestamp: new Date().toISOString(),
-                error: error.message,
+                error: errorMessage,
                 services: {
                     database: "unknown",
                     redis: "unknown"

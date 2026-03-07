@@ -4,7 +4,7 @@ import { authOptions } from "@/lib/auth/auth";
 import { db } from "@/lib/infra/db";
 
 // GET: List all license requests for the org
-export async function GET(req: NextRequest) {
+export async function GET(_req: NextRequest) {
     try {
         const session = await getServerSession(authOptions);
         if (!session?.user) return new Response("Unauthorized", { status: 401 });
@@ -20,8 +20,9 @@ export async function GET(req: NextRequest) {
         });
 
         return NextResponse.json(requests);
-    } catch (err: any) {
-        return NextResponse.json({ error: err.message }, { status: 500 });
+    } catch (err: unknown) {
+        const errorMessage = err instanceof Error ? err.message : "Unknown error";
+        return NextResponse.json({ error: errorMessage }, { status: 500 });
     }
 }
 
@@ -56,7 +57,8 @@ export async function POST(req: NextRequest) {
         });
 
         return NextResponse.json(request);
-    } catch (err: any) {
-        return NextResponse.json({ error: err.message }, { status: 500 });
+    } catch (err: unknown) {
+        const errorMessage = err instanceof Error ? err.message : "Unknown error";
+        return NextResponse.json({ error: errorMessage }, { status: 500 });
     }
 }

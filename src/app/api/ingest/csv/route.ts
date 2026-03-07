@@ -2,13 +2,14 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth/auth";
 import { db } from "@/lib/infra/db";
-import { fileSchemas, TemplateType, industryTemplates, IndustrySource } from "@/lib/reports/templates";
+import { fileSchemas, industryTemplates, IndustrySource } from "@/lib/reports/templates";
 import { autoMapHeaders, applyMapping } from "@/lib/ingest/mapping-utils";
 import Papa from "papaparse";
 import { checkRateLimit } from "@/lib/infra/rate-limit";
 import { validatePermission } from "@/lib/auth/rbac";
 import { logger } from "@/lib/infra/logger";
 import { ApiErrors } from "@/lib/api/error-response";
+import { z } from "zod";
 
 export async function POST(req: Request) {
     try {
@@ -23,8 +24,9 @@ export async function POST(req: Request) {
         // RBAC Check
         try {
             validatePermission(role, "CATALOG_EDIT");
-        } catch (e: any) {
-            return ApiErrors.Forbidden(e.message);
+        } catch (e: unknown) {
+            const errorMessage = e instanceof Error ? e.message : "Permission denied";
+            return ApiErrors.Forbidden(errorMessage);
         }
 
         // Reusable Rate Limiting
