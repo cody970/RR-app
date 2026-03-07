@@ -664,7 +664,9 @@ describe("rate anomaly — society-specific rates", () => {
         }
     });
 
-    it("should skip lines with unknown society", async () => {
+    it("should use default ASCAP rates for unknown societies", async () => {
+        // With the new currency-aware implementation, unknown societies
+        // fall back to ASCAP rates for analysis (better to catch potential issues)
         setupDefaultMocks({
             statementLines: [
                 {
@@ -672,7 +674,7 @@ describe("rate anomaly — society-specific rates", () => {
                     title: "Unknown Society Song",
                     uses: 1000,
                     amount: 1,
-                    rate: 0.001,
+                    rate: 0.001, // Very low rate - should trigger anomaly vs ASCAP avg of $0.08
                     society: "UNKNOWN_SOCIETY",
                     workId: "work-1",
                 },
@@ -681,13 +683,16 @@ describe("rate anomaly — society-specific rates", () => {
 
         await runDiscrepancyChecks(STATEMENT_ID, ORG_ID);
 
+        // The rate is 0.001 which is < 0.08 * 0.3 = 0.024, so should flag anomaly
         if (mockCreateMany.mock.calls.length > 0) {
             const createCall = mockCreateMany.mock.calls[0]?.[0];
             if (createCall?.data) {
                 const finding = createCall.data.find(
                     (d: Record<string, unknown>) => d.type === "STATEMENT_RATE_ANOMALY"
                 );
-                expect(finding).toBeUndefined();
+                // Now using default ASCAP rates, so low rates will be flagged
+                expect(finding).toBeDefined();
+                expect(finding?.severity).toBeDefined();
             }
         }
     });

@@ -10,6 +10,7 @@
 
 import { db } from "@/lib/infra/db";
 import { round, roundMoney } from "@/lib/finance/math-utils";
+import { convertToUSD, type CurrencyCode } from "@/lib/finance/currency";
 
 // ---------- Types ----------
 
@@ -24,14 +25,62 @@ export interface Discrepancy {
 }
 
 /**
- * Typical per-use rates by society (USD)
+ * Typical per-use rates by society, stored in their native currency.
+ * Rates represent typical minimum and average per-use royalty rates.
  */
-const TYPICAL_RATES: Record<string, { min: number; avg: number }> = {
-    ASCAP: { min: 0.01, avg: 0.08 },
-    BMI: { min: 0.01, avg: 0.07 },
-    MLC: { min: 0.003, avg: 0.004 },
-    SOUNDEXCHANGE: { min: 0.001, avg: 0.0025 },
+const TYPICAL_RATES: Record<string, { min: number; avg: number; currency: CurrencyCode }> = {
+    // US societies (USD)
+    ASCAP: { min: 0.01, avg: 0.08, currency: "USD" },
+    BMI: { min: 0.01, avg: 0.07, currency: "USD" },
+    SESAC: { min: 0.01, avg: 0.06, currency: "USD" },
+    MLC: { min: 0.003, avg: 0.004, currency: "USD" },
+    SOUNDEXCHANGE: { min: 0.001, avg: 0.0025, currency: "USD" },
+    HFA: { min: 0.005, avg: 0.01, currency: "USD" },
+
+    // UK societies (GBP)
+    PRS: { min: 0.008, avg: 0.065, currency: "GBP" },
+    MCPS: { min: 0.004, avg: 0.008, currency: "GBP" },
+    PPL: { min: 0.001, avg: 0.003, currency: "GBP" },
+
+    // European societies (EUR)
+    GEMA: { min: 0.01, avg: 0.09, currency: "EUR" },
+    SACEM: { min: 0.008, avg: 0.07, currency: "EUR" },
+    SIAE: { min: 0.007, avg: 0.06, currency: "EUR" },
+    SGAE: { min: 0.006, avg: 0.05, currency: "EUR" },
+    BUMA: { min: 0.008, avg: 0.06, currency: "EUR" },
+    STEMRA: { min: 0.004, avg: 0.008, currency: "EUR" },
+
+    // Nordic societies
+    STIM: { min: 0.08, avg: 0.65, currency: "SEK" },
+    TONO: { min: 0.08, avg: 0.60, currency: "NOK" },
+    KODA: { min: 0.05, avg: 0.45, currency: "DKK" },
+
+    // Other international
+    SOCAN: { min: 0.01, avg: 0.09, currency: "CAD" },
+    APRA: { min: 0.012, avg: 0.10, currency: "AUD" },
+    AMCOS: { min: 0.005, avg: 0.012, currency: "AUD" },
+    JASRAC: { min: 1.5, avg: 12.0, currency: "JPY" },
+    KOMCA: { min: 15, avg: 100, currency: "KRW" },
+    SAMRO: { min: 0.15, avg: 1.2, currency: "ZAR" },
 };
+
+/**
+ * Get typical rates for a society, converting to USD for comparison.
+ * Falls back to ASCAP rates if society is unknown.
+ */
+function getTypicalRatesInUSD(society: string): { min: number; avg: number } {
+    const rates = TYPICAL_RATES[society.toUpperCase()] || TYPICAL_RATES.ASCAP;
+
+    if (rates.currency === "USD") {
+        return { min: rates.min, avg: rates.avg };
+    }
+
+    // Convert rates to USD for comparison
+    const minUSD = convertToUSD(rates.min, rates.currency);
+    const avgUSD = convertToUSD(rates.avg, rates.currency);
+
+    return { min: minUSD, avg: avgUSD };
+}
 
 // ---------- Main Entry ----------
 
@@ -147,6 +196,7 @@ async function checkMissingWorks(statementId: string, orgId: string): Promise<Di
 
 /**
  * Flag statement lines where per-use rate is significantly below society average.
+ * Now currency-aware: converts rates to USD for comparison across societies.
  */
 async function checkRateAnomalies(statementId: string, orgId: string): Promise<Discrepancy[]> {
     const lines = await db.statementLine.findMany({
@@ -156,6 +206,8 @@ async function checkRateAnomalies(statementId: string, orgId: string): Promise<D
             title: true,
             uses: true,
             amount: true,
+            amountOriginal: true,
+            currency: true,
             rate: true,
             society: true,
             workId: true,
@@ -166,9 +218,10 @@ async function checkRateAnomalies(statementId: string, orgId: string): Promise<D
 
     for (const line of lines) {
         const society = line.society || "ASCAP";
-        const typical = TYPICAL_RATES[society];
-        if (!typical) continue;
+        // Get typical rates in USD for fair comparison
+        const typical = getTypicalRatesInUSD(society);
 
+        // Use USD amount for comparison (amount field is already converted to USD)
         const rate = line.rate || (line.uses > 0 ? round(line.amount / line.uses, 6) : 0);
         if (rate <= 0) continue;
 

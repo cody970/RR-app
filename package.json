@@ -10,6 +10,8 @@
     "dev:worker": "tsx watch src/jobs/audit-worker.ts",
     "worker:scan": "tsx src/jobs/scan-worker.ts",
     "dev:worker:scan": "tsx watch src/jobs/scan-worker.ts",
+    "worker:exchange-rate": "tsx src/jobs/exchange-rate-worker.ts",
+    "dev:worker:exchange-rate": "tsx watch src/jobs/exchange-rate-worker.ts",
     "lint": "eslint",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",

@@ -361,3 +361,255 @@ export function formatCurrencyCompact(
     }
     return `${symbol}${amount.toFixed(info?.decimals ?? 2)}`;
 }
+
+// ---------- Historical Rate Conversion ----------
+
+export interface HistoricalConversionResult extends ConversionResult {
+    isHistorical: boolean;
+    rateDate: string;
+}
+
+/**
+ * Convert an amount using historical exchange rates from the database.
+ * Falls back to current rates if no historical rate is found for the date.
+ *
+ * @param amount - The amount to convert
+ * @param fromCurrency - Source currency code
+ * @param toCurrency - Target currency code
+ * @param date - The date for which to use historical rates
+ * @returns Conversion result with rate information
+ */
+export async function convertCurrency(
+    amount: number,
+    fromCurrency: string,
+    toCurrency: string,
+    date?: Date,
+): Promise<HistoricalConversionResult> {
+    const from = fromCurrency.toUpperCase();
+    const to = toCurrency.toUpperCase();
+
+    if (from === to) {
+        return {
+            originalAmount: amount,
+            originalCurrency: from,
+            convertedAmount: amount,
+            targetCurrency: to,
+            rate: 1.0,
+            rateTimestamp: rateTimestamp,
+            isHistorical: false,
+            rateDate: new Date().toISOString().split('T')[0],
+        };
+    }
+
+    // If no date provided, use current rates
+    if (!date) {
+        const result = convert(amount, from, to);
+        return {
+            ...result,
+            isHistorical: false,
+            rateDate: new Date().toISOString().split('T')[0],
+        };
+    }
+
+    // Try to fetch historical rates from database
+    try {
+        const { db } = await import("@/lib/infra/db");
+        const dateOnly = new Date(date.toISOString().split('T')[0]);
+
+        // Get rates for both currencies relative to USD
+        const [fromRateRecord, toRateRecord] = await Promise.all([
+            from === "USD" ? null : db.exchangeRate.findUnique({
+                where: {
+                    date_baseCurrency_currency: {
+                        date: dateOnly,
+                        baseCurrency: "USD",
+                        currency: from,
+                    },
+                },
+            }),
+            to === "USD" ? null : db.exchangeRate.findUnique({
+                where: {
+                    date_baseCurrency_currency: {
+                        date: dateOnly,
+                        baseCurrency: "USD",
+                        currency: to,
+                    },
+                },
+            }),
+        ]);
+
+        const fromRate = from === "USD" ? 1.0 : (fromRateRecord?.rate ?? getRate(from));
+        const toRate = to === "USD" ? 1.0 : (toRateRecord?.rate ?? getRate(to));
+
+        const isHistorical = !!(fromRateRecord || toRateRecord || from === "USD" || to === "USD");
+
+        // Convert: from → USD → to
+        const usdAmount = amount / fromRate;
+        const convertedAmount = usdAmount * toRate;
+
+        // Round to appropriate decimal places
+        const info = CURRENCY_REGISTRY[to as CurrencyCode];
+        const decimals = info?.decimals ?? 2;
+        const rounded = Math.round(convertedAmount * Math.pow(10, decimals)) / Math.pow(10, decimals);
+
+        return {
+            originalAmount: amount,
+            originalCurrency: from,
+            convertedAmount: rounded,
+            targetCurrency: to,
+            rate: toRate / fromRate,
+            rateTimestamp: dateOnly.toISOString(),
+            isHistorical,
+            rateDate: dateOnly.toISOString().split('T')[0],
+        };
+    } catch (error) {
+        // Fallback to current rates if database lookup fails
+        console.warn("[Currency] Failed to fetch historical rates, using current rates:", error);
+        const result = convert(amount, from, to);
+        return {
+            ...result,
+            isHistorical: false,
+            rateDate: new Date().toISOString().split('T')[0],
+        };
+    }
+}
+
+/**
+ * Store an exchange rate in the database.
+ *
+ * @param date - Date for the rate
+ * @param currency - Currency code
+ * @param rate - Exchange rate (1 USD = rate currency)
+ * @param source - Source of the rate
+ */
+export async function storeExchangeRate(
+    date: Date,
+    currency: string,
+    rate: number,
+    source?: string,
+): Promise<void> {
+    const { db } = await import("@/lib/infra/db");
+    const dateOnly = new Date(date.toISOString().split('T')[0]);
+
+    await db.exchangeRate.upsert({
+        where: {
+            date_baseCurrency_currency: {
+                date: dateOnly,
+                baseCurrency: "USD",
+                currency: currency.toUpperCase(),
+            },
+        },
+        update: {
+            rate,
+            source,
+        },
+        create: {
+            date: dateOnly,
+            baseCurrency: "USD",
+            currency: currency.toUpperCase(),
+            rate,
+            source,
+        },
+    });
+}
+
+/**
+ * Get the exchange rate for a specific date and currency.
+ * Returns undefined if no rate exists for that date.
+ */
+export async function getHistoricalRate(
+    date: Date,
+    currency: string,
+): Promise<{ rate: number; source: string | null } | undefined> {
+    if (currency.toUpperCase() === "USD") {
+        return { rate: 1.0, source: "base" };
+    }
+
+    try {
+        const { db } = await import("@/lib/infra/db");
+        const dateOnly = new Date(date.toISOString().split('T')[0]);
+
+        const record = await db.exchangeRate.findUnique({
+            where: {
+                date_baseCurrency_currency: {
+                    date: dateOnly,
+                    baseCurrency: "USD",
+                    currency: currency.toUpperCase(),
+                },
+            },
+        });
+
+        if (record) {
+            return { rate: record.rate, source: record.source };
+        }
+        return undefined;
+    } catch (error) {
+        console.warn("[Currency] Failed to fetch historical rate:", error);
+        return undefined;
+    }
+}
+
+/**
+ * Fetch and store exchange rates from an external API.
+ * Used by the exchange rate worker to update daily rates.
+ */
+export async function fetchAndStoreRates(date: Date = new Date()): Promise<{
+    success: boolean;
+    ratesStored: number;
+    source: string;
+}> {
+    const apiKey = process.env.OPENEXCHANGERATES_API_KEY || process.env.ORE_API_KEY;
+
+    if (!apiKey) {
+        // Use fallback rates in development
+        console.log("[Currency] No API key configured, storing simulated rates");
+        const simulatedRates = { ...CURRENT_RATES };
+        let stored = 0;
+
+        for (const [currency, rate] of Object.entries(simulatedRates)) {
+            if (currency === "USD") continue;
+            await storeExchangeRate(date, currency, rate, "simulated");
+            stored++;
+        }
+
+        return { success: true, ratesStored: stored, source: "simulated" };
+    }
+
+    try {
+        console.log("[Currency] Fetching rates from Open Exchange Rates API");
+        const response = await fetch(
+            `https://openexchangerates.org/api/latest.json?app_id=${apiKey}`
+        );
+
+        if (!response.ok) {
+            throw new Error(`API responded with ${response.status}`);
+        }
+
+        const data = await response.json();
+        let stored = 0;
+
+        for (const code of Object.keys(CURRENCY_REGISTRY)) {
+            if (code === "USD") continue;
+            const rate = data.rates[code];
+            if (rate) {
+                await storeExchangeRate(date, code, rate, "openexchangerates");
+                stored++;
+            }
+        }
+
+        // Also update in-memory rates
+        for (const code of Object.keys(CURRENCY_REGISTRY)) {
+            if (code !== "USD" && data.rates[code]) {
+                CURRENT_RATES[code] = data.rates[code];
+            }
+        }
+        lastFetch = Date.now();
+        rateTimestamp = new Date().toISOString();
+
+        console.log(`[Currency] Stored ${stored} exchange rates from API`);
+        return { success: true, ratesStored: stored, source: "openexchangerates" };
+    } catch (error) {
+        console.error("[Currency] Failed to fetch rates from API:", error);
+        return { success: false, ratesStored: 0, source: "error" };
+    }
+}

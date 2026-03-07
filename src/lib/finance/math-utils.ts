@@ -5,6 +5,15 @@
  * to ensure consistent rounding and precision.
  */
 
+// Re-export currency conversion functions for convenience
+export {
+    convert,
+    convertToUSD,
+    convertFromUSD,
+    convertCurrency,
+    formatCurrency,
+} from "@/lib/finance/currency";
+
 /**
  * Rounds a number to a specific number of decimal places.
  * Default is 4 for intermediate calculations (e.g., shares).

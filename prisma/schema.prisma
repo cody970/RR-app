@@ -115,6 +115,7 @@ model Writer {
   publisherFee  Float?         // Publisher admin fee percentage (0-100)
   notes         String?
   accountNumber String?        // Internal account reference
+  preferredCurrency String?    // Preferred currency for payouts (ISO 4217 code)
   organization  Organization   @relation(fields: [orgId], references: [id])
   orgId         String
   works         WorkWriter[]
@@ -146,6 +147,7 @@ model Publisher {
   prSharePercent  Float?       // PR share (0-100)
   mrSharePercent  Float?       // MR share (0-100)
   srSharePercent  Float?       // SR share (0-100)
+  preferredCurrency String?    // Preferred currency for payouts (ISO 4217 code)
   organization  Organization   @relation(fields: [orgId], references: [id])
   orgId         String
   users         User[]
@@ -909,8 +911,12 @@ model PayeeLedger {
   publisherId     String?
   statementLineId String?  // Source: statement ingest
   licenseId       String?  // Source: sync license
-  amount          Float    // Payee portion (revenue * splitPercent)
-  currency        String   @default("USD")
+  amount          Float    // Payee portion in base currency (revenue * splitPercent)
+  amountOriginal  Float?   // Original amount before conversion (if different currency)
+  currencyOriginal String? // Original currency code before conversion
+  currency        String   @default("USD") // Currency of the amount field
+  exchangeRate    Float?   // Exchange rate used for conversion at time of entry
+  exchangeRateDate DateTime? // Date of the exchange rate used
   type            String   // EARNING, ADVANCE_RECOUPMENT, FEE
   status          String   @default("UNPAID") // UNPAID, PAID, CARRIED_FORWARD
   payoutId        String?
@@ -950,4 +956,20 @@ model Payout {
   @@index([orgId])
   @@index([writerId])
   @@index([publisherId])
+}
+
+// ---------- Exchange Rates for Multi-Currency Support ----------
+
+model ExchangeRate {
+  id           String   @id @default(cuid())
+  date         DateTime @db.Date  // Date for which this rate applies
+  baseCurrency String   @default("USD") // Base currency (typically USD)
+  currency     String   // Target currency code (EUR, GBP, etc.)
+  rate         Float    // Exchange rate: 1 baseCurrency = rate currency
+  source       String?  // Source of rate (e.g., "ECB", "OPENEXCHANGERATES")
+  createdAt    DateTime @default(now())
+
+  @@unique([date, baseCurrency, currency])
+  @@index([date])
+  @@index([currency])
 }
