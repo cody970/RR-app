@@ -2,7 +2,7 @@
 
 import { useRef, useMemo } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
-import { Environment, Float, Sphere, MeshDistortMaterial } from "@react-three/drei";
+import { Float, Sphere, MeshDistortMaterial } from "@react-three/drei";
 import * as THREE from "three";
 
 function SoundWaves() {
@@ -99,7 +99,7 @@ export function HeroVisualizer() {
                 <SoundWaves />
                 <FloatingShapes />
 
-                <Environment preset="city" />
+                {/* Using basic lighting instead of Environment to avoid HDR file dependency */}
             </Canvas>
         </div>
     );

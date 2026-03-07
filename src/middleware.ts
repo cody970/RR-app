@@ -1,12 +1,15 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
-import { randomBytes } from 'crypto';
 
 /**
  * Generate a cryptographic nonce for CSP
+ * Using browser-compatible approach for Edge Runtime
  */
 function generateNonce(): string {
-    return randomBytes(16).toString('base64');
+    // Generate a random nonce without using Node.js crypto
+    const array = new Uint8Array(16);
+    crypto.getRandomValues(array);
+    return btoa(String.fromCharCode(...array));
 }
 
 /**
