@@ -44,6 +44,9 @@ model Organization {
   workAcknowledgements WorkAcknowledgement[]
   cwrExports       CwrExport[]
   ackImports       AckImport[]
+  // Automated Ingestion
+  ingestionSources IngestionSource[]
+  ingestionLogs    IngestionLog[]
   currency      String         @default("USD")
   
   // Stripe Billing Fields
@@ -950,4 +953,59 @@ model Payout {
   @@index([orgId])
   @@index([writerId])
   @@index([publisherId])
+}
+
+// -----------------------------------------------------------------------------
+// Automated Statement Ingestion
+// -----------------------------------------------------------------------------
+
+model IngestionSource {
+  id              String       @id @default(cuid())
+  orgId           String
+  name            String       // e.g., "ASCAP Email", "BMI Auto-Forward"
+  type            String       @default("EMAIL") // EMAIL, API, SFTP
+  ingestEmail     String?      @unique // Unique email address for this source
+  senderFilter    String?      // Comma-separated allowed sender emails
+  societyHint     String?      // ASCAP, BMI, MLC, SOUNDEXCHANGE — helps parser
+  enabled         Boolean      @default(true)
+  // SFTP config (encrypted credentials stored separately or in env)
+  sftpHost        String?
+  sftpPort        Int?
+  sftpUsername    String?
+  sftpPath        String?      // Remote directory path
+  // API config
+  apiEndpoint     String?
+  // Schedule for automated polling (cron expression)
+  schedule        String?      // e.g., "0 0 * * *" for daily at midnight
+  lastSyncAt      DateTime?
+  lastReceivedAt  DateTime?
+  totalImported   Int          @default(0)
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  organization    Organization @relation(fields: [orgId], references: [id])
+  logs            IngestionLog[]
+
+  @@index([orgId])
+  @@index([ingestEmail])
+  @@index([type])
+}
+
+model IngestionLog {
+  id              String       @id @default(cuid())
+  sourceId        String
+  orgId           String
+  senderEmail     String
+  subject         String?
+  status          String       @default("PENDING") // PENDING, SUCCESS, FAILED, SKIPPED
+  message         String?
+  filesProcessed  Int          @default(0)
+  createdAt       DateTime     @default(now())
+
+  source          IngestionSource @relation(fields: [sourceId], references: [id])
+  organization    Organization    @relation(fields: [orgId], references: [id])
+
+  @@index([sourceId])
+  @@index([orgId])
+  @@index([createdAt])
 }

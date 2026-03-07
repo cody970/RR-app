@@ -17,7 +17,9 @@ import {
     ToggleRight,
     Loader2,
     Inbox,
-    AlertTriangle,
+    Server,
+    Globe,
+    Play,
 } from "lucide-react";
 
 // ---------- Types ----------
@@ -29,8 +31,15 @@ interface IngestionSource {
     ingestEmail: string | null;
     senderFilter: string | null;
     societyHint: string | null;
+    sftpHost: string | null;
+    sftpPort: number | null;
+    sftpUsername: string | null;
+    sftpPath: string | null;
+    apiEndpoint: string | null;
+    schedule: string | null;
     enabled: boolean;
     lastReceivedAt: string | null;
+    lastSyncAt: string | null;
     totalImported: number;
     createdAt: string;
 }
@@ -45,6 +54,8 @@ interface IngestionLog {
     createdAt: string;
 }
 
+type SourceType = "EMAIL" | "SFTP" | "API";
+
 // ---------- Component ----------
 
 export default function ConnectionsPage() {
@@ -53,12 +64,21 @@ export default function ConnectionsPage() {
     const [loading, setLoading] = useState(true);
     const [showAddForm, setShowAddForm] = useState(false);
     const [saving, setSaving] = useState(false);
+    const [fetching, setFetching] = useState<string | null>(null);
     const toast = useToast();
 
     // Add form state
+    const [formType, setFormType] = useState<SourceType>("EMAIL");
     const [formName, setFormName] = useState("");
     const [formSociety, setFormSociety] = useState("");
     const [formSenderFilter, setFormSenderFilter] = useState("");
+    // SFTP fields
+    const [formSftpHost, setFormSftpHost] = useState("");
+    const [formSftpPort, setFormSftpPort] = useState("22");
+    const [formSftpUsername, setFormSftpUsername] = useState("");
+    const [formSftpPath, setFormSftpPath] = useState("/");
+    // Schedule field
+    const [formSchedule, setFormSchedule] = useState("");
 
     const fetchData = useCallback(async () => {
         try {
@@ -76,12 +96,13 @@ export default function ConnectionsPage() {
                 const data = await logsRes.json();
                 setLogs(data.logs || []);
             }
-        } catch (e) {
-            console.error(e);
+        } catch (err) {
+            console.error(err);
             toast.error("Failed to load connections");
         } finally {
             setLoading(false);
         }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     useEffect(() => {
@@ -94,33 +115,83 @@ export default function ConnectionsPage() {
             return;
         }
 
+        // Validate SFTP fields if SFTP type selected
+        if (formType === "SFTP" && !formSftpHost.trim()) {
+            toast.error("Please enter an SFTP host");
+            return;
+        }
+
         setSaving(true);
         try {
+            const payload: Record<string, unknown> = {
+                name: formName,
+                type: formType,
+                societyHint: formSociety || undefined,
+            };
+
+            if (formType === "EMAIL") {
+                payload.senderFilter = formSenderFilter || undefined;
+            } else if (formType === "SFTP") {
+                payload.sftpHost = formSftpHost;
+                payload.sftpPort = parseInt(formSftpPort) || 22;
+                payload.sftpUsername = formSftpUsername || undefined;
+                payload.sftpPath = formSftpPath || "/";
+                payload.schedule = formSchedule || undefined;
+            } else if (formType === "API") {
+                payload.schedule = formSchedule || undefined;
+            }
+
             const res = await fetch("/api/settings/connections", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    name: formName,
-                    societyHint: formSociety || undefined,
-                    senderFilter: formSenderFilter || undefined,
-                }),
+                body: JSON.stringify(payload),
             });
 
             if (res.ok) {
                 toast.success("Ingestion source created!");
                 setShowAddForm(false);
-                setFormName("");
-                setFormSociety("");
-                setFormSenderFilter("");
+                resetForm();
                 await fetchData();
             } else {
                 const data = await res.json().catch(() => ({}));
                 toast.error(data.error || "Failed to create source");
             }
-        } catch (e) {
+        } catch {
             toast.error("Network error");
         } finally {
             setSaving(false);
+        }
+    };
+
+    const resetForm = () => {
+        setFormType("EMAIL");
+        setFormName("");
+        setFormSociety("");
+        setFormSenderFilter("");
+        setFormSftpHost("");
+        setFormSftpPort("22");
+        setFormSftpUsername("");
+        setFormSftpPath("/");
+        setFormSchedule("");
+    };
+
+    const triggerFetch = async (id: string) => {
+        setFetching(id);
+        try {
+            const res = await fetch(`/api/settings/connections/${id}/fetch`, {
+                method: "POST",
+            });
+            if (res.ok) {
+                toast.success("Fetch job triggered! Check activity log for results.");
+                await fetchData();
+            } else {
+                const data = await res.json().catch(() => ({}));
+                toast.error(data.error || "Failed to trigger fetch");
+            }
+        } catch {
+            toast.error("Network error");
+        } finally {
+            setFetching(null);
         }
     };
 
@@ -135,7 +206,7 @@ export default function ConnectionsPage() {
                 toast.success(enabled ? "Source disabled" : "Source enabled");
                 await fetchData();
             }
-        } catch (e) {
+        } catch {
             toast.error("Failed to update source");
         }
     };
@@ -150,7 +221,7 @@ export default function ConnectionsPage() {
                 toast.success("Source deleted");
                 await fetchData();
             }
-        } catch (e) {
+        } catch {
             toast.error("Failed to delete source");
         }
     };
@@ -169,6 +240,15 @@ export default function ConnectionsPage() {
         }
     };
 
+    const typeIcon = (type: string) => {
+        switch (type) {
+            case "EMAIL": return <Mail className="h-4 w-4" />;
+            case "SFTP": return <Server className="h-4 w-4" />;
+            case "API": return <Globe className="h-4 w-4" />;
+            default: return <Settings2 className="h-4 w-4" />;
+        }
+    };
+
     return (
         <div className="space-y-6">
             {/* Header */}
@@ -178,7 +258,7 @@ export default function ConnectionsPage() {
                         Statement Connections
                     </h1>
                     <p className="text-slate-500 px-2 text-sm">
-                        Set up automated ingestion of royalty statements via email forwarding.
+                        Set up automated ingestion of royalty statements via email, SFTP, or API.
                     </p>
                 </div>
                 <div className="flex gap-2 px-2">
@@ -206,15 +286,18 @@ export default function ConnectionsPage() {
             {/* How It Works */}
             <div className="mx-2 p-4 bg-indigo-50 border border-indigo-200 rounded-xl">
                 <h3 className="text-sm font-semibold text-indigo-900 mb-2 flex items-center gap-2">
-                    <Mail className="h-4 w-4" />
-                    How Email Ingestion Works
+                    <Settings2 className="h-4 w-4" />
+                    Automated Statement Ingestion
                 </h3>
-                <ol className="text-xs text-indigo-700 space-y-1 list-decimal list-inside">
-                    <li>Create an ingestion source below — you&apos;ll get a unique email address</li>
-                    <li>Set up auto-forwarding from your PRO (ASCAP, BMI, etc.) to that address</li>
-                    <li>When statements arrive, they&apos;re automatically parsed, imported, and audited</li>
-                    <li>Check the activity log below to monitor incoming statements</li>
-                </ol>
+                <div className="text-xs text-indigo-700 space-y-2">
+                    <p className="font-medium">Choose from three ingestion methods:</p>
+                    <ul className="space-y-1 ml-4 list-disc">
+                        <li><strong>Email:</strong> Forward statement emails to a unique address</li>
+                        <li><strong>SFTP:</strong> Automatically fetch from society SFTP servers on schedule</li>
+                        <li><strong>API:</strong> Pull data directly from MLC/SoundExchange APIs</li>
+                    </ul>
+                    <p className="text-indigo-600 mt-2">All sources auto-parse, import, and run discrepancy checks.</p>
+                </div>
             </div>
 
             {/* Add Form */}
@@ -224,6 +307,30 @@ export default function ConnectionsPage() {
                         <Settings2 className="h-4 w-4" />
                         New Ingestion Source
                     </h3>
+
+                    {/* Source Type Selection */}
+                    <div className="mb-4">
+                        <label className="block text-xs font-medium text-slate-700 mb-2">
+                            Source Type *
+                        </label>
+                        <div className="flex gap-2">
+                            {(["EMAIL", "SFTP", "API"] as const).map((type) => (
+                                <button
+                                    key={type}
+                                    onClick={() => setFormType(type)}
+                                    className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-sm transition-colors ${
+                                        formType === type
+                                            ? "border-indigo-500 bg-indigo-50 text-indigo-700"
+                                            : "border-slate-200 hover:border-slate-300 text-slate-600"
+                                    }`}
+                                >
+                                    {typeIcon(type)}
+                                    {type}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                         <div>
                             <label className="block text-xs font-medium text-slate-700 mb-1">
@@ -239,7 +346,7 @@ export default function ConnectionsPage() {
                         </div>
                         <div>
                             <label className="block text-xs font-medium text-slate-700 mb-1">
-                                Society (optional)
+                                Society {formType === "API" ? "*" : "(optional)"}
                             </label>
                             <select
                                 value={formSociety}
@@ -253,24 +360,101 @@ export default function ConnectionsPage() {
                                 <option value="SOUNDEXCHANGE">SoundExchange</option>
                             </select>
                         </div>
-                        <div>
-                            <label className="block text-xs font-medium text-slate-700 mb-1">
-                                Allowed Senders (optional)
-                            </label>
-                            <input
-                                type="text"
-                                value={formSenderFilter}
-                                onChange={(e) => setFormSenderFilter(e.target.value)}
-                                placeholder="e.g., statements@ascap.com"
-                                className="w-full h-9 px-3 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500"
-                            />
-                        </div>
+
+                        {/* Email-specific fields */}
+                        {formType === "EMAIL" && (
+                            <div>
+                                <label className="block text-xs font-medium text-slate-700 mb-1">
+                                    Allowed Senders (optional)
+                                </label>
+                                <input
+                                    type="text"
+                                    value={formSenderFilter}
+                                    onChange={(e) => setFormSenderFilter(e.target.value)}
+                                    placeholder="e.g., statements@ascap.com"
+                                    className="w-full h-9 px-3 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                                />
+                            </div>
+                        )}
+
+                        {/* SFTP-specific fields */}
+                        {formType === "SFTP" && (
+                            <>
+                                <div>
+                                    <label className="block text-xs font-medium text-slate-700 mb-1">
+                                        SFTP Host *
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={formSftpHost}
+                                        onChange={(e) => setFormSftpHost(e.target.value)}
+                                        placeholder="sftp.society.com"
+                                        className="w-full h-9 px-3 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-medium text-slate-700 mb-1">
+                                        Port
+                                    </label>
+                                    <input
+                                        type="number"
+                                        value={formSftpPort}
+                                        onChange={(e) => setFormSftpPort(e.target.value)}
+                                        placeholder="22"
+                                        className="w-full h-9 px-3 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-medium text-slate-700 mb-1">
+                                        Username
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={formSftpUsername}
+                                        onChange={(e) => setFormSftpUsername(e.target.value)}
+                                        placeholder="username"
+                                        className="w-full h-9 px-3 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-medium text-slate-700 mb-1">
+                                        Remote Path
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={formSftpPath}
+                                        onChange={(e) => setFormSftpPath(e.target.value)}
+                                        placeholder="/statements"
+                                        className="w-full h-9 px-3 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                                    />
+                                </div>
+                            </>
+                        )}
+
+                        {/* Schedule field for SFTP/API */}
+                        {(formType === "SFTP" || formType === "API") && (
+                            <div>
+                                <label className="block text-xs font-medium text-slate-700 mb-1">
+                                    Schedule (cron)
+                                </label>
+                                <input
+                                    type="text"
+                                    value={formSchedule}
+                                    onChange={(e) => setFormSchedule(e.target.value)}
+                                    placeholder="0 0 * * * (daily at midnight, 5-field cron)"
+                                    className="w-full h-9 px-3 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                                />
+                                <p className="text-[10px] text-slate-400 mt-1">
+                                    Standard 5-field cron: minute hour day month weekday
+                                </p>
+                            </div>
+                        )}
                     </div>
                     <div className="flex justify-end gap-2 mt-4">
                         <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => setShowAddForm(false)}
+                            onClick={() => { setShowAddForm(false); resetForm(); }}
                         >
                             Cancel
                         </Button>
@@ -312,14 +496,19 @@ export default function ConnectionsPage() {
                                 <div className="flex-1 min-w-0">
                                     <div className="flex items-center gap-2">
                                         <span className={`w-2 h-2 rounded-full ${source.enabled ? "bg-emerald-500" : "bg-slate-300"}`} />
+                                        <span className="text-slate-400">{typeIcon(source.type)}</span>
                                         <h3 className="font-medium text-slate-900 text-sm">{source.name}</h3>
+                                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-100 text-slate-500 border border-slate-200 uppercase">
+                                            {source.type}
+                                        </span>
                                         {source.societyHint && (
-                                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 border border-slate-200">
+                                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-600 border border-indigo-200">
                                                 {source.societyHint}
                                             </span>
                                         )}
                                     </div>
-                                    {source.ingestEmail && (
+                                    {/* Email address for EMAIL type */}
+                                    {source.type === "EMAIL" && source.ingestEmail && (
                                         <div className="flex items-center gap-1.5 mt-1">
                                             <code className="text-xs text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded font-mono">
                                                 {source.ingestEmail}
@@ -332,14 +521,44 @@ export default function ConnectionsPage() {
                                             </button>
                                         </div>
                                     )}
+                                    {/* SFTP details */}
+                                    {source.type === "SFTP" && source.sftpHost && (
+                                        <div className="text-xs text-slate-500 mt-1">
+                                            {source.sftpUsername ? `${source.sftpUsername}@` : ""}{source.sftpHost}:{source.sftpPort || 22}{source.sftpPath}
+                                        </div>
+                                    )}
+                                    {/* Schedule info */}
+                                    {source.schedule && (
+                                        <div className="text-[10px] text-slate-400 mt-0.5">
+                                            Schedule: <code className="bg-slate-100 px-1 rounded">{source.schedule}</code>
+                                        </div>
+                                    )}
                                     <div className="flex items-center gap-3 mt-1.5 text-[10px] text-slate-400">
                                         <span>{source.totalImported} statements imported</span>
                                         {source.lastReceivedAt && (
-                                            <span>Last: {new Date(source.lastReceivedAt).toLocaleDateString()}</span>
+                                            <span>Last import: {new Date(source.lastReceivedAt).toLocaleDateString()}</span>
+                                        )}
+                                        {source.lastSyncAt && (
+                                            <span>Last sync: {new Date(source.lastSyncAt).toLocaleString()}</span>
                                         )}
                                     </div>
                                 </div>
                                 <div className="flex items-center gap-2">
+                                    {/* Manual fetch button for SFTP/API types */}
+                                    {(source.type === "SFTP" || source.type === "API") && (
+                                        <button
+                                            onClick={() => triggerFetch(source.id)}
+                                            disabled={fetching === source.id}
+                                            className="text-slate-400 hover:text-indigo-600 disabled:opacity-50"
+                                            title="Trigger fetch now"
+                                        >
+                                            {fetching === source.id ? (
+                                                <Loader2 className="h-4 w-4 animate-spin" />
+                                            ) : (
+                                                <Play className="h-4 w-4" />
+                                            )}
+                                        </button>
+                                    )}
                                     <button
                                         onClick={() => toggleSource(source.id, source.enabled)}
                                         className="text-slate-400 hover:text-slate-600"
