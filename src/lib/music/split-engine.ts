@@ -83,9 +83,11 @@ export async function processStatementLineSplits(lineId: string, orgId: string) 
         currency: line.currency,
         type: "EARNING" as const,
         status: s.amount === 0 ? "PAID" : "UNPAID" as const, // Treat zero-value splits as instantly cleared for audit
+        // Note: We preserve all ledger entries including zero-amount ones for audit trail
+        // Zero-amount entries are marked as PAID and can be filtered in UI if needed
     }));
 
-    // 4. Create ledgers
+    // 4. Create ledgers (including zero-amount entries for complete audit trail)
     await db.payeeLedger.createMany({
         data: ledgers,
     });

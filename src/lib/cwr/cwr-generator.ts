@@ -79,7 +79,7 @@ function formatShare(share: number): string {
     // CWR v2.2 expects shares up to 100.00% (represented as 10000 in a 5-char field).
     // ASCAP, BMI, and other major societies use a "100/100" or "200% total" system
     // where writer and publisher shares each sum to 100%.
-    // Since input shares are out of 100% total, we must scale them for CWR output.
+    // Since input shares are out of 100% total, we must scale them by 2 for CWR output.
     const scaled = Math.round(share * 2 * 100);
     return padLeft(String(Math.min(scaled, 10000)), 5);
 }

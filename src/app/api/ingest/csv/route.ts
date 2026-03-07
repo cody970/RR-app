@@ -38,13 +38,22 @@ export async function POST(req: Request) {
             return ApiErrors.TooManyRequests("Import Rate Limit Exceeded");
         }
 
+        // Validate request body with Zod
+        const ingestSchema = z.object({
+            type: z.enum(["Works", "Recordings", "Writers", "Statement Lines", "DSP Report", "CWR File"]),
+            csvData: z.string().min(1).max(10 * 1024 * 1024), // Max 10MB
+            sourceTemplate: z.enum(["ASCAP", "BMI", "SESAC", "SoundExchange", "Spotify", "AppleMusic", "HFA", "MLC"]).optional(),
+            customMapping: z.record(z.string()).optional(),
+        });
+
         const body = await req.json().catch(() => ({}));
-        const { type, csvData, sourceTemplate, customMapping } = body as {
-            type: TemplateType;
-            csvData: string;
-            sourceTemplate?: IndustrySource;
-            customMapping?: Record<string, string>;
-        };
+        const parsed = ingestSchema.safeParse(body);
+
+        if (!parsed.success) {
+            return ApiErrors.BadRequest("Invalid request", parsed.error.flatten());
+        }
+
+        const { type, csvData, sourceTemplate, customMapping } = parsed.data;
 
         if (!type || !csvData) {
             return ApiErrors.BadRequest("Missing required fields: type and csvData");
