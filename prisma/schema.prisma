@@ -294,7 +294,7 @@ model Statement {
   period        String         // YYYY-Q# or YYYY-MM
   fileName      String?
   fileType      String?        // ASCAP_CSV, BMI_CSV, MLC_CSV, SOUNDEXCHANGE_CSV
-  totalAmount   Float          @default(0)
+  totalAmount   Decimal        @default(0) @db.Decimal(18, 4)
   lineCount     Int            @default(0)
   status        String         @default("PROCESSED") // PROCESSING, PROCESSED, FAILED
   organization  Organization   @relation(fields: [orgId], references: [id])
@@ -314,15 +314,15 @@ model StatementLine {
   isrc            String?
   iswc            String?
   uses            Int
-  amount          Float
-  amountOriginal  Float?
+  amount         Decimal        @db.Decimal(18, 4)
+  amountOriginal Decimal?       @db.Decimal(18, 4)
   currency        String         @default("USD")
   title           String?
   artist          String?
   society         String?        // ASCAP, BMI, MLC, SOUNDEXCHANGE
   territory       String?
   useType         String?        // PERFORMANCE, MECHANICAL, DIGITAL, SYNC
-  rate            Float?
+  rate            Decimal?       @db.Decimal(18, 6)
   workId          String?
   // Smart matching metadata for AI-powered fuzzy matching
   matchMethod     String?        // EXACT_ISWC, EXACT_ISRC, EXACT_TITLE, NORMALIZED_TITLE, FUZZY_HIGH, FUZZY_MEDIUM, FUZZY_LOW, CONTAINS, USER_CORRECTED, USER_REJECTED, NONE
@@ -346,11 +346,11 @@ model RoyaltyPeriod {
   workId          String?
   society         String       // ASCAP, BMI, MLC, SOUNDEXCHANGE
   period          String       // YYYY-Q# e.g. 2025-Q1
-  totalAmount     Float        @default(0)
+  totalAmount     Decimal      @default(0) @db.Decimal(18, 4)
   totalUses       Int          @default(0)
-  avgRate         Float?       // avg per-use rate
+  avgRate         Decimal?     @db.Decimal(18, 6) // avg per-use rate
   useType         String?      // PERFORMANCE, MECHANICAL, DIGITAL
-  previousAmount  Float?       // prior period amount for trend
+  previousAmount  Decimal?     @db.Decimal(18, 4) // prior period amount for trend
   changePercent   Float?       // period-over-period % change
   createdAt       DateTime     @default(now())
   updatedAt       DateTime     @updatedAt
@@ -369,9 +369,9 @@ model Finding {
   severity        String
   status          String       @default("OPEN")
   confidence      Int
-  estimatedImpact Float?
-  recoveredAmount Float?
-  amountOriginal  Float?
+  estimatedImpact Decimal?     @db.Decimal(18, 4)
+  recoveredAmount Decimal?     @db.Decimal(18, 4)
+  amountOriginal  Decimal?     @db.Decimal(18, 4)
   currency        String       @default("USD")
   resourceType    String?
   resourceId      String
@@ -543,8 +543,8 @@ model DspReport {
   title          String
   artist         String?
   streams        Int
-  revenue        Float
-  perStreamRate  Float
+  revenue        Decimal  @db.Decimal(18, 4)
+  perStreamRate  Decimal  @db.Decimal(18, 8)
   orgId          String
   createdAt      DateTime @default(now())
 
@@ -581,7 +581,7 @@ model SyncQuote {
   orgId        String
   clientName   String
   projectName  String
-  proposedFee  Float
+  proposedFee  Decimal  @db.Decimal(18, 4)
   status       String   @default("PENDING") // PENDING, ACCEPTED, REJECTED
   notes        String?
   createdAt    DateTime @default(now())
@@ -601,7 +601,7 @@ model SyncLicense {
   orgId        String
   licenseeName String
   projectName  String
-  fee          Float
+  fee          Decimal  @db.Decimal(18, 4)
   terms        String?
   status       String   @default("ACTIVE") // ACTIVE, EXPIRED, TERMINATED
   validFrom    DateTime?
@@ -664,7 +664,7 @@ model RegistrationGap {
   society         String       // ASCAP, BMI, SESAC, MLC, SoundExchange
   gapType         String       // MISSING_WORK, MISSING_RECORDING, MISSING_SPLIT, NO_REGISTRATION
   confidence      Int          // 0-100 matching confidence
-  estimatedImpact Float?
+  estimatedImpact Decimal?     @db.Decimal(18, 4)
   status          String       @default("OPEN") // OPEN, REGISTERING, REGISTERED, DISMISSED
   songviewMatch   Json?
   musicbrainzId   String?
@@ -686,7 +686,7 @@ model RetroactiveClaim {
   organizationId  String
   targetSociety   String
   yearsClaimed    Int              @default(2)
-  estimatedValue  Float?           @default(0)
+  estimatedValue  Decimal?         @default(0) @db.Decimal(18, 4)
   status          String           @default("GENERATED") // GENERATED, SUBMITTED, PAID, REJECTED
   lodContent      String?          @db.Text
   createdAt       DateTime         @default(now())
@@ -787,7 +787,7 @@ model LicenseRequest {
   media            String?
   territory        String?
   term             String?
-  budget           Float?
+  budget           Decimal? @db.Decimal(18, 4)
   status           String   @default("PENDING") // PENDING, REVIEWING, APPROVED, REJECTED
   notes            String?
   createdAt        DateTime @default(now())
@@ -809,7 +809,7 @@ model License {
   requestId    String?  @unique
   licenseType  String
   licenseeName String
-  fee          Float
+  fee          Decimal  @db.Decimal(18, 4)
   startDate    DateTime?
   endDate      DateTime?
   territory    String?
@@ -966,7 +966,7 @@ model PayeeLedger {
   publisherId     String?
   statementLineId String?  // Source: statement ingest
   licenseId       String?  // Source: sync license
-  amount          Float    // Payee portion (revenue * splitPercent)
+  amount          Decimal  @db.Decimal(18, 4) // Payee portion (revenue * splitPercent)
   currency        String   @default("USD")
   type            String   // EARNING, ADVANCE_RECOUPMENT, FEE
   status          String   @default("UNPAID") // UNPAID, PAID, CARRIED_FORWARD
@@ -992,7 +992,7 @@ model Payout {
   writerId        String?
   publisherId     String?
   period          String   // e.g., "2026-Q1"
-  totalAmount     Float
+  totalAmount     Decimal  @db.Decimal(18, 4)
   status          String   @default("PROCESSING") // PROCESSING, ISSUED, FAILED
   statementUrl    String?  // PDF accounting statement link
   paidAt          DateTime?
