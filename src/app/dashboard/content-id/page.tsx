@@ -19,6 +19,9 @@ import {
     ShieldCheck,
     ShieldAlert,
     BarChart3,
+    Play,
+    Video,
+    TrendingUp,
 } from "lucide-react";
 
 // ---------- Types ----------
@@ -42,6 +45,9 @@ interface Claim {
     platform: string;
     status: string;
     estimatedRevenue: number;
+    totalViews: number;
+    totalClaims: number;
+    lastCheckedAt: string | null;
     createdAt: string;
 }
 
@@ -53,16 +59,35 @@ interface UnregisteredRecording {
     createdAt: string;
 }
 
+interface Usage {
+    id: string;
+    recordingId: string;
+    recordingTitle: string;
+    isrc: string | null;
+    artist: string | null;
+    platform: string;
+    videoId: string | null;
+    videoTitle: string | null;
+    channelName: string | null;
+    viewCount: number;
+    claimStatus: string;
+    estimatedRevenue: number;
+    usageDurationSec: number | null;
+    detectedAt: string;
+}
+
 // ---------- Component ----------
 
 export default function ContentIdPage() {
     const [overview, setOverview] = useState<Overview | null>(null);
     const [claims, setClaims] = useState<Claim[]>([]);
     const [unregistered, setUnregistered] = useState<UnregisteredRecording[]>([]);
+    const [usages, setUsages] = useState<Usage[]>([]);
     const [loading, setLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);
+    const [scanning, setScanning] = useState(false);
     const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-    const [activeTab, setActiveTab] = useState<"overview" | "claims" | "unregistered">("overview");
+    const [activeTab, setActiveTab] = useState<"claims" | "unregistered" | "usages">("claims");
     const toast = useToast();
 
     const fetchData = useCallback(async () => {
@@ -74,6 +99,7 @@ export default function ContentIdPage() {
                 setOverview(data.overview || null);
                 setClaims(data.claims || []);
                 setUnregistered(data.unregistered || []);
+                setUsages(data.usages || []);
             }
         } catch (e) {
             console.error(e);
@@ -137,9 +163,42 @@ export default function ContentIdPage() {
         }
     };
 
+    const startScan = async () => {
+        setScanning(true);
+        try {
+            const res = await fetch("/api/content-id/scan", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({}),
+            });
+
+            if (res.ok) {
+                const data = await res.json();
+                toast.success("Content ID scan started. You'll be notified when complete.");
+            } else {
+                const data = await res.json();
+                if (data.error === "A scan is already in progress") {
+                    toast.info("A scan is already in progress");
+                } else {
+                    toast.error("Failed to start scan");
+                }
+            }
+        } catch (e) {
+            toast.error("Network error");
+        } finally {
+            setScanning(false);
+        }
+    };
+
     const formatMoney = (val: number) => {
         if (val >= 1000) return `$${(val / 1000).toFixed(1)}K`;
         return `$${val.toFixed(2)}`;
+    };
+
+    const formatViews = (val: number) => {
+        if (val >= 1000000) return `${(val / 1000000).toFixed(1)}M`;
+        if (val >= 1000) return `${(val / 1000).toFixed(1)}K`;
+        return val.toString();
     };
 
     const platformBadge = (platform: string) => {
@@ -165,6 +224,20 @@ export default function ContentIdPage() {
                     </p>
                 </div>
                 <div className="flex gap-2 px-2">
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={startScan}
+                        disabled={scanning}
+                        className="h-9"
+                    >
+                        {scanning ? (
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        ) : (
+                            <Play className="h-4 w-4 mr-2" />
+                        )}
+                        Scan for Usages
+                    </Button>
                     <Button
                         variant="outline"
                         size="sm"
@@ -206,7 +279,7 @@ export default function ContentIdPage() {
                             </div>
                             <p className="text-2xl font-bold text-slate-900">{formatMoney(overview.estimatedRevenue)}</p>
                             <p className="text-[10px] text-slate-400 mt-1">
-                                From {overview.totalPlacements} placements
+                                From {overview.totalPlacements} monitors
                             </p>
                         </CardContent>
                     </Card>
@@ -247,14 +320,15 @@ export default function ContentIdPage() {
             <div className="px-2">
                 <div className="flex gap-1 bg-slate-100 p-1 rounded-lg w-fit">
                     {[
-                        { key: "overview" as const, label: "Claims", icon: Monitor },
+                        { key: "claims" as const, label: "Monitors", icon: Monitor },
+                        { key: "usages" as const, label: "Detected Usages", icon: Video },
                         { key: "unregistered" as const, label: "Unmonitored", icon: ShieldAlert },
                     ].map((tab) => (
                         <button
                             key={tab.key}
-                            onClick={() => setActiveTab(tab.key === "overview" ? "claims" : tab.key)}
+                            onClick={() => setActiveTab(tab.key)}
                             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
-                                (activeTab === "claims" && tab.key === "overview") || activeTab === tab.key
+                                activeTab === tab.key
                                     ? "bg-white text-slate-900 shadow-sm"
                                     : "text-slate-500 hover:text-slate-700"
                             }`}
@@ -266,13 +340,13 @@ export default function ContentIdPage() {
                 </div>
             </div>
 
-            {/* Claims Tab */}
-            {(activeTab === "claims" || activeTab === "overview") && (
+            {/* Monitors Tab */}
+            {activeTab === "claims" && (
                 <div className="mx-2 bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
                     <div className="px-6 py-4 border-b border-slate-200 bg-slate-50">
                         <h2 className="text-sm font-semibold text-slate-900 flex items-center gap-2">
                             <ShieldCheck className="h-4 w-4 text-emerald-500" />
-                            Active Content ID Claims
+                            Active Content ID Monitors
                             <span className="text-xs text-slate-400 font-normal">({claims.length})</span>
                         </h2>
                     </div>
@@ -282,7 +356,7 @@ export default function ContentIdPage() {
                     ) : claims.length === 0 ? (
                         <div className="p-8 text-center">
                             <Monitor className="h-10 w-10 text-slate-300 mx-auto mb-3" />
-                            <p className="text-slate-500 text-sm">No Content ID claims yet.</p>
+                            <p className="text-slate-500 text-sm">No Content ID monitors yet.</p>
                             <p className="text-slate-400 text-xs mt-1">
                                 Submit recordings for monitoring to start tracking claims.
                             </p>
@@ -304,14 +378,24 @@ export default function ContentIdPage() {
                                         <div className="flex items-center gap-2 mt-0.5 text-[10px] text-slate-400">
                                             {claim.artist && <span>{claim.artist}</span>}
                                             <span>•</span>
-                                            {claim.platform.split(",").map((p) => (
-                                                <span
-                                                    key={p}
-                                                    className={`px-1.5 py-0.5 rounded ${platformBadge(p.trim())}`}
-                                                >
-                                                    {p.trim()}
-                                                </span>
-                                            ))}
+                                            <span className={`px-1.5 py-0.5 rounded ${platformBadge(claim.platform)}`}>
+                                                {claim.platform}
+                                            </span>
+                                            {claim.totalViews > 0 && (
+                                                <>
+                                                    <span>•</span>
+                                                    <span className="flex items-center gap-0.5">
+                                                        <Eye className="h-3 w-3" />
+                                                        {formatViews(claim.totalViews)} views
+                                                    </span>
+                                                </>
+                                            )}
+                                            {claim.totalClaims > 0 && (
+                                                <>
+                                                    <span>•</span>
+                                                    <span>{claim.totalClaims} claims</span>
+                                                </>
+                                            )}
                                         </div>
                                     </div>
                                     <div className="text-right flex-shrink-0">
@@ -320,6 +404,104 @@ export default function ContentIdPage() {
                                         </p>
                                         <p className="text-[10px] text-slate-400">
                                             {claim.status}
+                                        </p>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            )}
+
+            {/* Detected Usages Tab */}
+            {activeTab === "usages" && (
+                <div className="mx-2 bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
+                    <div className="px-6 py-4 border-b border-slate-200 bg-slate-50">
+                        <h2 className="text-sm font-semibold text-slate-900 flex items-center gap-2">
+                            <Video className="h-4 w-4 text-blue-500" />
+                            Detected Content Usages
+                            <span className="text-xs text-slate-400 font-normal">({usages.length})</span>
+                        </h2>
+                    </div>
+
+                    {loading ? (
+                        <div className="p-8 text-center text-slate-500 text-sm">Loading...</div>
+                    ) : usages.length === 0 ? (
+                        <div className="p-8 text-center">
+                            <Video className="h-10 w-10 text-slate-300 mx-auto mb-3" />
+                            <p className="text-slate-500 text-sm">No usages detected yet.</p>
+                            <p className="text-slate-400 text-xs mt-1">
+                                Run a scan to detect where your content is being used.
+                            </p>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={startScan}
+                                disabled={scanning}
+                                className="mt-4"
+                            >
+                                {scanning ? (
+                                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                ) : (
+                                    <Play className="h-4 w-4 mr-2" />
+                                )}
+                                Scan for Usages
+                            </Button>
+                        </div>
+                    ) : (
+                        <div className="divide-y divide-slate-100">
+                            {usages.map((usage) => (
+                                <div key={usage.id} className="px-6 py-3 flex items-center gap-3">
+                                    <div className={`h-8 w-8 rounded-lg flex items-center justify-center ${
+                                        usage.platform === "YouTube" ? "bg-red-50" :
+                                        usage.platform === "TikTok" ? "bg-slate-100" :
+                                        usage.platform === "Instagram" ? "bg-pink-50" :
+                                        "bg-blue-50"
+                                    }`}>
+                                        <Video className={`h-4 w-4 ${
+                                            usage.platform === "YouTube" ? "text-red-600" :
+                                            usage.platform === "TikTok" ? "text-slate-700" :
+                                            usage.platform === "Instagram" ? "text-pink-600" :
+                                            "text-blue-600"
+                                        }`} />
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-sm font-medium text-slate-900 truncate">
+                                                {usage.videoTitle || "Unknown video"}
+                                            </span>
+                                        </div>
+                                        <div className="flex items-center gap-2 mt-0.5 text-[10px] text-slate-400">
+                                            <span className={`px-1.5 py-0.5 rounded ${platformBadge(usage.platform)}`}>
+                                                {usage.platform}
+                                            </span>
+                                            {usage.channelName && (
+                                                <>
+                                                    <span>•</span>
+                                                    <span>{usage.channelName}</span>
+                                                </>
+                                            )}
+                                            <span>•</span>
+                                            <span className="flex items-center gap-0.5">
+                                                <Eye className="h-3 w-3" />
+                                                {formatViews(usage.viewCount)} views
+                                            </span>
+                                            <span>•</span>
+                                            <span className="text-slate-500">
+                                                Uses: {usage.recordingTitle}
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div className="text-right flex-shrink-0">
+                                        <p className="text-sm font-medium text-emerald-600">
+                                            {formatMoney(usage.estimatedRevenue)}
+                                        </p>
+                                        <p className={`text-[10px] px-1.5 py-0.5 rounded inline-block ${
+                                            usage.claimStatus === "ACTIVE" ? "bg-emerald-50 text-emerald-700" :
+                                            usage.claimStatus === "DISPUTED" ? "bg-amber-50 text-amber-700" :
+                                            "bg-slate-100 text-slate-600"
+                                        }`}>
+                                            {usage.claimStatus}
                                         </p>
                                     </div>
                                 </div>

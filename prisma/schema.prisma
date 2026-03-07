@@ -44,6 +44,9 @@ model Organization {
   workAcknowledgements WorkAcknowledgement[]
   cwrExports       CwrExport[]
   ackImports       AckImport[]
+  // Content ID monitoring
+  contentIdMonitors ContentIdMonitor[]
+  contentIdJobs    ContentIdJob[]
   currency      String         @default("USD")
   
   // Stripe Billing Fields
@@ -235,6 +238,8 @@ model Recording {
   orgId         String
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
+  // Content ID monitoring
+  contentIdMonitors ContentIdMonitor[]
 
   @@unique([isrc, orgId])
   @@index([orgId])
@@ -950,4 +955,78 @@ model Payout {
   @@index([orgId])
   @@index([writerId])
   @@index([publisherId])
+}
+
+// ─────────────────────────────────────────────
+// Content ID / Audio Fingerprint Monitoring
+// ─────────────────────────────────────────────
+
+model ContentIdMonitor {
+  id                String              @id @default(cuid())
+  recordingId       String
+  orgId             String
+  platform          String              // YouTube, Facebook, Instagram, TikTok
+  assetId           String?             // External Content ID asset identifier
+  registrationStatus String             @default("PENDING") // PENDING, REGISTERED, FAILED
+  policy            String              @default("MONETIZE") // MONETIZE, BLOCK, TRACK
+  fingerprint       String?             // Audio fingerprint hash for matching
+  lastCheckedAt     DateTime?           // Last time usage was checked
+  totalViews        Int                 @default(0)
+  totalClaims       Int                 @default(0)
+  estimatedRevenue  Float               @default(0)
+  error             String?             // Error message if registration failed
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+
+  recording         Recording           @relation(fields: [recordingId], references: [id])
+  organization      Organization        @relation(fields: [orgId], references: [id])
+  usages            ContentIdUsage[]
+
+  @@unique([recordingId, platform])
+  @@index([orgId])
+  @@index([recordingId])
+  @@index([registrationStatus])
+  @@index([platform])
+}
+
+model ContentIdUsage {
+  id                String            @id @default(cuid())
+  monitorId         String
+  platform          String            // Platform where usage was detected
+  videoId           String?           // External video/content ID
+  videoTitle        String?           // Title of the video/content
+  channelName       String?           // Channel/creator name
+  viewCount         Int               @default(0)
+  claimStatus       String            @default("ACTIVE") // ACTIVE, RELEASED, DISPUTED
+  estimatedRevenue  Float             @default(0)
+  usageDurationSec  Int?              // Duration of music used (in seconds)
+  detectedAt        DateTime          @default(now())
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+
+  monitor           ContentIdMonitor  @relation(fields: [monitorId], references: [id])
+
+  @@index([monitorId])
+  @@index([platform])
+  @@index([claimStatus])
+}
+
+model ContentIdJob {
+  id          String   @id @default(cuid())
+  orgId       String
+  status      String   @default("PENDING") // PENDING, RUNNING, COMPLETE, FAILED
+  totalRecordings Int  @default(0)
+  processedCount  Int  @default(0)
+  newUsagesFound  Int  @default(0)
+  estimatedRevenue Float @default(0)
+  error       String?
+  startedAt   DateTime?
+  completedAt DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  organization Organization @relation(fields: [orgId], references: [id])
+
+  @@index([orgId])
+  @@index([status])
 }

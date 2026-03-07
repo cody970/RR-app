@@ -28,34 +28,34 @@ export async function GET(req: Request) {
 
         // ---------- Overview ----------
         if (view === "overview" || view === "all") {
-            // Total recordings and those with Content ID placements
+            // Total recordings and those with Content ID monitors
             const [totalRecordings, monitoredRecordings, totalPlacements] = await Promise.all([
                 db.recording.count({ where: { orgId } }),
-                db.syncPlacement.groupBy({
+                db.contentIdMonitor.groupBy({
                     by: ["recordingId"],
                     where: {
-                        recording: { orgId },
-                        type: "CONTENT_ID",
+                        orgId,
+                        registrationStatus: "REGISTERED",
                     },
                 }),
-                db.syncPlacement.count({
+                db.contentIdMonitor.count({
                     where: {
-                        recording: { orgId },
-                        type: "CONTENT_ID",
+                        orgId,
+                        registrationStatus: "REGISTERED",
                     },
                 }),
             ]);
 
-            // Revenue from Content ID placements
-            const revenueAgg = await db.syncPlacement.aggregate({
+            // Revenue from Content ID monitors
+            const revenueAgg = await db.contentIdMonitor.aggregate({
                 where: {
-                    recording: { orgId },
-                    type: "CONTENT_ID",
+                    orgId,
+                    registrationStatus: "REGISTERED",
                 },
                 _sum: { estimatedRevenue: true },
             });
 
-            // Unregistered recordings (no Content ID placement)
+            // Unregistered recordings (no Content ID monitor)
             const registeredIds = monitoredRecordings.map((r) => r.recordingId);
             const unregisteredCount = await db.recording.count({
                 where: {
@@ -85,12 +85,12 @@ export async function GET(req: Request) {
             };
         }
 
-        // ---------- Claims / Placements ----------
+        // ---------- Claims / Active Monitors ----------
         if (view === "claims" || view === "all") {
-            const placements = await db.syncPlacement.findMany({
+            const monitors = await db.contentIdMonitor.findMany({
                 where: {
-                    recording: { orgId },
-                    type: "CONTENT_ID",
+                    orgId,
+                    registrationStatus: "REGISTERED",
                 },
                 orderBy: { createdAt: "desc" },
                 take: 50,
@@ -100,32 +100,35 @@ export async function GET(req: Request) {
                             id: true,
                             title: true,
                             isrc: true,
-                            artist: true,
+                            artistName: true,
                         },
                     },
                 },
             });
 
-            result.claims = placements.map((p) => ({
-                id: p.id,
-                recordingId: p.recordingId,
-                recordingTitle: p.recording.title,
-                isrc: p.recording.isrc,
-                artist: p.recording.artist,
-                platform: p.platform,
-                status: p.status,
-                estimatedRevenue: p.estimatedRevenue,
-                createdAt: p.createdAt,
+            result.claims = monitors.map((m) => ({
+                id: m.id,
+                recordingId: m.recordingId,
+                recordingTitle: m.recording.title,
+                isrc: m.recording.isrc,
+                artist: m.recording.artistName,
+                platform: m.platform,
+                status: m.registrationStatus,
+                estimatedRevenue: m.estimatedRevenue,
+                totalViews: m.totalViews,
+                totalClaims: m.totalClaims,
+                lastCheckedAt: m.lastCheckedAt,
+                createdAt: m.createdAt,
             }));
         }
 
         // ---------- Unregistered Recordings ----------
         if (view === "unregistered" || view === "all") {
-            // Find recordings without Content ID placements
-            const registeredRecordingIds = await db.syncPlacement.findMany({
+            // Find recordings without Content ID monitors
+            const registeredRecordingIds = await db.contentIdMonitor.findMany({
                 where: {
-                    recording: { orgId },
-                    type: "CONTENT_ID",
+                    orgId,
+                    registrationStatus: "REGISTERED",
                 },
                 select: { recordingId: true },
                 distinct: ["recordingId"],
@@ -144,12 +147,61 @@ export async function GET(req: Request) {
                     id: true,
                     title: true,
                     isrc: true,
-                    artist: true,
+                    artistName: true,
                     createdAt: true,
                 },
             });
 
-            result.unregistered = unregistered;
+            // Map artistName to artist for frontend compatibility
+            result.unregistered = unregistered.map(r => ({
+                id: r.id,
+                title: r.title,
+                isrc: r.isrc,
+                artist: r.artistName,
+                createdAt: r.createdAt,
+            }));
+        }
+
+        // ---------- Detected Usages ----------
+        if (view === "usages" || view === "all") {
+            const usages = await db.contentIdUsage.findMany({
+                where: {
+                    monitor: { orgId },
+                },
+                orderBy: { detectedAt: "desc" },
+                take: 100,
+                include: {
+                    monitor: {
+                        include: {
+                            recording: {
+                                select: {
+                                    id: true,
+                                    title: true,
+                                    isrc: true,
+                                    artistName: true,
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+
+            result.usages = usages.map(u => ({
+                id: u.id,
+                recordingId: u.monitor.recordingId,
+                recordingTitle: u.monitor.recording.title,
+                isrc: u.monitor.recording.isrc,
+                artist: u.monitor.recording.artistName,
+                platform: u.platform,
+                videoId: u.videoId,
+                videoTitle: u.videoTitle,
+                channelName: u.channelName,
+                viewCount: u.viewCount,
+                claimStatus: u.claimStatus,
+                estimatedRevenue: u.estimatedRevenue,
+                usageDurationSec: u.usageDurationSec,
+                detectedAt: u.detectedAt,
+            }));
         }
 
         return NextResponse.json(result);
@@ -212,6 +264,7 @@ export async function POST(req: Request) {
             recordingId: string;
             success: boolean;
             assetId?: string;
+            monitors?: Array<{ platform: string; monitorId: string }>;
             error?: string;
         }> = [];
 
@@ -225,6 +278,7 @@ export async function POST(req: Request) {
                     recordingId: recording.id,
                     success: result.success,
                     assetId: result.assetId,
+                    monitors: result.monitors,
                 });
             } catch (err: unknown) {
                 const message = err instanceof Error ? err.message : "Unknown error";
@@ -236,7 +290,7 @@ export async function POST(req: Request) {
             }
         }
 
-        // Optionally create findings for unregistered recordings
+        // Optionally create findings for recordings that failed to register
         if (createFindings) {
             const unregisteredIds = recordingIds.filter(
                 (id) => !results.find((r) => r.recordingId === id && r.success),
