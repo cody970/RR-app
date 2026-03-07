@@ -127,34 +127,87 @@ export async function POST(req: Request) {
         });
 
         // 4. Ingest with Batching
+        let recordsToIngest = validRows;
+        if (type === "CWR File") {
+            try {
+                const { parseCwrFile } = await import("@/lib/cwr/cwr-parser");
+                recordsToIngest = parseCwrFile(csvData);
+            } catch (err) {
+                return ApiErrors.BadRequest("Failed to parse CWR file content");
+            }
+        }
+
         const BATCH_SIZE = 500;
         try {
-            for (let i = 0; i < validRows.length; i += BATCH_SIZE) {
-                const batch = validRows.slice(i, i + BATCH_SIZE);
+            for (let i = 0; i < recordsToIngest.length; i += BATCH_SIZE) {
+                const batch = recordsToIngest.slice(i, i + BATCH_SIZE);
 
                 await db.$transaction(async (tx: any) => {
                     if (type === "Works") {
+                        const iswcs = batch.map((r: any) => r.ISWC).filter(Boolean);
+                        const existing = await tx.work.findMany({
+                            where: { orgId, iswc: { in: iswcs } },
+                            select: { id: true, iswc: true }
+                        });
+                        const existingMap = new Map(existing.map((e: any) => [e.iswc, e.id]));
+
+                        const toCreate: any[] = [];
                         for (const row of batch) {
-                            await tx.work.upsert({
-                                where: { iswc_orgId: { iswc: row.ISWC || `MOCK-${Date.now()}-${Math.random()}`, orgId } },
-                                update: { title: row.Title },
-                                create: { title: row.Title, iswc: row.ISWC, orgId },
-                            });
+                            if (row.ISWC && existingMap.has(row.ISWC)) {
+                                await tx.work.update({
+                                    where: { id: existingMap.get(row.ISWC) },
+                                    data: { title: row.Title }
+                                });
+                            } else {
+                                toCreate.push({
+                                    title: row.Title,
+                                    iswc: row.ISWC || `MOCK-${Date.now()}-${Math.random()}`,
+                                    orgId
+                                });
+                            }
+                        }
+                        if (toCreate.length > 0) {
+                            await tx.work.createMany({ data: toCreate });
                         }
                     } else if (type === "Recordings") {
+                        const isrcs = batch.map((r: any) => r.ISRC).filter(Boolean);
+                        const existing = await tx.recording.findMany({
+                            where: { orgId, isrc: { in: isrcs } },
+                            select: { id: true, isrc: true }
+                        });
+                        const existingMap = new Map(existing.map((e: any) => [e.isrc, e.id]));
+
+                        const toCreate: any[] = [];
                         for (const row of batch) {
-                            await tx.recording.upsert({
-                                where: { isrc_orgId: { isrc: row.ISRC || `MOCK-${Date.now()}-${Math.random()}`, orgId } },
-                                update: { title: row.Title, durationSec: row.DurationSec },
-                                create: { title: row.Title, isrc: row.ISRC, durationSec: row.DurationSec, orgId },
-                            });
+                            if (row.ISRC && existingMap.has(row.ISRC)) {
+                                await tx.recording.update({
+                                    where: { id: existingMap.get(row.ISRC) },
+                                    data: { title: row.Title, durationSec: row.DurationSec }
+                                });
+                            } else {
+                                toCreate.push({
+                                    title: row.Title,
+                                    isrc: row.ISRC || `MOCK-${Date.now()}-${Math.random()}`,
+                                    durationSec: row.DurationSec,
+                                    orgId
+                                });
+                            }
+                        }
+                        if (toCreate.length > 0) {
+                            await tx.recording.createMany({ data: toCreate });
                         }
                     } else if (type === "Writers") {
+                        // Optimization: Fetch all works in batch
+                        const workTitles = [...new Set(batch.map((r: any) => r.WorkTitle))];
+                        const works = await tx.work.findMany({
+                            where: { orgId, title: { in: workTitles } },
+                            select: { id: true, title: true }
+                        });
+                        const workMap = new Map(works.map((w: any) => [w.title, w.id]));
+
                         for (const row of batch) {
-                            const work = await tx.work.findFirst({
-                                where: { title: row.WorkTitle, orgId }
-                            });
-                            if (work) {
+                            const workId = workMap.get(row.WorkTitle);
+                            if (workId) {
                                 const writer = await tx.writer.upsert({
                                     where: { ipiCae_orgId: { ipiCae: row.IPI || `MOCK-${Date.now()}`, orgId } },
                                     update: { name: row.Name },
@@ -162,14 +215,15 @@ export async function POST(req: Request) {
                                 });
 
                                 await tx.workWriter.upsert({
-                                    where: { workId_writerId: { workId: work.id, writerId: writer.id } },
+                                    where: { workId_writerId: { workId, writerId: writer.id } },
                                     update: { splitPercent: row.SplitPercent, role: row.Role },
-                                    create: { workId: work.id, writerId: writer.id, splitPercent: row.SplitPercent, role: row.Role },
+                                    create: { workId, writerId: writer.id, splitPercent: row.SplitPercent, role: row.Role },
                                 });
                             }
                         }
                     } else if (type === "Statement Lines") {
                         const statementMap = new Map<string, string>();
+                        const linesData: any[] = [];
                         for (const row of batch) {
                             const key = `${row.Source}-${row.Period}`;
                             if (!statementMap.has(key)) {
@@ -184,61 +238,53 @@ export async function POST(req: Request) {
                                 statementMap.set(key, statement!.id);
                             }
                             const statementId = statementMap.get(key);
-                            await tx.statementLine.create({
-                                data: {
-                                    statementId,
-                                    isrc: row.ISRC,
-                                    uses: row.Uses,
-                                    amount: row.Amount,
-                                    title: row.Title,
-                                    artist: row.Artist
-                                }
+                            linesData.push({
+                                statementId,
+                                isrc: row.ISRC,
+                                uses: row.Uses,
+                                amount: row.Amount,
+                                title: row.Title,
+                                artist: row.Artist
                             });
                         }
+                        if (linesData.length > 0) {
+                            await tx.statementLine.createMany({ data: linesData });
+                        }
                     } else if (type === "DSP Report") {
-                        for (const row of batch) {
-                            // Fix financial math: Avoid direct float division where possible
-                            // Store revenue in cents/micros if needed, but here we just ensure a safe calculation
+                        const reportData = batch.map((row: any) => {
                             const revenueInMicros = Math.round(row.Revenue * 1000000);
                             const perStreamRateMicros = row.Streams > 0 ? Math.floor(revenueInMicros / row.Streams) : 0;
                             const perStreamRate = perStreamRateMicros / 1000000;
-
-                            await tx.dspReport.create({
-                                data: {
-                                    source: row.Source,
-                                    period: row.Period,
-                                    territory: row.Territory || null,
-                                    isrc: row.ISRC,
-                                    title: row.Title,
-                                    artist: row.Artist,
-                                    streams: row.Streams,
-                                    revenue: row.Revenue,
-                                    perStreamRate,
-                                    orgId,
-                                }
-                            });
-                        }
+                            return {
+                                source: row.Source,
+                                period: row.Period,
+                                territory: row.Territory || null,
+                                isrc: row.ISRC,
+                                title: row.Title,
+                                artist: row.Artist,
+                                streams: row.Streams,
+                                revenue: row.Revenue,
+                                perStreamRate,
+                                orgId,
+                            };
+                        });
+                        await tx.dspReport.createMany({ data: reportData });
                     } else if (type === "CWR File") {
-                        const { parseCwrFile } = await import("@/lib/cwr/cwr-parser");
-                        const cwrRecords = parseCwrFile(csvData);
-                        for (const rec of cwrRecords) {
-                            await tx.cwrRegistration.create({
-                                data: {
-                                    workTitle: rec.workTitle,
-                                    iswc: rec.iswc,
-                                    society: rec.society,
-                                    territory: rec.territory,
-                                    publisherName: rec.publisherName,
-                                    publisherIpi: rec.publisherIpi,
-                                    writerName: rec.writerName,
-                                    writerIpi: rec.writerIpi,
-                                    shares: rec.shares,
-                                    recordType: rec.recordType,
-                                    rawRecord: rec.rawRecord,
-                                    orgId,
-                                }
-                            });
-                        }
+                        const recordsToInsert = batch.map((rec: any) => ({
+                            workTitle: rec.workTitle,
+                            iswc: rec.iswc,
+                            society: rec.society,
+                            territory: rec.territory,
+                            publisherName: rec.publisherName,
+                            publisherIpi: rec.publisherIpi,
+                            writerName: rec.writerName,
+                            writerIpi: rec.writerIpi,
+                            shares: rec.shares,
+                            recordType: rec.recordType,
+                            rawRecord: rec.rawRecord,
+                            orgId,
+                        }));
+                        await tx.cwrRegistration.createMany({ data: recordsToInsert });
                     }
                 });
             }
@@ -247,7 +293,7 @@ export async function POST(req: Request) {
             await db.activity.create({
                 data: {
                     action: `CATALOG_IMPORTED`,
-                    details: `Imported ${validRows.length} ${type} records (Job: ${ingestJob.id})`,
+                    details: `Imported ${recordsToIngest.length} ${type} records (Job: ${ingestJob.id})`,
                     orgId,
                     userId: session.user.id,
                     resourceType: "Catalog",
