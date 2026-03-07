@@ -26,3 +26,16 @@ export const contentIdQueue = new Queue('content-id-queue', {
         removeOnFail: 500,
     },
 });
+
+export const exchangeRateQueue = new Queue('exchange-rate-queue', {
+    connection: redis as any,
+    defaultJobOptions: {
+        attempts: 3,
+        backoff: {
+            type: 'exponential',
+            delay: 5000,
+        },
+        removeOnComplete: 50,
+        removeOnFail: 100,
+    },
+});

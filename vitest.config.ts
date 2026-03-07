@@ -15,6 +15,17 @@ export default defineConfig({
             '**/.{idea,git,cache,output,temp}/**',
             '**/{karma,rollup,webpack,vite,vitest,jest,ava,babel,nyc,cypress,tsup,build}.config.*'
         ],
+        coverage: {
+            provider: 'v8',
+            reporter: ['text', 'json', 'html'],
+            include: ['src/lib/**/*.ts'],
+            exclude: [
+                'src/lib/**/*.test.ts',
+                'src/lib/**/*.spec.ts',
+                'src/**/__tests__/**',
+                'node_modules/**',
+            ],
+        },
     },
     resolve: {
         alias: {
