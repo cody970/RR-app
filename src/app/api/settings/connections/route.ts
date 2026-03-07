@@ -33,8 +33,18 @@ export async function GET() {
 
 const createSourceSchema = z.object({
     name: z.string().min(1, "Name is required").max(100),
+    type: z.enum(["EMAIL", "SFTP", "API"]).default("EMAIL"),
     societyHint: z.enum(["ASCAP", "BMI", "MLC", "SOUNDEXCHANGE"]).optional(),
     senderFilter: z.string().max(500).optional(),
+    // SFTP configuration
+    sftpHost: z.string().max(255).optional(),
+    sftpPort: z.number().int().min(1).max(65535).optional(),
+    sftpUsername: z.string().max(255).optional(),
+    sftpPath: z.string().max(500).optional(),
+    // API configuration
+    apiEndpoint: z.string().url().optional(),
+    // Schedule (cron expression)
+    schedule: z.string().max(100).optional(),
 });
 
 export async function POST(req: Request) {
@@ -59,21 +69,41 @@ export async function POST(req: Request) {
             );
         }
 
-        const { name, societyHint, senderFilter } = parsed.data;
+        const {
+            name,
+            type,
+            societyHint,
+            senderFilter,
+            sftpHost,
+            sftpPort,
+            sftpUsername,
+            sftpPath,
+            apiEndpoint,
+            schedule,
+        } = parsed.data;
 
-        // Generate a unique ingest email address using a random token
-        const token = randomBytes(8).toString("hex");
-        const orgSlug = session.user.orgId.slice(0, 8).toLowerCase();
-        const ingestEmail = `ingest-${orgSlug}-${token}@royaltyradar.io`;
+        // Generate a unique ingest email address for EMAIL type
+        let ingestEmail: string | null = null;
+        if (type === "EMAIL") {
+            const token = randomBytes(8).toString("hex");
+            const orgSlug = session.user.orgId.slice(0, 8).toLowerCase();
+            ingestEmail = `ingest-${orgSlug}-${token}@royaltyradar.io`;
+        }
 
         const source = await db.ingestionSource.create({
             data: {
                 orgId: session.user.orgId,
                 name,
-                type: "EMAIL",
+                type,
                 ingestEmail,
                 societyHint: societyHint ?? null,
                 senderFilter: senderFilter ?? null,
+                sftpHost: sftpHost ?? null,
+                sftpPort: sftpPort ?? null,
+                sftpUsername: sftpUsername ?? null,
+                sftpPath: sftpPath ?? null,
+                apiEndpoint: apiEndpoint ?? null,
+                schedule: schedule ?? null,
                 enabled: true,
             },
         });

@@ -1,3 +1,5 @@
+"use client";
+
 import { useState } from "react";
 import { useSession } from "next-auth/react";
 import { UploadCloud, File, AlertCircle, CheckCircle2, Download, Table, ArrowRight, Settings2 } from "lucide-react";

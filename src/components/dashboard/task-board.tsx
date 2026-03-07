@@ -164,5 +164,3 @@ export function TaskBoard() {
         </div>
     );
 }
-    );
-}

@@ -10,6 +10,8 @@
     "dev:worker": "tsx watch src/jobs/audit-worker.ts",
     "worker:scan": "tsx src/jobs/scan-worker.ts",
     "dev:worker:scan": "tsx watch src/jobs/scan-worker.ts",
+    "worker:fetch": "tsx src/jobs/statement-fetch-worker.ts",
+    "dev:worker:fetch": "tsx watch src/jobs/statement-fetch-worker.ts",
     "lint": "eslint",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
