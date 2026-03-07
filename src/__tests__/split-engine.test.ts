@@ -1,5 +1,12 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { calculateSplits, validateSplitOwnership } from "../lib/music/split-engine";
+
+// Mock Prisma to avoid initialization errors
+vi.mock("../lib/infra/db", () => ({
+    db: {
+        // Mock any database operations if needed
+    },
+}));
 
 describe("Split Engine", () => {
     describe("calculateSplits", () => {

@@ -1,3 +1,4 @@
+// @vitest-environment happy-dom
 import { describe, it, expect, vi } from 'vitest';
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
@@ -74,7 +75,7 @@ describe('EmptyState', () => {
 
     it('renders without action buttons when not provided', () => {
         render(<EmptyState title="Test Title" />);
-        const buttons = screen.getAllByRole('button');
+        const buttons = screen.queryAllByRole('button');
         expect(buttons).toHaveLength(0);
     });
 });

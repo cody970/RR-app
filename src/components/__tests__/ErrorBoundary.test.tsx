@@ -1,17 +1,24 @@
+// @vitest-environment happy-dom
 import { describe, it, expect, vi } from 'vitest';
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { ErrorBoundary } from '../ErrorBoundary';
 
-// Component that throws an error
-function ThrowError({ shouldThrow }: { shouldThrow: boolean }) {
-    if (shouldThrow) {
+// Use a module-level variable to control throwing
+let shouldThrowError = false;
+
+function ThrowError() {
+    if (shouldThrowError) {
         throw new Error('Test error');
     }
     return <div>No error</div>;
 }
 
 describe('ErrorBoundary', () => {
+    beforeEach(() => {
+        shouldThrowError = false;
+    });
+
     it('renders children when there is no error', () => {
         render(
             <ErrorBoundary>
@@ -22,9 +29,10 @@ describe('ErrorBoundary', () => {
     });
 
     it('catches errors and displays error UI', () => {
+        shouldThrowError = true;
         render(
             <ErrorBoundary>
-                <ThrowError shouldThrow={true} />
+                <ThrowError />
             </ErrorBoundary>
         );
 
@@ -33,10 +41,11 @@ describe('ErrorBoundary', () => {
     });
 
     it('displays custom fallback when provided', () => {
+        shouldThrowError = true;
         const fallback = <div>Custom Error UI</div>;
         render(
             <ErrorBoundary fallback={fallback}>
-                <ThrowError shouldThrow={true} />
+                <ThrowError />
             </ErrorBoundary>
         );
 
@@ -45,10 +54,11 @@ describe('ErrorBoundary', () => {
     });
 
     it('calls onError callback when error occurs', () => {
+        shouldThrowError = true;
         const onError = vi.fn();
         render(
             <ErrorBoundary onError={onError}>
-                <ThrowError shouldThrow={true} />
+                <ThrowError />
             </ErrorBoundary>
         );
 
@@ -62,24 +72,21 @@ describe('ErrorBoundary', () => {
     });
 
     it('resets error state when Try Again button is clicked', () => {
-        const { rerender } = render(
+        shouldThrowError = true;
+        render(
             <ErrorBoundary>
-                <ThrowError shouldThrow={true} />
+                <ThrowError />
             </ErrorBoundary>
         );
 
         // Error UI should be visible
         expect(screen.getByText('Something went wrong')).toBeInTheDocument();
 
-        // Click Try Again
-        fireEvent.click(screen.getByText('Try Again'));
+        // Stop throwing before clicking Try Again
+        shouldThrowError = false;
 
-        // Rerender without error
-        rerender(
-            <ErrorBoundary>
-                <ThrowError shouldThrow={false} />
-            </ErrorBoundary>
-        );
+        // Click Try Again - this resets the error boundary state
+        fireEvent.click(screen.getByText('Try Again'));
 
         // Should now show the child component
         expect(screen.getByText('No error')).toBeInTheDocument();
@@ -89,9 +96,10 @@ describe('ErrorBoundary', () => {
         const originalEnv = process.env.NODE_ENV;
         process.env.NODE_ENV = 'development';
 
+        shouldThrowError = true;
         render(
             <ErrorBoundary>
-                <ThrowError shouldThrow={true} />
+                <ThrowError />
             </ErrorBoundary>
         );
 
@@ -102,9 +110,10 @@ describe('ErrorBoundary', () => {
     });
 
     it('includes error ID in error UI', () => {
+        shouldThrowError = true;
         render(
             <ErrorBoundary>
-                <ThrowError shouldThrow={true} />
+                <ThrowError />
             </ErrorBoundary>
         );
 
