@@ -1,0 +1,89 @@
+name: Staging
+
+on:
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  deploy-staging:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Docker
+      run: docker-compose up -d postgres redis
+    
+    - name: Wait for services
+      run: |
+        echo "Waiting for PostgreSQL to be ready..."
+        until docker exec royalty-radar-db pg_isready -U root; do
+          echo "PostgreSQL is unavailable - sleeping"
+          sleep 1
+        done
+        echo "PostgreSQL is ready!"
+        
+        echo "Waiting for Redis to be ready..."
+        until docker exec royalty-radar-redis redis-cli ping; do
+          echo "Redis is unavailable - sleeping"
+          sleep 1
+        done
+        echo "Redis is ready!"
+    
+    - name: Install dependencies
+      run: npm install
+    
+    - name: Run database migrations
+      run: npx prisma migrate deploy
+      env:
+        DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
+    
+    - name: Build application
+      run: npm run build
+      env:
+        DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
+        REDIS_URL: ${{ secrets.STAGING_REDIS_URL }}
+        NEXTAUTH_URL: ${{ secrets.STAGING_NEXTAUTH_URL }}
+        NEXTAUTH_SECRET: ${{ secrets.STAGING_NEXTAUTH_SECRET }}
+        NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: ${{ secrets.STAGING_STRIPE_PUBLISHABLE_KEY }}
+        STRIPE_SECRET_KEY: ${{ secrets.STAGING_STRIPE_SECRET_KEY }}
+        STRIPE_WEBHOOK_SECRET: ${{ secrets.STAGING_STRIPE_WEBHOOK_SECRET }}
+        NEXT_PUBLIC_SENTRY_DSN: ${{ secrets.STAGING_SENTRY_DSN }}
+        SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+        SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
+        SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
+    
+    - name: Deploy to staging
+      run: |
+        # Add your staging deployment commands here
+        # For example, deploy to Vercel preview, Railway preview, etc.
+        echo "Staging deployment steps would go here"
+        # vercel --token=${{ secrets.VERCEL_TOKEN }}
+    
+    - name: Create Sentry release (staging)
+      if: env.NEXT_PUBLIC_SENTRY_DSN != ''
+      run: |
+        npx sentry-cli releases new ${{ github.sha }}
+        npx sentry-cli releases set-commits ${{ github.sha }} --auto
+        npx sentry-cli releases deploys ${{ github.sha }} new -e staging
+      env:
+        SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+        SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
+        SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
+    
+    - name: Comment PR with staging URL
+      if: github.event_name == 'pull_request'
+      uses: actions/github-script@v7
+      with:
+        script: |
+          github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: '🚀 Staging deployment ready!\n\nStaging URL: [your-staging-url-here](https://staging.yourdomain.com)'
+          })
+    
+    - name: Cleanup Docker
+      if: always()
+      run: docker-compose down -v

@@ -1,0 +1,89 @@
+name: Deploy
+
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Docker
+      run: docker-compose up -d postgres redis
+    
+    - name: Wait for services
+      run: |
+        echo "Waiting for PostgreSQL to be ready..."
+        until docker exec royalty-radar-db pg_isready -U root; do
+          echo "PostgreSQL is unavailable - sleeping"
+          sleep 1
+        done
+        echo "PostgreSQL is ready!"
+        
+        echo "Waiting for Redis to be ready..."
+        until docker exec royalty-radar-redis redis-cli ping; do
+          echo "Redis is unavailable - sleeping"
+          sleep 1
+        done
+        echo "Redis is ready!"
+    
+    - name: Install dependencies
+      run: npm install
+    
+    - name: Run database migrations
+      run: npx prisma migrate deploy
+      env:
+        DATABASE_URL: ${{ secrets.DATABASE_URL }}
+    
+    - name: Build application
+      run: npm run build
+      env:
+        DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        REDIS_URL: ${{ secrets.REDIS_URL }}
+        NEXTAUTH_URL: ${{ secrets.NEXTAUTH_URL }}
+        NEXTAUTH_SECRET: ${{ secrets.NEXTAUTH_SECRET }}
+        NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY }}
+        STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
+        STRIPE_WEBHOOK_SECRET: ${{ secrets.STRIPE_WEBHOOK_SECRET }}
+        NEXT_PUBLIC_SENTRY_DSN: ${{ secrets.NEXT_PUBLIC_SENTRY_DSN }}
+        SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+        SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
+        SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
+    
+    - name: Deploy to production
+      run: |
+        # Add your deployment commands here
+        # For example, deploy to Vercel, AWS, Railway, etc.
+        echo "Deployment steps would go here"
+        # vercel --prod --token=${{ secrets.VERCEL_TOKEN }}
+    
+    - name: Create Sentry release
+      if: env.NEXT_PUBLIC_SENTRY_DSN != ''
+      run: |
+        npx sentry-cli releases new ${{ github.sha }}
+        npx sentry-cli releases set-commits ${{ github.sha }} --auto
+        npx sentry-cli releases deploys ${{ github.sha }} new -e production
+      env:
+        SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+        SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
+        SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
+    
+    - name: Cleanup Docker
+      if: always()
+      run: docker-compose down -v
+    
+    - name: Notify on success
+      if: success()
+      run: |
+        echo "Deployment successful!"
+        # Add notification logic (Slack, Discord, etc.)
+    
+    - name: Notify on failure
+      if: failure()
+      run: |
+        echo "Deployment failed!"
+        # Add notification logic (Slack, Discord, etc.)

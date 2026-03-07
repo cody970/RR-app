@@ -11,6 +11,11 @@
     "worker:scan": "tsx src/jobs/scan-worker.ts",
     "dev:worker:scan": "tsx watch src/jobs/scan-worker.ts",
     "lint": "eslint",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:debug": "playwright test --debug",
+    "test:e2e:report": "playwright show-report",
+    "sentry-wizard": "sentry-wizard -i nextjs",
     "test": "vitest run",
     "postinstall": "prisma generate",
     "db:seed": "tsx prisma/seed.ts"
@@ -19,10 +24,14 @@
     "seed": "tsx prisma/seed.ts"
   },
   "dependencies": {
+    "@bull-board/api": "^6.20.3",
+    "@bull-board/express": "^6.20.3",
     "@prisma/client": "^5.22.0",
     "@react-three/drei": "^10.7.7",
     "@react-three/fiber": "^9.5.0",
+    "@sentry/nextjs": "^10.42.0",
     "bcrypt": "^6.0.0",
+    "bull-board": "^1.7.2",
     "bullmq": "^5.70.1",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
@@ -47,6 +56,7 @@
     "zod": "^4.3.6"
   },
   "devDependencies": {
+    "@playwright/test": "^1.58.2",
     "@tailwindcss/postcss": "^4",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",

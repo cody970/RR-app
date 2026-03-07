@@ -1,7 +1,10 @@
+version: '3.8'
+
 services:
   postgres:
-    image: postgres:15-alpine
+    image: postgres:16-alpine
     container_name: royalty-radar-db
+    restart: unless-stopped
     environment:
       POSTGRES_USER: root
       POSTGRES_PASSWORD: password
@@ -10,14 +13,39 @@ services:
       - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
-    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U root"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   redis:
     image: redis:7-alpine
     container_name: royalty-radar-redis
+    restart: unless-stopped
     ports:
       - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Optional: Redis Commander for GUI access to Redis
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    container_name: royalty-radar-redis-commander
     restart: unless-stopped
+    environment:
+      - REDIS_HOSTS=local:redis:6379
+    ports:
+      - "8081:8081"
+    depends_on:
+      redis:
+        condition: service_healthy
 
 volumes:
   pgdata:
+  redis_data:
