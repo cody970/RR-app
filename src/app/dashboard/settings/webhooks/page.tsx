@@ -79,6 +79,7 @@ export default function WebhooksPage() {
     const [deliveries, setDeliveries] = useState<Record<string, DeliveryData[]>>({});
     const [newSecret, setNewSecret] = useState<string | null>(null);
     const [showSecret, setShowSecret] = useState(false);
+    const [testingId, setTestingId] = useState<string | null>(null);
     const toast = useToast();
 
     // Add form state
@@ -199,6 +200,32 @@ export default function WebhooksPage() {
             }
         } catch (e) {
             toast.error("Failed to delete webhook");
+        }
+    };
+
+    const testWebhook = async (id: string) => {
+        setTestingId(id);
+        try {
+            const res = await fetch(`/api/webhooks/${id}/test`, { method: "POST" });
+            const data = await res.json();
+            if (res.ok && data.success) {
+                toast.success(`Test delivery successful! HTTP ${data.delivery?.statusCode || "OK"}`);
+                // Refresh deliveries if expanded
+                if (expandedId === id) {
+                    await fetchDeliveries(id);
+                }
+            } else if (res.ok && !data.success) {
+                toast.error(`Test delivery failed: HTTP ${data.delivery?.statusCode || "unknown"}`);
+                if (expandedId === id) {
+                    await fetchDeliveries(id);
+                }
+            } else {
+                toast.error(data.error || "Failed to send test");
+            }
+        } catch (e) {
+            toast.error("Network error sending test");
+        } finally {
+            setTestingId(null);
         }
     };
 
@@ -453,6 +480,22 @@ export default function WebhooksPage() {
                                                 <ChevronUp className="h-4 w-4" />
                                             ) : (
                                                 <ChevronDown className="h-4 w-4" />
+                                            )}
+                                        </button>
+                                        <button
+                                            onClick={() => testWebhook(wh.id)}
+                                            disabled={testingId === wh.id || !wh.enabled}
+                                            className={`p-1 ${
+                                                wh.enabled
+                                                    ? "text-slate-400 hover:text-blue-500"
+                                                    : "text-slate-200 cursor-not-allowed"
+                                            }`}
+                                            title={wh.enabled ? "Send test event" : "Enable webhook to test"}
+                                        >
+                                            {testingId === wh.id ? (
+                                                <Loader2 className="h-4 w-4 animate-spin" />
+                                            ) : (
+                                                <Send className="h-4 w-4" />
                                             )}
                                         </button>
                                         <button
