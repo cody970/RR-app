@@ -14,9 +14,12 @@ import {
     Target,
     ArrowUpRight,
     ArrowDownRight,
+    Download,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { useToast } from "@/components/ui/toast-provider";
 import {
     RevenueBySocietyChart,
     TopWorksChart,
@@ -24,6 +27,7 @@ import {
     WorkTrendsChart,
     CumulativeRecoveryChart,
 } from "@/components/dashboard/trend-charts";
+import { exportToCSV, exportToJSON } from "@/lib/export-utils";
 
 interface TrendData {
     // Existing
@@ -44,6 +48,7 @@ export default function AnalyticsPage() {
     const [data, setData] = useState<TrendData | null>(null);
     const [loading, setLoading] = useState(true);
     const [activeTab, setActiveTab] = useState<"revenue" | "recovery" | "catalog">("revenue");
+    const toast = useToast();
 
     useEffect(() => {
         async function fetchData() {
@@ -108,14 +113,95 @@ export default function AnalyticsPage() {
             ? "text-red-600"
             : "text-slate-500";
 
+    // Export handlers
+    const handleExportRevenue = () => {
+        const exportData = data.revenueBySociety.map(r => {
+            const { period, total, ...societies } = r;
+            return {
+                Period: period,
+                TotalRevenue: total,
+                ...societies
+            };
+        });
+        exportToCSV("revenue_trends", exportData);
+        toast.success("Revenue trends exported to CSV");
+    };
+
+    const handleExportTerritories = () => {
+        const exportData = data.territories.map(t => ({
+            Territory: t.territory,
+            Revenue: t.revenue,
+            Uses: t.uses,
+            LineCount: t.lineCount
+        }));
+        exportToCSV("territory_breakdown", exportData);
+        toast.success("Territory breakdown exported to CSV");
+    };
+
+    const handleExportTopWorks = () => {
+        const exportData = data.topWorks.map(w => ({
+            WorkId: w.workId,
+            Title: w.title,
+            TotalRevenue: w.totalRevenue,
+            TotalUses: w.totalUses
+        }));
+        exportToCSV("top_works", exportData);
+        toast.success("Top works exported to CSV");
+    };
+
+    const handleExportAll = () => {
+        exportToJSON("analytics_report", {
+            exportedAt: new Date().toISOString(),
+            summary: {
+                totalRevenue,
+                periodChange,
+                trend: data.regressionStats.trend,
+                rSquared: data.regressionStats.rSquared,
+                totalFindings,
+                recoveredCount,
+                totalImpact,
+                totalRecovered
+            },
+            revenueBySociety: data.revenueBySociety,
+            forecastPeriods: data.forecastPeriods,
+            topWorks: data.topWorks,
+            territories: data.territories,
+            workTrends: data.workTrends
+        });
+        toast.success("Full analytics report exported to JSON");
+    };
+
     return (
         <div className="space-y-6">
             {/* Header */}
-            <div>
-                <h1 className="text-2xl font-bold text-slate-900">Analytics & Trends</h1>
-                <p className="text-slate-500 mt-1">
-                    Revenue intelligence, trend analysis, and forecasting for your catalog.
-                </p>
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div>
+                    <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Analytics & Trends</h1>
+                    <p className="text-slate-500 dark:text-slate-400 mt-1">
+                        Revenue intelligence, trend analysis, and forecasting for your catalog.
+                    </p>
+                </div>
+                <div className="flex items-center gap-2">
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleExportRevenue}
+                        disabled={data.revenueBySociety.length === 0}
+                        className="text-xs"
+                    >
+                        <Download className="h-3 w-3 mr-1" />
+                        Revenue CSV
+                    </Button>
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleExportAll}
+                        className="text-xs bg-amber-50 border-amber-200 text-amber-700 hover:bg-amber-100 dark:bg-amber-950 dark:border-amber-800 dark:text-amber-300"
+                    >
+                        <Download className="h-3 w-3 mr-1" />
+                        Full Report
+                    </Button>
+                </div>
             </div>
 
             {/* KPI Cards */}
@@ -249,14 +335,27 @@ export default function AnalyticsPage() {
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                         {/* Top Works */}
                         <Card>
-                            <CardHeader>
-                                <CardTitle className="flex items-center gap-2">
-                                    <Music className="h-5 w-5 text-amber-500" />
-                                    Top Works by Revenue
-                                </CardTitle>
-                                <CardDescription>
-                                    Highest-earning works across all periods
-                                </CardDescription>
+                            <CardHeader className="flex flex-row items-start justify-between">
+                                <div>
+                                    <CardTitle className="flex items-center gap-2">
+                                        <Music className="h-5 w-5 text-amber-500" />
+                                        Top Works by Revenue
+                                    </CardTitle>
+                                    <CardDescription>
+                                        Highest-earning works across all periods
+                                    </CardDescription>
+                                </div>
+                                {data.topWorks.length > 0 && (
+                                    <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={handleExportTopWorks}
+                                        className="text-xs text-slate-500 hover:text-slate-700"
+                                    >
+                                        <Download className="h-3 w-3 mr-1" />
+                                        CSV
+                                    </Button>
+                                )}
                             </CardHeader>
                             <CardContent>
                                 {data.topWorks.length > 0 ? (
@@ -269,14 +368,27 @@ export default function AnalyticsPage() {
 
                         {/* Territory Breakdown */}
                         <Card>
-                            <CardHeader>
-                                <CardTitle className="flex items-center gap-2">
-                                    <Globe className="h-5 w-5 text-amber-500" />
-                                    Revenue by Territory
-                                </CardTitle>
-                                <CardDescription>
-                                    Geographic distribution of royalty income
-                                </CardDescription>
+                            <CardHeader className="flex flex-row items-start justify-between">
+                                <div>
+                                    <CardTitle className="flex items-center gap-2">
+                                        <Globe className="h-5 w-5 text-amber-500" />
+                                        Revenue by Territory
+                                    </CardTitle>
+                                    <CardDescription>
+                                        Geographic distribution of royalty income
+                                    </CardDescription>
+                                </div>
+                                {data.territories.length > 0 && (
+                                    <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={handleExportTerritories}
+                                        className="text-xs text-slate-500 hover:text-slate-700"
+                                    >
+                                        <Download className="h-3 w-3 mr-1" />
+                                        CSV
+                                    </Button>
+                                )}
                             </CardHeader>
                             <CardContent>
                                 {data.territories.length > 0 ? (
