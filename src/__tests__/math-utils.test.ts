@@ -215,6 +215,20 @@ describe("linearRegression", () => {
         expect(result.intercept).toBe(5);
         expect(result.predict(100)).toBe(5);
     });
+
+    it("should handle vertical data (same x values)", () => {
+        const points = [
+            { x: 5, y: 10 },
+            { x: 5, y: 20 },
+            { x: 5, y: 30 },
+        ];
+        const result = linearRegression(points);
+        // When denominator is 0 (all x values same), should return average y
+        expect(result.slope).toBe(0);
+        expect(result.intercept).toBe(20); // Average of 10, 20, 30
+        expect(result.rSquared).toBe(0);
+        expect(result.predict(5)).toBe(20);
+    });
 });
 
 // ---------- forecastNextPeriods ----------
@@ -299,9 +313,14 @@ describe("growthRates", () => {
         expect(result[1]).toBe(-20);   // -20% decline
     });
 
-    it("should handle zero base value", () => {
+    it("should handle zero base value with positive growth", () => {
         const result = growthRates([0, 100]);
         expect(result[0]).toBe(100);
+    });
+
+    it("should handle zero to zero transition", () => {
+        const result = growthRates([0, 0]);
+        expect(result[0]).toBe(0);
     });
 
     it("should handle single value", () => {
