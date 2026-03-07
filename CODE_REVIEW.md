@@ -61,12 +61,21 @@ The webhook handler trusts `session.metadata.orgId` from Stripe checkout data wi
 
 **Fix:** Cross-reference the Stripe customer ID against your organization records before applying changes.
 
-### 7. OAuth users auto-assigned OWNER role
+### 7. OAuth users auto-assigned OWNER role ✅ FIXED
 **File:** `src/lib/auth/auth.ts` (lines 64–92)
 
 All new OAuth sign-ups get `role: "OWNER"` and a new organization. There's no email verification check from the OAuth provider, and no way to invite users into existing orgs.
 
-**Fix:** Default to `VIEWER` role. Check `account?.email_verified`. Build an invitation flow for org membership.
+**Fix:** ~~Default to `VIEWER` role.~~ Check `account?.email_verified`. Build an invitation flow for org membership.
+
+**Resolution (March 2026):**
+- Email verification is now checked from OAuth providers
+- Invitation system added: `OrgInvitation` model in Prisma schema
+- API endpoints at `/api/settings/team/invitations` for creating/listing/revoking invitations
+- API endpoint at `/api/invitations/accept` for accepting invitations
+- OAuth callback now checks for pending invitations before creating user
+- Users with pending invitations join the existing org with the invited role (defaults to VIEWER)
+- Users without invitations can still create their own org as OWNER (legitimate use case)
 
 ---
 

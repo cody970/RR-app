@@ -74,11 +74,10 @@ export const authOptions: NextAuthOptions = {
     },
     callbacks: {
         async signIn({ user, account, profile }) {
-            const clientIp = "unknown"; // In a real Next.js app, you'd get this from headers
-
             if (account?.provider === 'google' || account?.provider === 'github') {
                 // Ensure the OAuth provider has verified the user's email address
-                const isVerified = profile && ('email_verified' in profile ? (profile as any).email_verified : true);
+                // Type assertion needed because profile shape varies by provider
+                const isVerified = profile && ('email_verified' in profile ? (profile as { email_verified?: boolean }).email_verified : true);
 
                 if (!isVerified) {
                     logger.warn({
@@ -89,30 +88,86 @@ export const authOptions: NextAuthOptions = {
                     return false;
                 }
 
-                const existingUser = await db.user.findUnique({ where: { email: user.email! } });
+                const normalizedEmail = user.email!.toLowerCase();
+                const existingUser = await db.user.findUnique({ where: { email: normalizedEmail } });
+                
                 if (!existingUser) {
-                    logger.info({ email: user.email, provider: account.provider }, "Auto-creating user from OAuth login");
-
-                    const orgName = user.name ? `${user.name}'s Workspace` : `${user.email?.split('@')[0]}'s Workspace`;
-                    const org = await db.organization.create({
-                        data: {
-                            name: orgName,
+                    // Check for pending invitation for this email
+                    // CODE_REVIEW #7 FIX: New users should join via invitation, not auto-create orgs with OWNER role
+                    const pendingInvitation = await db.orgInvitation.findFirst({
+                        where: {
+                            email: normalizedEmail,
+                            status: "PENDING",
+                            expiresAt: { gt: new Date() }
+                        },
+                        include: {
+                            organization: true
                         }
                     });
 
-                    const newUser = await db.user.create({
-                        data: {
-                            email: user.email!,
-                            // Secure sentinel that cannot be used for login but satisfies the DB constraint
-                            passwordHash: `OAUTH_ONLY_${crypto.randomBytes(32).toString('hex')}`,
-                            role: "OWNER", // First user is owner
-                            orgId: org.id
-                        }
-                    });
+                    if (pendingInvitation) {
+                        // User has a pending invitation - join that org with the invited role
+                        logger.info({ 
+                            email: normalizedEmail, 
+                            provider: account.provider,
+                            orgId: pendingInvitation.orgId,
+                            role: pendingInvitation.role
+                        }, "Creating user from OAuth login via invitation");
 
-                    user.orgId = newUser.orgId;
-                    user.role = newUser.role;
-                    user.id = newUser.id;
+                        const newUser = await db.user.create({
+                            data: {
+                                email: normalizedEmail,
+                                passwordHash: `OAUTH_ONLY_${crypto.randomBytes(32).toString('hex')}`,
+                                role: pendingInvitation.role, // Use role from invitation (defaults to VIEWER)
+                                orgId: pendingInvitation.orgId
+                            }
+                        });
+
+                        // Mark invitation as accepted
+                        await db.orgInvitation.update({
+                            where: { id: pendingInvitation.id },
+                            data: { 
+                                status: "ACCEPTED",
+                                acceptedAt: new Date()
+                            }
+                        });
+
+                        user.orgId = newUser.orgId;
+                        user.role = newUser.role;
+                        user.id = newUser.id;
+
+                        logger.info({
+                            userId: newUser.id,
+                            email: normalizedEmail,
+                            orgId: pendingInvitation.orgId,
+                            role: pendingInvitation.role
+                        }, "User joined organization via invitation");
+                    } else {
+                        // No invitation - create new org with OWNER role
+                        // This is the legitimate case: user is starting their own workspace
+                        logger.info({ email: normalizedEmail, provider: account.provider }, "Auto-creating user and organization from OAuth login");
+
+                        const orgName = user.name ? `${user.name}'s Workspace` : `${normalizedEmail.split('@')[0]}'s Workspace`;
+                        const org = await db.organization.create({
+                            data: {
+                                name: orgName,
+                            }
+                        });
+
+                        const newUser = await db.user.create({
+                            data: {
+                                email: normalizedEmail,
+                                // Secure sentinel that cannot be used for login but satisfies the DB constraint
+                                passwordHash: `OAUTH_ONLY_${crypto.randomBytes(32).toString('hex')}`,
+                                role: "OWNER", // First user of new org is owner
+                                orgId: org.id
+                            }
+                        });
+
+                        user.orgId = newUser.orgId;
+                        user.role = newUser.role;
+                        user.id = newUser.id;
+                    }
                 } else {
                     user.orgId = existingUser.orgId;
                     user.role = existingUser.role;
@@ -127,7 +182,7 @@ export const authOptions: NextAuthOptions = {
             }
             return true;
         },
-        async jwt({ token, user, account }) {
+        async jwt({ token, user }) {
             if (user) {
                 token.id = user.id;
                 token.orgId = user.orgId;

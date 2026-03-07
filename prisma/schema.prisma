@@ -60,6 +60,28 @@ model Organization {
 
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
+  invitations   OrgInvitation[]
+}
+
+// Organization invitation for adding users to existing orgs
+// Addresses CODE_REVIEW issue #7: OAuth users should join existing orgs via invitation
+model OrgInvitation {
+  id            String       @id @default(cuid())
+  email         String       // Email to invite
+  role          String       @default("VIEWER") // Default role is VIEWER, not OWNER
+  token         String       @unique // Secure invitation token (hashed)
+  status        String       @default("PENDING") // PENDING, ACCEPTED, EXPIRED, REVOKED
+  expiresAt     DateTime     // Invitation expiration
+  invitedById   String?      // User who sent the invitation (optional for initial setup)
+  organization  Organization @relation(fields: [orgId], references: [id])
+  orgId         String
+  createdAt     DateTime     @default(now())
+  acceptedAt    DateTime?    // When the invitation was accepted
+
+  @@unique([email, orgId]) // One active invitation per email per org
+  @@index([token])
+  @@index([orgId, status])
+  @@index([email, status])
 }
 
 model IngestJob {
