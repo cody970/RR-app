@@ -17,6 +17,7 @@ import { SparkButton } from "@/components/spark/spark-button";
 
 import { HeroVisualizer } from "@/components/landing/hero-visualizer";
 import { GlowingEffectDemo } from "@/components/landing/glowing-features";
+import { HeroStarCta } from "@/components/landing/hero-star-cta";
 
 export default function LandingPage() {
   return (
@@ -80,19 +81,7 @@ export default function LandingPage() {
             The ultimate catalog audit and revenue recovery platform for modern rights holders. We scan millions of global data points to heal your metadata and unlock hidden revenue.
           </p>
 
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-6 animate-slide-up delay-300">
-            <Link href="/register">
-              <SparkButton variant="secondary" size="lg" className="w-full sm:w-auto h-16 px-10 text-sm font-black uppercase tracking-widest rounded-2xl shadow-2xl">
-                Connect Catalog Free
-                <ArrowRight className="ml-3 w-5 h-5" aria-hidden="true" />
-              </SparkButton>
-            </Link>
-            <Link href="#demo">
-              <SparkButton variant="tertiary" size="lg" className="w-full sm:w-auto h-16 px-10 text-sm font-black uppercase tracking-widest rounded-2xl">
-                Interactive Demo
-              </SparkButton>
-            </Link>
-          </div>
+          <HeroStarCta />
 
           {/* Dashboard Preview / Stats */}
           <div className="mt-24 pt-12 border-t border-slate-100 flex flex-wrap justify-center gap-12 sm:gap-32 animate-slide-up delay-400">

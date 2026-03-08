@@ -419,3 +419,17 @@
 .dark ::-webkit-scrollbar-thumb:hover {
   background: rgba(212, 175, 55, 0.4);
 }
+/* ── Star Button Animation ── */
+
+@theme inline {
+  --animate-star-btn: star-btn calc(var(--duration) * 1s) linear infinite;
+}
+
+@keyframes star-btn {
+  0% {
+    offset-distance: 0%;
+  }
+  100% {
+    offset-distance: 100%;
+  }
+}
