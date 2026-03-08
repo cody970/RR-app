@@ -4,17 +4,15 @@
  */
 
 let spotifyToken: { value: string; expires: number } | null = null;
+// In-flight refresh promise: ensures concurrent callers share one token request
+let tokenRefreshPromise: Promise<string> | null = null;
 
-async function getSpotifyToken() {
+async function refreshSpotifyToken(): Promise<string> {
     const clientId = process.env.SPOTIFY_CLIENT_ID;
     const clientSecret = process.env.SPOTIFY_CLIENT_SECRET;
 
     if (!clientId || !clientSecret) {
         throw new Error("Missing Spotify credentials in environment");
-    }
-
-    if (spotifyToken && spotifyToken.expires > Date.now()) {
-        return spotifyToken.value;
     }
 
     const res = await fetch("https://accounts.spotify.com/api/token", {
@@ -38,6 +36,23 @@ async function getSpotifyToken() {
     };
 
     return spotifyToken.value;
+}
+
+async function getSpotifyToken(): Promise<string> {
+    if (spotifyToken && spotifyToken.expires > Date.now()) {
+        return spotifyToken.value;
+    }
+
+    // If a refresh is already in flight, reuse it to prevent concurrent token requests
+    if (tokenRefreshPromise) {
+        return tokenRefreshPromise;
+    }
+
+    tokenRefreshPromise = refreshSpotifyToken().finally(() => {
+        tokenRefreshPromise = null;
+    });
+
+    return tokenRefreshPromise;
 }
 
 export interface SpotifyTrack {

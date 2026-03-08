@@ -39,36 +39,46 @@ export async function GET() {
         const itemsWithId = worksWithIswc + recordsWithIsrc;
         const healthScore = totalItems > 0 ? Math.round((itemsWithId / totalItems) * 100) : 100;
 
-        // 2. Finding Impact Metrics
-        const findings = await db.finding.findMany({
-            where: { orgId },
-            select: { type: true, estimatedImpact: true, severity: true, status: true, recoveredAmount: true },
-        });
+        // 2. Finding Impact Metrics — use DB-level aggregation to avoid loading all
+        //    findings into memory (avoids O(N) memory for large catalogs).
+        const [findingTotals, impactByTypeRaw, severityRaw, statusRaw] = await Promise.all([
+            db.finding.aggregate({
+                where: { orgId },
+                _sum: { estimatedImpact: true, recoveredAmount: true },
+            }),
+            db.finding.groupBy({
+                by: ["type"],
+                where: { orgId },
+                _sum: { estimatedImpact: true },
+            }),
+            db.finding.groupBy({
+                by: ["severity"],
+                where: { orgId },
+                _count: { _all: true },
+            }),
+            db.finding.groupBy({
+                by: ["status"],
+                where: { orgId },
+                _count: { _all: true },
+            }),
+        ]);
 
-        const totalLeakage = findings.reduce((acc: number, f: any) => acc + (f.estimatedImpact || 0), 0);
-        const totalRecovered = findings.reduce((acc: number, f: any) => acc + (f.recoveredAmount || 0), 0);
+        const totalLeakage = Number(findingTotals._sum.estimatedImpact ?? 0);
+        const totalRecovered = Number(findingTotals._sum.recoveredAmount ?? 0);
         const recoveryRate = totalLeakage > 0 ? (totalRecovered / totalLeakage) * 100 : 0;
 
-        const impactByType = findings.reduce((acc: Record<string, number>, f: any) => {
-            acc[f.type] = (acc[f.type] || 0) + (f.estimatedImpact || 0);
-            return acc;
-        }, {});
-
-        const chartData = Object.entries(impactByType).map(([name, value]: [string, any]) => ({
-            name: name.replace(/_/g, " "),
-            value,
+        const chartData = impactByTypeRaw.map(r => ({
+            name: r.type.replace(/_/g, " "),
+            value: Number(r._sum.estimatedImpact ?? 0),
         }));
 
-        // 3. Severity & Status Distribution
-        const severityData = findings.reduce((acc: Record<string, number>, f: any) => {
-            acc[f.severity] = (acc[f.severity] || 0) + 1;
-            return acc;
-        }, {});
+        const severityData = Object.fromEntries(
+            severityRaw.map(r => [r.severity, r._count._all])
+        );
 
-        const statusData = findings.reduce((acc: Record<string, number>, f: any) => {
-            acc[f.status] = (acc[f.status] || 0) + 1;
-            return acc;
-        }, {});
+        const statusData = Object.fromEntries(
+            statusRaw.map(r => [r.status, r._count._all])
+        );
 
         const result = {
             healthScore,
