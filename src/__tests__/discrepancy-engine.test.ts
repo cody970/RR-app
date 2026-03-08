@@ -27,6 +27,9 @@ vi.mock("@/lib/infra/db", () => ({
             findMany: (...args: unknown[]) => mockFindMany(...args),
             findUnique: (...args: unknown[]) => mockFindUnique(...args),
         },
+        dspReport: {
+            findMany: (...args: unknown[]) => mockFindMany(...args),
+        },
         finding: {
             findMany: (...args: unknown[]) => mockFindMany(...args),
             createMany: (...args: unknown[]) => mockCreateMany(...args),
@@ -123,6 +126,16 @@ function setupDefaultMocks(overrides?: {
         // royaltyPeriod.findMany — revenue drops
         if (where && "orgId" in where && "changePercent" in where) {
             return Promise.resolve(defaults.royaltyPeriods.filter(p => (p.changePercent ?? 0) < -25 && (p.previousAmount ?? 0) > 10));
+        }
+
+        // dspReport.findMany — DSP vs PRO check (returns empty by default)
+        if (where && "orgId" in where && "streams" in where) {
+            return Promise.resolve([]);
+        }
+
+        // statementLine.findMany — ISRC lookup for DSP vs PRO check
+        if (where && "statementId" in where && "isrc" in where) {
+            return Promise.resolve([]);
         }
 
         // finding.findMany — existing findings

@@ -47,6 +47,7 @@ export interface Recording {
 
 export type { Discrepancy } from "@/lib/music/discrepancy-engine";
 export type { AuditReportData } from "@/lib/reports/pdf-utils";
+export type { AnomalyResult, AnomalyDetectionOptions } from "@/lib/finance/anomaly-detection";
 
 // ─────────────────────────────────────────────
 //  Catalog & Scanning
