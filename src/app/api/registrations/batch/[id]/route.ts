@@ -5,7 +5,7 @@ import { db } from "@/lib/infra/db";
 
 export async function GET(
     _req: Request,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     try {
         const session = await getServerSession(authOptions);
@@ -14,7 +14,7 @@ export async function GET(
         }
 
         const batch = await db.registrationBatch.findUnique({
-            where: { id: params.id, orgId: session.user.orgId },
+            where: { id: (await params).id, orgId: session.user.orgId },
         });
 
         if (!batch) {

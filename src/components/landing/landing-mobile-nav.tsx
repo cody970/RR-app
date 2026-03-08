@@ -11,6 +11,7 @@ const navLinks = [
   { href: "#how-it-works", label: "Process" },
   { href: "#pricing", label: "Pricing" },
   { href: "#security", label: "Security" },
+  { href: "/blog", label: "Blog" },
 ];
 
 export function LandingMobileNav() {

@@ -4,42 +4,60 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { signIn } from "next-auth/react";
 import Link from "next/link";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 import { SparkButton } from "@/components/spark/spark-button";
 import { SparkInput } from "@/components/spark/spark-input";
 import { SparkAlert } from "@/components/spark/spark-alert";
 import { ArrowRight, Eye, EyeOff, Building2 } from "lucide-react";
 
+const registerSchema = z.object({
+    organizationName: z.string().min(2, "Organization name must be at least 2 characters"),
+    email: z.string().email("Please enter a valid email address"),
+    password: z
+        .string()
+        .min(6, "Password must be at least 6 characters")
+        .max(100, "Password is too long"),
+});
+
+type RegisterFormData = z.infer<typeof registerSchema>;
+
 export default function RegisterPage() {
     const router = useRouter();
-    const [email, setEmail] = useState("");
-    const [password, setPassword] = useState("");
-    const [orgName, setOrgName] = useState("");
-    const [error, setError] = useState("");
-    const [loading, setLoading] = useState(false);
+    const [serverError, setServerError] = useState("");
     const [showPassword, setShowPassword] = useState(false);
 
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        setLoading(true);
-        setError("");
+    const {
+        register,
+        handleSubmit,
+        formState: { errors, isSubmitting },
+    } = useForm<RegisterFormData>({
+        resolver: zodResolver(registerSchema),
+    });
+
+    const onSubmit = async (data: RegisterFormData) => {
+        setServerError("");
 
         try {
             const res = await fetch("/api/auth/register", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ email, password, organizationName: orgName }),
+                body: JSON.stringify({
+                    email: data.email,
+                    password: data.password,
+                    organizationName: data.organizationName,
+                }),
             });
 
             if (res.ok) {
                 router.push("/login");
             } else {
                 const text = await res.text();
-                setError(text || "An error occurred");
+                setServerError(text || "An error occurred");
             }
         } catch {
-            setError("An unexpected error occurred");
-        } finally {
-            setLoading(false);
+            setServerError("An unexpected error occurred");
         }
     };
 
@@ -77,59 +95,58 @@ export default function RegisterPage() {
                         </p>
                     </div>
 
-                    <form className="space-y-5" onSubmit={handleSubmit} noValidate>
-                        {error && (
-                            <SparkAlert variant="error" dismissible onDismiss={() => setError("")}>
-                                {error}
+                    <form className="space-y-5" onSubmit={handleSubmit(onSubmit)} noValidate>
+                        {serverError && (
+                            <SparkAlert variant="error" dismissible onDismiss={() => setServerError("")}>
+                                {serverError}
                             </SparkAlert>
                         )}
 
                         <div className="space-y-4">
                             <SparkInput
-                                id="orgName"
+                                id="organizationName"
                                 type="text"
-                                required
                                 label="Organization Name"
-                                value={orgName}
-                                onChange={(e) => setOrgName(e.target.value)}
-                                className="h-12 bg-white"
                                 placeholder="Acme Music Publishing"
                                 autoComplete="organization"
+                                className="h-12 bg-white"
+                                error={errors.organizationName?.message}
+                                {...register("organizationName")}
                             />
 
                             <SparkInput
                                 id="email"
                                 type="email"
-                                required
                                 label="Email address"
-                                value={email}
-                                onChange={(e) => setEmail(e.target.value)}
-                                className="h-12 bg-white"
                                 placeholder="you@example.com"
                                 autoComplete="email"
+                                className="h-12 bg-white"
+                                error={errors.email?.message}
+                                {...register("email")}
                             />
 
-                            <div className="space-y-1.5">
+                            {/* Password with inline show/hide toggle */}
+                            <div className="relative">
                                 <SparkInput
                                     id="password"
                                     type={showPassword ? "text" : "password"}
-                                    required
                                     label="Password"
-                                    value={password}
-                                    onChange={(e) => setPassword(e.target.value)}
-                                    className="h-12 bg-white pr-12"
                                     placeholder="••••••••"
-                                    minLength={6}
-                                    helperText="Minimum 6 characters"
                                     autoComplete="new-password"
+                                    className="h-12 bg-white pr-12"
+                                    helperText="Minimum 6 characters"
+                                    error={errors.password?.message}
+                                    {...register("password")}
                                 />
                                 <button
                                     type="button"
                                     aria-label={showPassword ? "Hide password" : "Show password"}
                                     onClick={() => setShowPassword(!showPassword)}
-                                    className="absolute right-3 top-[calc(50%+0.75rem)] -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
+                                    className="absolute right-3 top-[38px] text-slate-400 hover:text-slate-600 transition-colors"
                                 >
-                                    {showPassword ? <EyeOff className="h-5 w-5" aria-hidden="true" /> : <Eye className="h-5 w-5" aria-hidden="true" />}
+                                    {showPassword
+                                        ? <EyeOff className="h-5 w-5" aria-hidden="true" />
+                                        : <Eye className="h-5 w-5" aria-hidden="true" />}
                                 </button>
                             </div>
                         </div>
@@ -138,10 +155,10 @@ export default function RegisterPage() {
                             type="submit"
                             variant="primary"
                             size="lg"
-                            loading={loading}
+                            loading={isSubmitting}
                             className="w-full bg-gradient-to-r from-amber-500 to-yellow-600 hover:from-amber-600 hover:to-yellow-700"
                         >
-                            {!loading && (
+                            {!isSubmitting && (
                                 <>
                                     Create account
                                     <ArrowRight className="h-4 w-4" aria-hidden="true" />

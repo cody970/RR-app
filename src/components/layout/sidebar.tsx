@@ -2,7 +2,11 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Library, UploadCloud, ScanSearch, SearchCheck, FileCheck2, DollarSign, Briefcase, Workflow, Bot, FileText, Shield, Users, CreditCard, LogOut, Wallet, BarChart3 } from "lucide-react";
+import {
+    LayoutDashboard, Library, UploadCloud, ScanSearch, SearchCheck,
+    FileCheck2, DollarSign, Briefcase, Workflow, Bot, FileText, Shield,
+    Users, CreditCard, LogOut, Wallet, BarChart3, Monitor, Music2, Shuffle,
+} from "lucide-react";
 import { signOut } from "next-auth/react";
 
 const navSections = [
@@ -22,11 +26,14 @@ const navSections = [
             { name: "Registrations", href: "/dashboard/registrations", icon: FileCheck2 },
             { name: "Revenue", href: "/dashboard/revenue", icon: DollarSign },
             { name: "Analytics", href: "/dashboard/analytics", icon: BarChart3 },
+            { name: "Content ID", href: "/dashboard/content-id", icon: Monitor },
+            { name: "MLC Matching", href: "/dashboard/mlc-matching", icon: Music2 },
         ],
     },
     {
         label: "Operations",
         items: [
+            { name: "Sync Licensing", href: "/dashboard/sync", icon: Shuffle },
             { name: "Accounting Hub", href: "/dashboard/accounting", icon: Wallet },
             { name: "Licensing Hub", href: "/dashboard/licensing", icon: Briefcase },
             { name: "Tasks", href: "/dashboard/tasks", icon: Workflow },
@@ -44,7 +51,7 @@ const navSections = [
     },
 ];
 
-export function Sidebar({ isOpen, onClose }: { isOpen?: boolean; onClose?: () => void }) {
+export function Sidebar({ onClose }: { isOpen?: boolean; onClose?: () => void }) {
     const pathname = usePathname();
 
     return (
@@ -61,7 +68,7 @@ export function Sidebar({ isOpen, onClose }: { isOpen?: boolean; onClose?: () =>
 
             {/* Nav */}
             <div className="flex flex-1 flex-col overflow-y-auto py-4">
-                <nav className="flex-1 px-4 space-y-6">
+                <nav className="flex-1 px-4 space-y-6" aria-label="Main navigation">
                     {navSections.map((section) => (
                         <div key={section.label}>
                             <div className="px-3 mb-3">
@@ -69,7 +76,7 @@ export function Sidebar({ isOpen, onClose }: { isOpen?: boolean; onClose?: () =>
                                     {section.label}
                                 </span>
                             </div>
-                            <div className="space-y-1">
+                            <div className="space-y-0.5">
                                 {section.items.map((item) => {
                                     const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
                                     return (
@@ -77,7 +84,7 @@ export function Sidebar({ isOpen, onClose }: { isOpen?: boolean; onClose?: () =>
                                             key={item.name}
                                             href={item.href}
                                             onClick={onClose}
-                                            className={`group relative flex items-center rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-300 ${isActive
+                                            className={`group relative flex items-center rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200 ${isActive
                                                 ? "bg-slate-900/5 dark:bg-white/5 text-indigo-600 dark:text-indigo-400"
                                                 : "text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-white/[0.03] hover:text-slate-900 dark:hover:text-slate-200"
                                                 }`}
@@ -86,7 +93,7 @@ export function Sidebar({ isOpen, onClose }: { isOpen?: boolean; onClose?: () =>
                                                 <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-gradient-to-b from-indigo-500 to-violet-500 rounded-r-full shadow-[0_0_12px_rgba(79,70,229,0.4)]" />
                                             )}
                                             <item.icon
-                                                className={`mr-3 h-[18px] w-[18px] flex-shrink-0 transition-all duration-300 ${isActive
+                                                className={`mr-3 h-[18px] w-[18px] flex-shrink-0 transition-all duration-200 ${isActive
                                                     ? "text-indigo-600 dark:text-indigo-400 scale-110"
                                                     : "text-slate-400 dark:text-slate-500 group-hover:text-slate-600 dark:group-hover:text-slate-300 group-hover:scale-110"
                                                     }`}
@@ -114,13 +121,15 @@ export function Sidebar({ isOpen, onClose }: { isOpen?: boolean; onClose?: () =>
                     </div>
                     <button
                         onClick={() => signOut({ callbackUrl: "/login" })}
-                        className="p-1.5 rounded-lg text-slate-400 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 transition-all duration-300"
+                        className="p-1.5 rounded-lg text-slate-400 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 transition-all duration-200"
                         title="Sign out"
+                        aria-label="Sign out"
                     >
-                        <LogOut className="h-4 w-4" />
+                        <LogOut className="h-4 w-4" aria-hidden="true" />
                     </button>
                 </div>
             </div>
         </div>
     );
 }
+

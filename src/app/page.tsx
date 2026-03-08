@@ -50,6 +50,7 @@ export default function LandingPage() {
             <Link href="#how-it-works" className="hover:text-indigo-600 transition-colors">Process</Link>
             <Link href="#pricing" className="hover:text-indigo-600 transition-colors">Pricing</Link>
             <Link href="#security" className="hover:text-indigo-600 transition-colors">Security</Link>
+            <Link href="/blog" className="hover:text-indigo-600 transition-colors">Blog</Link>
           </nav>
           <div className="hidden lg:flex items-center gap-6">
             <Link href="/login" className="text-sm font-bold text-slate-500 hover:text-slate-900 transition-colors uppercase tracking-widest">
@@ -245,6 +246,9 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* Pricing Section */}
+      <PricingSection />
+
       {/* Trust Section */}
       <section className="py-20 border-t border-slate-200 bg-white">
         <div className="container mx-auto px-6 max-w-5xl">
@@ -321,8 +325,8 @@ export default function LandingPage() {
             <div>
               <h4 className="text-[10px] font-black text-slate-900 uppercase tracking-[0.2em] mb-8">Company</h4>
               <ul className="space-y-4">
+                <li><Link href="/blog" className="text-sm font-medium hover:text-indigo-600 transition-colors">Blog</Link></li>
                 <li><Link href="#" className="text-sm font-medium hover:text-indigo-600 transition-colors">About Us</Link></li>
-                <li><Link href="#" className="text-sm font-medium hover:text-indigo-600 transition-colors">Blog</Link></li>
                 <li><Link href="#" className="text-sm font-medium hover:text-indigo-600 transition-colors">Careers</Link></li>
                 <li><Link href="#" className="text-sm font-medium hover:text-indigo-600 transition-colors">Contact</Link></li>
               </ul>

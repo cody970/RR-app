@@ -16,7 +16,7 @@ import { db } from "@/lib/infra/db";
 
 export async function GET(
     req: Request,
-    { params }: { params: { id: string } },
+    { params }: { params: Promise<{ id: string }> },
 ) {
     const authHeader = req.headers.get("Authorization");
     const key = authHeader?.replace("Bearer ", "");
@@ -32,7 +32,7 @@ export async function GET(
     try {
         // Verify webhook belongs to this org
         const webhook = await db.webhook.findFirst({
-            where: { id: params.id, orgId: organization.id },
+            where: { id: (await params).id, orgId: organization.id },
         });
 
         if (!webhook) {
@@ -49,7 +49,7 @@ export async function GET(
         );
         const status = searchParams.get("status") || "all";
 
-        const where: Record<string, unknown> = { webhookId: params.id };
+        const where: Record<string, unknown> = { webhookId: (await params).id };
         if (status === "success") where.success = true;
         if (status === "failed") where.success = false;
 
