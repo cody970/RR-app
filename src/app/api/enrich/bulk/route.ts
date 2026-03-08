@@ -53,26 +53,46 @@ export async function POST(req: Request) {
                 select: { id: true, resourceType: true, resourceId: true, type: true },
             });
 
+            // Batch-fetch all referenced works and recordings up front to avoid N+1 queries
+            const workFindingIds = findings
+                .filter(f => f.resourceType === "Work")
+                .map(f => f.resourceId);
+            const recordingFindingIds = findings
+                .filter(f => f.resourceType === "Recording")
+                .map(f => f.resourceId);
+
+            const [batchWorks, batchRecordings] = await Promise.all([
+                workFindingIds.length
+                    ? db.work.findMany({
+                          where: { id: { in: workFindingIds } },
+                          select: { id: true, title: true, iswc: true },
+                      })
+                    : Promise.resolve([]),
+                recordingFindingIds.length
+                    ? db.recording.findMany({
+                          where: { id: { in: recordingFindingIds } },
+                          select: { id: true, title: true, isrc: true },
+                      })
+                    : Promise.resolve([]),
+            ]);
+
+            const workById = new Map(batchWorks.map(w => [w.id, w]));
+            const recordingById = new Map(batchRecordings.map(r => [r.id, r]));
+
             for (const finding of findings) {
                 try {
-                    // Get the resource title for enrichment lookup
+                    // Look up the resource title from the pre-fetched maps
                     let title = "";
                     let currentId: string | null = null;
 
                     if (finding.resourceType === "Work") {
-                        const work = await db.work.findUnique({
-                            where: { id: finding.resourceId },
-                            select: { title: true, iswc: true },
-                        });
+                        const work = workById.get(finding.resourceId);
                         if (work) {
                             title = work.title;
                             currentId = work.iswc;
                         }
                     } else if (finding.resourceType === "Recording") {
-                        const recording = await db.recording.findUnique({
-                            where: { id: finding.resourceId },
-                            select: { title: true, isrc: true },
-                        });
+                        const recording = recordingById.get(finding.resourceId);
                         if (recording) {
                             title = recording.title;
                             currentId = recording.isrc;

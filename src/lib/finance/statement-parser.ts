@@ -600,6 +600,9 @@ async function aggregateRoyaltyPeriods(
     const affectedWorkIds = Array.from(new Set(lines.map(l => l.workId!).filter(Boolean)));
     const affectedSocieties = Array.from(new Set(lines.map(l => l.society)));
 
+    // Compute prevPeriod once — all groups share the same period argument
+    const prevPeriod = getPreviousPeriod(period);
+
     if (affectedWorkIds.length > 0) {
         const workGroups = await db.statementLine.groupBy({
             by: ['workId', 'society'],
@@ -610,6 +613,21 @@ async function aggregateRoyaltyPeriods(
             _sum: { amount: true, uses: true }
         });
 
+        // Batch-fetch all previous-period records for affected works in one query
+        const prevWorkPeriods = prevPeriod
+            ? await db.royaltyPeriod.findMany({
+                  where: {
+                      orgId,
+                      period: prevPeriod,
+                      workId: { in: workGroups.map(g => g.workId!).filter(Boolean) },
+                  },
+                  select: { workId: true, society: true, totalAmount: true },
+              })
+            : [];
+        const prevWorkMap = new Map(
+            prevWorkPeriods.map(p => [`${p.workId}:${p.society}`, p.totalAmount])
+        );
+
         for (const group of workGroups) {
             const workId = group.workId!;
             const society = group.society!;
@@ -617,13 +635,9 @@ async function aggregateRoyaltyPeriods(
             const totalUses = group._sum.uses || 0;
             const avgRate = totalUses > 0 ? totalAmount / totalUses : null;
 
-            const prevPeriod = getPreviousPeriod(period);
-            const prev = await db.royaltyPeriod.findUnique({
-                where: { orgId_workId_society_period: { orgId, workId, society, period: prevPeriod } },
-            });
-
-            const changePercent = prev?.totalAmount
-                ? ((totalAmount - prev.totalAmount) / prev.totalAmount) * 100
+            const prevTotalAmount = prevWorkMap.get(`${workId}:${society}`);
+            const changePercent = prevTotalAmount
+                ? ((totalAmount - prevTotalAmount) / prevTotalAmount) * 100
                 : null;
 
             await db.royaltyPeriod.upsert({
@@ -631,12 +645,12 @@ async function aggregateRoyaltyPeriods(
                 create: {
                     orgId, workId, society, period,
                     totalAmount, totalUses, avgRate,
-                    previousAmount: prev?.totalAmount,
+                    previousAmount: prevTotalAmount,
                     changePercent,
                 },
                 update: {
                     totalAmount, totalUses, avgRate,
-                    previousAmount: prev?.totalAmount,
+                    previousAmount: prevTotalAmount,
                     changePercent,
                 },
             });
@@ -653,19 +667,31 @@ async function aggregateRoyaltyPeriods(
         _sum: { amount: true, uses: true }
     });
 
+    // Batch-fetch all previous-period records for affected societies in one query
+    const prevSocietyPeriods = prevPeriod
+        ? await db.royaltyPeriod.findMany({
+              where: {
+                  orgId,
+                  period: prevPeriod,
+                  workId: "",
+                  society: { in: societyGroups.map(g => g.society!).filter(Boolean) },
+              },
+              select: { society: true, totalAmount: true },
+          })
+        : [];
+    const prevSocietyMap = new Map(
+        prevSocietyPeriods.map(p => [p.society, p.totalAmount])
+    );
+
     for (const group of societyGroups) {
         const society = group.society!;
         const totalAmount = group._sum.amount || 0;
         const totalUses = group._sum.uses || 0;
         const avgRate = totalUses > 0 ? totalAmount / totalUses : null;
 
-        const prevPeriod = getPreviousPeriod(period);
-        const prev = await db.royaltyPeriod.findUnique({
-            where: { orgId_workId_society_period: { orgId, workId: "", society, period: prevPeriod } },
-        });
-
-        const changePercent = prev?.totalAmount
-            ? ((totalAmount - prev.totalAmount) / prev.totalAmount) * 100
+        const prevTotalAmount = prevSocietyMap.get(society);
+        const changePercent = prevTotalAmount
+            ? ((totalAmount - prevTotalAmount) / prevTotalAmount) * 100
             : null;
 
         await db.royaltyPeriod.upsert({
@@ -673,12 +699,12 @@ async function aggregateRoyaltyPeriods(
             create: {
                 orgId, workId: "", society, period,
                 totalAmount, totalUses, avgRate,
-                previousAmount: prev?.totalAmount,
+                previousAmount: prevTotalAmount,
                 changePercent,
             },
             update: {
                 totalAmount, totalUses, avgRate,
-                previousAmount: prev?.totalAmount,
+                previousAmount: prevTotalAmount,
                 changePercent,
             },
         });

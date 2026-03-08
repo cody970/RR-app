@@ -146,63 +146,70 @@ export async function POST(req: Request) {
 
         const { actions } = parsed.data;
         const userId = session.user.id;
+        const reviewedAt = new Date();
         let confirmed = 0;
         let rejected = 0;
         let corrected = 0;
 
-        for (const { lineId, action, correctWorkId } of actions) {
-            // Verify the line belongs to this org
-            const line = await db.statementLine.findFirst({
-                where: {
-                    id: lineId,
-                    statement: { orgId },
-                },
-            });
+        // Batch-verify all line IDs belong to this org in a single query
+        const lineIds = actions.map(a => a.lineId);
+        const validLines = await db.statementLine.findMany({
+            where: { id: { in: lineIds }, statement: { orgId } },
+            select: { id: true },
+        });
+        const validLineIdSet = new Set(validLines.map(l => l.id));
 
-            if (!line) continue;
+        // Build update payloads for all valid actions, separating counting from DB ops
+        const updateOps: ReturnType<typeof db.statementLine.update>[] = [];
+        for (const { lineId, action, correctWorkId } of actions) {
+            if (!validLineIdSet.has(lineId)) continue;
 
             if (action === "confirm") {
-                // Match is confirmed — mark as reviewed, workId stays
-                await db.statementLine.update({
-                    where: { id: lineId },
-                    data: {
-                        needsReview: false,
-                        reviewedAt: new Date(),
-                        reviewedBy: userId,
-                    },
-                });
                 confirmed++;
+                updateOps.push(
+                    db.statementLine.update({
+                        where: { id: lineId },
+                        data: { needsReview: false, reviewedAt, reviewedBy: userId },
+                    })
+                );
             } else if (action === "reject") {
                 if (correctWorkId) {
-                    // User provided the correct work — update the match and mark as reviewed
-                    await db.statementLine.update({
-                        where: { id: lineId },
-                        data: {
-                            workId: correctWorkId,
-                            matchMethod: "USER_CORRECTED",
-                            matchConfidence: 100,
-                            needsReview: false,
-                            reviewedAt: new Date(),
-                            reviewedBy: userId,
-                        },
-                    });
                     corrected++;
+                    updateOps.push(
+                        db.statementLine.update({
+                            where: { id: lineId },
+                            data: {
+                                workId: correctWorkId,
+                                matchMethod: "USER_CORRECTED",
+                                matchConfidence: 100,
+                                needsReview: false,
+                                reviewedAt,
+                                reviewedBy: userId,
+                            },
+                        })
+                    );
                 } else {
-                    // Reject the match entirely — set workId to null and mark as reviewed
-                    await db.statementLine.update({
-                        where: { id: lineId },
-                        data: {
-                            workId: null,
-                            matchMethod: "USER_REJECTED",
-                            matchConfidence: 0,
-                            needsReview: false,
-                            reviewedAt: new Date(),
-                            reviewedBy: userId,
-                        },
-                    });
                     rejected++;
+                    updateOps.push(
+                        db.statementLine.update({
+                            where: { id: lineId },
+                            data: {
+                                workId: null,
+                                matchMethod: "USER_REJECTED",
+                                matchConfidence: 0,
+                                needsReview: false,
+                                reviewedAt,
+                                reviewedBy: userId,
+                            },
+                        })
+                    );
                 }
             }
+        }
+
+        // Execute all updates in a single transaction
+        if (updateOps.length > 0) {
+            await db.$transaction(updateOps);
         }
 
         return NextResponse.json({
