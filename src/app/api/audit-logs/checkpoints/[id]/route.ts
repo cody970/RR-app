@@ -14,7 +14,7 @@ import { verifyCheckpoint, exportVerificationBundle } from "@/lib/infra/audit-ch
 
 export async function GET(
     req: Request,
-    { params }: { params: { id: string } },
+    { params }: { params: Promise<{ id: string }> },
 ) {
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
@@ -22,7 +22,7 @@ export async function GET(
     }
 
     const orgId = session.user.orgId;
-    const checkpointId = params.id;
+    const checkpointId = (await params).id;
 
     try {
         // Verify the checkpoint belongs to this org

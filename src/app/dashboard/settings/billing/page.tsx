@@ -1,7 +1,7 @@
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth/auth";
 import { db as prisma } from "@/lib/infra/db";
-import { PricingCards } from "@/components/billing/pricing-cards";
+import { PricingCards, statusToTierName } from "@/components/billing/pricing-cards";
 import { Button } from "@/components/ui/button";
 import { redirect } from "next/navigation";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -71,7 +71,7 @@ export default async function BillingPage() {
 
             <div className="mt-8">
                 <h3 className="text-xl font-semibold mb-6">Available Plans</h3>
-                <PricingCards currentTier={isSubscribed ? "Pro" : "Starter"} />
+                <PricingCards currentTier={statusToTierName(organization.subscriptionStatus)} />
             </div>
         </div>
     );

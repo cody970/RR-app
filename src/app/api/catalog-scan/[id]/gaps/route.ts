@@ -10,7 +10,7 @@ import { db } from "@/lib/infra/db";
 
 export async function GET(
     req: NextRequest,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     try {
         const session = await getServerSession(authOptions);
@@ -20,7 +20,7 @@ export async function GET(
 
         // Verify scan belongs to the org
         const scan = await db.catalogScan.findFirst({
-            where: { id: params.id, orgId: session.user.orgId },
+            where: { id: (await params).id, orgId: session.user.orgId },
         });
         if (!scan) {
             return NextResponse.json({ error: "Scan not found" }, { status: 404 });
@@ -37,7 +37,7 @@ export async function GET(
         const sortOrder = url.searchParams.get("sortOrder") === "asc" ? "asc" : "desc";
 
         // Build filter
-        const where: Record<string, unknown> = { scanId: params.id };
+        const where: Record<string, unknown> = { scanId: (await params).id };
         if (gapType) where.gapType = gapType;
         if (society) where.society = society;
         if (status) where.status = status;
@@ -69,7 +69,7 @@ export async function GET(
 
 export async function PATCH(
     req: NextRequest,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     try {
         const session = await getServerSession(authOptions);
@@ -78,7 +78,7 @@ export async function PATCH(
         }
 
         const scan = await db.catalogScan.findFirst({
-            where: { id: params.id, orgId: session.user.orgId },
+            where: { id: (await params).id, orgId: session.user.orgId },
         });
         if (!scan) {
             return NextResponse.json({ error: "Scan not found" }, { status: 404 });
@@ -108,7 +108,7 @@ export async function PATCH(
         const result = await db.registrationGap.updateMany({
             where: {
                 id: { in: gapIds },
-                scanId: params.id,
+                scanId: (await params).id,
             },
             data: { status: newStatus },
         });

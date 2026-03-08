@@ -34,7 +34,7 @@ const updateWebhookSchema = z.object({
 
 export async function PATCH(
     req: Request,
-    { params }: { params: { id: string } },
+    { params }: { params: Promise<{ id: string }> },
 ) {
     const session = await getServerSession(authOptions);
     if (!session?.user) return new Response("Unauthorized", { status: 401 });
@@ -48,7 +48,7 @@ export async function PATCH(
 
     try {
         const existing = await db.webhook.findFirst({
-            where: { id: params.id, orgId: session.user.orgId },
+            where: { id: (await params).id, orgId: session.user.orgId },
         });
 
         if (!existing) {
@@ -89,7 +89,7 @@ export async function PATCH(
         }
 
         const updated = await db.webhook.update({
-            where: { id: params.id },
+            where: { id: (await params).id },
             data: updateData,
             select: {
                 id: true,
@@ -115,7 +115,7 @@ export async function PATCH(
 
 export async function DELETE(
     _req: Request,
-    { params }: { params: { id: string } },
+    { params }: { params: Promise<{ id: string }> },
 ) {
     const session = await getServerSession(authOptions);
     if (!session?.user) return new Response("Unauthorized", { status: 401 });
@@ -129,7 +129,7 @@ export async function DELETE(
 
     try {
         const existing = await db.webhook.findFirst({
-            where: { id: params.id, orgId: session.user.orgId },
+            where: { id: (await params).id, orgId: session.user.orgId },
         });
 
         if (!existing) {
@@ -140,7 +140,7 @@ export async function DELETE(
         }
 
         await db.webhook.delete({
-            where: { id: params.id },
+            where: { id: (await params).id },
         });
 
         return new Response(null, { status: 204 });

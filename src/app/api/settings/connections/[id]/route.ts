@@ -18,7 +18,7 @@ const updateSourceSchema = z.object({
 
 export async function PATCH(
     req: Request,
-    { params }: { params: { id: string } },
+    { params }: { params: Promise<{ id: string }> },
 ) {
     const session = await getServerSession(authOptions);
     if (!session?.user) return new Response("Unauthorized", { status: 401 });
@@ -33,7 +33,7 @@ export async function PATCH(
     try {
         // Verify the source belongs to the user's org
         const existing = await db.ingestionSource.findFirst({
-            where: { id: params.id, orgId: session.user.orgId },
+            where: { id: (await params).id, orgId: session.user.orgId },
         });
 
         if (!existing) {
@@ -70,7 +70,7 @@ export async function PATCH(
         }
 
         const updated = await db.ingestionSource.update({
-            where: { id: params.id },
+            where: { id: (await params).id },
             data: updateData,
         });
 
@@ -87,7 +87,7 @@ export async function PATCH(
 
 export async function DELETE(
     _req: Request,
-    { params }: { params: { id: string } },
+    { params }: { params: Promise<{ id: string }> },
 ) {
     const session = await getServerSession(authOptions);
     if (!session?.user) return new Response("Unauthorized", { status: 401 });
@@ -102,7 +102,7 @@ export async function DELETE(
     try {
         // Verify the source belongs to the user's org
         const existing = await db.ingestionSource.findFirst({
-            where: { id: params.id, orgId: session.user.orgId },
+            where: { id: (await params).id, orgId: session.user.orgId },
         });
 
         if (!existing) {
@@ -114,11 +114,11 @@ export async function DELETE(
 
         // Delete associated logs first, then the source
         await db.ingestionLog.deleteMany({
-            where: { sourceId: params.id },
+            where: { sourceId: (await params).id },
         });
 
         await db.ingestionSource.delete({
-            where: { id: params.id },
+            where: { id: (await params).id },
         });
 
         return NextResponse.json({ success: true });

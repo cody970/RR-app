@@ -9,7 +9,7 @@ import { db } from "@/lib/infra/db";
 
 export async function GET(
     req: NextRequest,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     try {
         const session = await getServerSession(authOptions);
@@ -19,7 +19,7 @@ export async function GET(
 
         const scan = await db.catalogScan.findFirst({
             where: {
-                id: params.id,
+                id: (await params).id,
                 orgId: session.user.orgId,
             },
             include: {

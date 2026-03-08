@@ -11,14 +11,14 @@ import { db } from "@/lib/infra/db";
 
 export async function GET(
     req: Request,
-    { params }: { params: { id: string } },
+    { params }: { params: Promise<{ id: string }> },
 ) {
     const session = await getServerSession(authOptions);
     if (!session?.user) return new Response("Unauthorized", { status: 401 });
 
     try {
         const webhook = await db.webhook.findFirst({
-            where: { id: params.id, orgId: session.user.orgId },
+            where: { id: (await params).id, orgId: session.user.orgId },
         });
 
         if (!webhook) {
@@ -35,7 +35,7 @@ export async function GET(
         );
 
         const deliveries = await db.webhookDelivery.findMany({
-            where: { webhookId: params.id },
+            where: { webhookId: (await params).id },
             orderBy: { createdAt: "desc" },
             take: limit,
             select: {

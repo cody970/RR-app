@@ -13,7 +13,7 @@ import { submitWorkRegistration, submitRecordingRegistration, convertGapToRegist
 
 export async function POST(
     req: NextRequest,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     try {
         const session = await getServerSession(authOptions);
@@ -23,7 +23,7 @@ export async function POST(
 
         // Verify scan belongs to org
         const scan = await db.catalogScan.findFirst({
-            where: { id: params.id, orgId: session.user.orgId },
+            where: { id: (await params).id, orgId: session.user.orgId },
         });
         if (!scan) {
             return NextResponse.json({ error: "Scan not found" }, { status: 404 });
@@ -48,7 +48,7 @@ export async function POST(
         const gaps = await db.registrationGap.findMany({
             where: {
                 id: { in: gapIds },
-                scanId: params.id,
+                scanId: (await params).id,
                 status: "OPEN",
             },
         });

@@ -36,7 +36,7 @@ const updateWebhookSchema = z.object({
 
 export async function PATCH(
     req: Request,
-    { params }: { params: { id: string } },
+    { params }: { params: Promise<{ id: string }> },
 ) {
     const authHeader = req.headers.get("Authorization");
     const key = authHeader?.replace("Bearer ", "");
@@ -52,7 +52,7 @@ export async function PATCH(
     try {
         // Verify webhook belongs to this org
         const existing = await db.webhook.findFirst({
-            where: { id: params.id, orgId: organization.id },
+            where: { id: (await params).id, orgId: organization.id },
         });
 
         if (!existing) {
@@ -94,7 +94,7 @@ export async function PATCH(
         }
 
         const updated = await db.webhook.update({
-            where: { id: params.id },
+            where: { id: (await params).id },
             data: updateData,
             select: {
                 id: true,
@@ -125,7 +125,7 @@ export async function PATCH(
 
 export async function DELETE(
     _req: Request,
-    { params }: { params: { id: string } },
+    { params }: { params: Promise<{ id: string }> },
 ) {
     const authHeader = _req.headers.get("Authorization");
     const key = authHeader?.replace("Bearer ", "");
@@ -140,7 +140,7 @@ export async function DELETE(
 
     try {
         const existing = await db.webhook.findFirst({
-            where: { id: params.id, orgId: organization.id },
+            where: { id: (await params).id, orgId: organization.id },
         });
 
         if (!existing) {
@@ -152,7 +152,7 @@ export async function DELETE(
 
         // Cascade delete handles deliveries via schema relation
         await db.webhook.delete({
-            where: { id: params.id },
+            where: { id: (await params).id },
         });
 
         return new Response(null, { status: 204 });

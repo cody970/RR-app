@@ -5,7 +5,7 @@ import { generateRetroactiveClaim } from "@/lib/infra/claim-service";
 
 export async function POST(
     req: Request,
-    { params }: { params: { id: string, gapId: string } }
+    { params }: { params: Promise<{ id: string; gapId: string }> }
 ) {
     try {
         const session = await getServerSession(authOptions);
@@ -26,7 +26,7 @@ export async function POST(
         const body = await req.json().catch(() => ({}));
         const targetSociety = body.targetSociety || "Relevant Society";
 
-        const claim = await generateRetroactiveClaim(params.gapId, orgId, targetSociety);
+        const claim = await generateRetroactiveClaim((await params).gapId, orgId, targetSociety);
 
         return NextResponse.json({ success: true, claim });
     } catch (error: any) {

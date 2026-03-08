@@ -1,23 +1,24 @@
 import Link from "next/link";
 import {
-  ArrowRight,
   Music,
   Shield,
   Zap,
-  FileCheck,
-  Upload,
-  ScanSearch,
   TrendingUp,
   Github,
   Twitter,
   Linkedin,
-  Bot
+  FileCheck,
+  Bot,
 } from "lucide-react";
-import { SparkButton } from "@/components/spark/spark-button";
 
 import { HeroVisualizer } from "@/components/landing/hero-visualizer";
 import { GlowingEffectDemo } from "@/components/landing/glowing-features";
 import { HeroStarCta } from "@/components/landing/hero-star-cta";
+import { LandingMobileNav } from "@/components/landing/landing-mobile-nav";
+import { PricingSection } from "@/components/landing/pricing-section";
+import { TestimonialsSection } from "@/components/landing/testimonials-section";
+import { CtaSection } from "@/components/landing/cta-section";
+import { CtaStickyBar } from "@/components/landing/cta-sticky-bar";
 
 export default function LandingPage() {
   return (
@@ -32,6 +33,9 @@ export default function LandingPage() {
       {/* Premium Header */}
       <header className="fixed top-0 left-0 right-0 z-50 bg-white/70 backdrop-blur-2xl border-b border-slate-200/60 transition-all duration-300">
         <div className="container mx-auto px-6 h-20 flex items-center justify-between">
+          {/* Mobile hamburger – rendered before logo so it sits left on small screens */}
+          <LandingMobileNav />
+
           <div className="flex items-center gap-3 group cursor-pointer">
             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center text-[10px] font-black text-white shadow-xl shadow-indigo-500/20 ring-1 ring-white/20 transition-transform group-hover:scale-110">
               RR
@@ -43,9 +47,11 @@ export default function LandingPage() {
           <nav className="hidden lg:flex items-center gap-10 text-sm font-bold text-slate-500 uppercase tracking-widest">
             <Link href="#features" className="hover:text-indigo-600 transition-colors">Features</Link>
             <Link href="#how-it-works" className="hover:text-indigo-600 transition-colors">Process</Link>
+            <Link href="#pricing" className="hover:text-indigo-600 transition-colors">Pricing</Link>
             <Link href="#security" className="hover:text-indigo-600 transition-colors">Security</Link>
+            <Link href="/blog" className="hover:text-indigo-600 transition-colors">Blog</Link>
           </nav>
-          <div className="flex items-center gap-6">
+          <div className="hidden lg:flex items-center gap-6">
             <Link href="/login" className="text-sm font-bold text-slate-500 hover:text-slate-900 transition-colors uppercase tracking-widest">
               Log in
             </Link>
@@ -194,10 +200,11 @@ export default function LandingPage() {
                 </li>
               ))}
             </ul>
-            <Link href="/register">
-              <SparkButton size="lg" variant="ghost" className="bg-white text-slate-950 hover:bg-slate-100 rounded-2xl px-10 h-16 font-black uppercase tracking-widest text-xs transition-all shadow-xl">
-                Learn About Security
-              </SparkButton>
+            <Link
+              href="/register"
+              className="inline-flex items-center gap-2 h-14 px-10 rounded-2xl bg-white text-slate-900 text-sm font-black uppercase tracking-widest hover:bg-slate-100 transition-all shadow-xl"
+            >
+              Start for Free
             </Link>
           </div>
           <div className="lg:w-1/2 relative w-full aspect-square max-w-md mx-auto">
@@ -212,32 +219,14 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* CTA Section */}
-      <section className="py-32 relative overflow-hidden bg-white">
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[80%] h-px bg-gradient-to-r from-transparent via-indigo-500/20 to-transparent" />
+      {/* Testimonials */}
+      <TestimonialsSection />
 
-        <div className="container mx-auto max-w-4xl px-6 text-center relative z-10">
-          <h2 className="text-5xl md:text-7xl font-black text-slate-900 mb-8 tracking-tighter leading-tight">
-            Ready to recover <br />your royalties?
-          </h2>
-          <p className="text-xl text-slate-500 max-w-2xl mx-auto mb-16 font-medium leading-relaxed">
-            Join the next generation of music publishers and labels recovering millions in missing royalties with RoyaltyRadar.
-          </p>
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-6">
-            <Link href="/register">
-              <SparkButton size="lg" variant="secondary" className="h-16 px-12 text-sm font-black uppercase tracking-widest rounded-2xl shadow-2xl">
-                Start Free Trial
-                <ArrowRight className="ml-3 w-5 h-5" aria-hidden="true" />
-              </SparkButton>
-            </Link>
-            <Link href="/login">
-              <SparkButton size="lg" variant="tertiary" className="h-16 px-12 text-sm font-black uppercase tracking-widest rounded-2xl">
-                Sign In
-              </SparkButton>
-            </Link>
-          </div>
-        </div>
-      </section>
+      {/* Pricing Section */}
+      <PricingSection />
+
+      {/* High-impact CTA Section (replaces old bland one) */}
+      <CtaSection />
 
       {/* Trust Section */}
       <section className="py-20 border-t border-slate-200 bg-white">
@@ -307,7 +296,7 @@ export default function LandingPage() {
                 <li><Link href="#features" className="text-sm font-medium hover:text-indigo-600 transition-colors">Features</Link></li>
                 <li><Link href="#pricing" className="text-sm font-medium hover:text-indigo-600 transition-colors">Pricing</Link></li>
                 <li><Link href="#how-it-works" className="text-sm font-medium hover:text-indigo-600 transition-colors">Process</Link></li>
-                <li><Link href="/register" className="text-sm font-medium hover:text-indigo-600 transition-colors">Free Trial</Link></li>
+                <li><Link href="/register" className="text-sm font-medium hover:text-indigo-600 transition-colors">Start for Free</Link></li>
               </ul>
             </div>
 
@@ -315,8 +304,8 @@ export default function LandingPage() {
             <div>
               <h4 className="text-[10px] font-black text-slate-900 uppercase tracking-[0.2em] mb-8">Company</h4>
               <ul className="space-y-4">
+                <li><Link href="/blog" className="text-sm font-medium hover:text-indigo-600 transition-colors">Blog</Link></li>
                 <li><Link href="#" className="text-sm font-medium hover:text-indigo-600 transition-colors">About Us</Link></li>
-                <li><Link href="#" className="text-sm font-medium hover:text-indigo-600 transition-colors">Blog</Link></li>
                 <li><Link href="#" className="text-sm font-medium hover:text-indigo-600 transition-colors">Careers</Link></li>
                 <li><Link href="#" className="text-sm font-medium hover:text-indigo-600 transition-colors">Contact</Link></li>
               </ul>
@@ -344,6 +333,9 @@ export default function LandingPage() {
           </div>
         </div>
       </footer>
+
+      {/* Sticky bottom CTA bar — appears after 400px scroll */}
+      <CtaStickyBar />
     </div>
   );
 }
