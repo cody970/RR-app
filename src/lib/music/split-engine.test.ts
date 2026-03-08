@@ -1,12 +1,19 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { calculateSplits, validateSplitOwnership } from './split-engine';
+import { calculateSplits, validateSplitOwnership, processStatementSplitsBulk } from './split-engine';
 
-// Mock Prisma to avoid initialization errors
-vi.mock('../infra/db', () => ({
-    db: {
-        // Mock any database operations if needed
+// vi.mock is hoisted to top of file, so mockDb must be created with vi.hoisted
+const mockDb = vi.hoisted(() => ({
+    statementLine: {
+        findMany: vi.fn(),
+    },
+    work: {
+        findMany: vi.fn(),
+    },
+    payeeLedger: {
+        createMany: vi.fn(),
     },
 }));
+vi.mock('../infra/db', () => ({ db: mockDb }));
 
 describe('Split Engine', () => {
     describe('calculateSplits', () => {
@@ -186,9 +193,84 @@ describe('Split Engine', () => {
             ];
             
             const result = calculateSplits(500, writers);
-            
+
             expect(result).toHaveLength(1);
             expect(result[0].amount).toBe(500);
         });
+    });
+});
+
+describe('processStatementSplitsBulk', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+        mockDb.payeeLedger.createMany.mockResolvedValue({ count: 0 });
+    });
+
+    it('returns 0 when there are no matched lines', async () => {
+        mockDb.statementLine.findMany.mockResolvedValue([]);
+
+        const result = await processStatementSplitsBulk('stmt-1', 'org-1');
+
+        expect(result).toBe(0);
+        expect(mockDb.work.findMany).not.toHaveBeenCalled();
+        expect(mockDb.payeeLedger.createMany).not.toHaveBeenCalled();
+    });
+
+    it('creates ledgers for all matched lines in a single createMany call', async () => {
+        mockDb.statementLine.findMany.mockResolvedValue([
+            { id: 'line-1', workId: 'work-1', amount: 100, currency: 'USD', statementId: 'stmt-1' },
+            { id: 'line-2', workId: 'work-1', amount: 200, currency: 'USD', statementId: 'stmt-1' },
+        ]);
+        mockDb.work.findMany.mockResolvedValue([
+            {
+                id: 'work-1',
+                writers: [
+                    { writerId: 'w1', splitPercent: 60, writer: { id: 'w1' } },
+                    { writerId: 'w2', splitPercent: 40, writer: { id: 'w2' } },
+                ],
+            },
+        ]);
+
+        const result = await processStatementSplitsBulk('stmt-1', 'org-1');
+
+        // 2 lines × 2 writers = 4 ledger entries
+        expect(result).toBe(4);
+        expect(mockDb.payeeLedger.createMany).toHaveBeenCalledTimes(1);
+        const { data } = mockDb.payeeLedger.createMany.mock.calls[0][0];
+        expect(data).toHaveLength(4);
+    });
+
+    it('fetches works using a single query with all unique workIds', async () => {
+        mockDb.statementLine.findMany.mockResolvedValue([
+            { id: 'line-1', workId: 'work-1', amount: 100, currency: 'USD', statementId: 'stmt-1' },
+            { id: 'line-2', workId: 'work-2', amount: 50, currency: 'USD', statementId: 'stmt-1' },
+            { id: 'line-3', workId: 'work-1', amount: 25, currency: 'USD', statementId: 'stmt-1' },
+        ]);
+        mockDb.work.findMany.mockResolvedValue([
+            { id: 'work-1', writers: [{ writerId: 'w1', splitPercent: 100, writer: { id: 'w1' } }] },
+            { id: 'work-2', writers: [{ writerId: 'w2', splitPercent: 100, writer: { id: 'w2' } }] },
+        ]);
+
+        await processStatementSplitsBulk('stmt-1', 'org-1');
+
+        // Should call work.findMany exactly once with both unique workIds
+        expect(mockDb.work.findMany).toHaveBeenCalledTimes(1);
+        const whereClause = mockDb.work.findMany.mock.calls[0][0].where;
+        expect(whereClause.id.in).toHaveLength(2);
+        expect(whereClause.id.in).toContain('work-1');
+        expect(whereClause.id.in).toContain('work-2');
+    });
+
+    it('skips lines whose work is not found in the org', async () => {
+        mockDb.statementLine.findMany.mockResolvedValue([
+            { id: 'line-1', workId: 'work-missing', amount: 100, currency: 'USD', statementId: 'stmt-1' },
+        ]);
+        // work.findMany returns empty — work not in org
+        mockDb.work.findMany.mockResolvedValue([]);
+
+        const result = await processStatementSplitsBulk('stmt-1', 'org-1');
+
+        expect(result).toBe(0);
+        expect(mockDb.payeeLedger.createMany).not.toHaveBeenCalled();
     });
 });

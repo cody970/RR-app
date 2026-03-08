@@ -95,6 +95,71 @@ export async function processStatementLineSplits(lineId: string, orgId: string) 
     return ledgers.length;
 }
 
+/**
+ * Bulk version of processStatementLineSplits for an entire statement.
+ * Fetches all matched lines and their associated works in a constant number
+ * of DB round-trips instead of O(N) queries per line.
+ */
+export async function processStatementSplitsBulk(
+    statementId: string,
+    orgId: string
+): Promise<number> {
+    // 1. Fetch all matched lines for the statement in one query
+    const lines = await db.statementLine.findMany({
+        where: { statementId, workId: { not: null } },
+    });
+
+    if (lines.length === 0) return 0;
+
+    // 2. Collect unique workIds and fetch all works+writers in a single query
+    const workIds = [...new Set(lines.map(l => l.workId as string))];
+    const works = await db.work.findMany({
+        where: { id: { in: workIds }, orgId },
+        include: {
+            writers: {
+                include: { writer: true },
+            },
+        },
+    });
+    const workMap = new Map(works.map(w => [w.id, w]));
+
+    // 3. Compute all ledger entries in memory
+    const allLedgers: {
+        orgId: string;
+        writerId: string;
+        statementLineId: string;
+        amount: number;
+        currency: string;
+        type: "EARNING";
+        status: "PAID" | "UNPAID";
+    }[] = [];
+
+    for (const line of lines) {
+        const work = workMap.get(line.workId as string);
+        if (!work) continue;
+
+        const splitResults = calculateSplits(line.amount, work.writers);
+        for (const s of splitResults) {
+            allLedgers.push({
+                orgId,
+                writerId: s.writerId,
+                statementLineId: line.id,
+                amount: s.amount,
+                currency: line.currency,
+                type: "EARNING",
+                status: s.amount === 0 ? "PAID" : "UNPAID",
+            });
+        }
+    }
+
+    if (allLedgers.length === 0) return 0;
+
+    // 4. Insert all ledgers in a single createMany call
+    await db.payeeLedger.createMany({ data: allLedgers });
+
+    return allLedgers.length;
+}
+
 export async function processLicenseSplits(licenseId: string, orgId: string) {
     const license = await db.license.findUnique({
         where: { id: licenseId },

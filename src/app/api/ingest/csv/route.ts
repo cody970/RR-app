@@ -163,12 +163,15 @@ export async function POST(req: Request) {
                         const existingMap = new Map(existing.map((e: any) => [e.iswc, e.id]));
 
                         const toCreate: any[] = [];
+                        const updatePromises: Promise<any>[] = [];
                         for (const row of batch) {
                             if (row.ISWC && existingMap.has(row.ISWC)) {
-                                await tx.work.update({
-                                    where: { id: existingMap.get(row.ISWC) },
-                                    data: { title: row.Title }
-                                });
+                                updatePromises.push(
+                                    tx.work.update({
+                                        where: { id: existingMap.get(row.ISWC) },
+                                        data: { title: row.Title }
+                                    })
+                                );
                             } else {
                                 toCreate.push({
                                     title: row.Title,
@@ -177,6 +180,7 @@ export async function POST(req: Request) {
                                 });
                             }
                         }
+                        await Promise.all(updatePromises);
                         if (toCreate.length > 0) {
                             await tx.work.createMany({ data: toCreate });
                         }
@@ -189,12 +193,15 @@ export async function POST(req: Request) {
                         const existingMap = new Map(existing.map((e: any) => [e.isrc, e.id]));
 
                         const toCreate: any[] = [];
+                        const updatePromises: Promise<any>[] = [];
                         for (const row of batch) {
                             if (row.ISRC && existingMap.has(row.ISRC)) {
-                                await tx.recording.update({
-                                    where: { id: existingMap.get(row.ISRC) },
-                                    data: { title: row.Title, durationSec: row.DurationSec }
-                                });
+                                updatePromises.push(
+                                    tx.recording.update({
+                                        where: { id: existingMap.get(row.ISRC) },
+                                        data: { title: row.Title, durationSec: row.DurationSec }
+                                    })
+                                );
                             } else {
                                 toCreate.push({
                                     title: row.Title,
@@ -204,6 +211,7 @@ export async function POST(req: Request) {
                                 });
                             }
                         }
+                        await Promise.all(updatePromises);
                         if (toCreate.length > 0) {
                             await tx.recording.createMany({ data: toCreate });
                         }

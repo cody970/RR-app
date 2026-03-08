@@ -9,6 +9,8 @@
  * User-Agent header required.
  */
 
+import { logger } from "@/lib/infra/logger";
+
 const MB_API_BASE = "https://musicbrainz.org/ws/2";
 const USER_AGENT = "RoyaltyRadar/1.0.0 (catalog-scanner)";
 const REQUEST_DELAY_MS = 1100;
@@ -181,7 +183,13 @@ export async function getArtistWorks(
 
         if (offset >= (data["work-count"] || 0)) break;
         // Safety: cap at 1000 works to avoid runaway pagination
-        if (allWorks.length >= 1000) break;
+        if (allWorks.length >= 1000) {
+            logger.warn(
+                { artistMBID, totalAvailable: data["work-count"] },
+                "MusicBrainz getArtistWorks: capped at 1000 results — consider narrowing the query"
+            );
+            break;
+        }
     }
 
     return allWorks;
@@ -212,7 +220,13 @@ export async function getArtistRecordings(
         offset += data.recordings.length;
 
         if (offset >= (data["recording-count"] || 0)) break;
-        if (allRecordings.length >= 1000) break;
+        if (allRecordings.length >= 1000) {
+            logger.warn(
+                { artistMBID, totalAvailable: data["recording-count"] },
+                "MusicBrainz getArtistRecordings: capped at 1000 results — consider narrowing the query"
+            );
+            break;
+        }
     }
 
     return allRecordings;

@@ -2,7 +2,8 @@ import { NextResponse, NextRequest } from "next/server";
 import { db } from "@/lib/infra/db";
 import { requireAuth } from "@/lib/auth/get-session";
 import { validatePermission } from "@/lib/auth/rbac";
-import { processStatementLineSplits, processLicenseSplits } from "@/lib/music/split-engine";
+import { processStatementSplitsBulk, processLicenseSplits } from "@/lib/music/split-engine";
+import { logger } from "@/lib/infra/logger";
 import { z } from "zod";
 
 const calculateSchema = z.object({
@@ -34,23 +35,22 @@ export async function POST(req: NextRequest) {
         let totalLedgersCreated = 0;
 
         if (source === "STATEMENT") {
-            // Process ALL lines in a statement
+            // Verify the statement exists and belongs to this org
             const statement = await db.statement.findUnique({
                 where: { id: sourceId, orgId },
-                include: { lines: true }
+                select: { id: true },
             });
 
             if (!statement) return NextResponse.json({ error: "Statement not found" }, { status: 404 });
 
-            for (const line of statement.lines) {
-                // Only process splits if matched to a work
-                if (line.workId) {
-                    try {
-                        totalLedgersCreated += await processStatementLineSplits(line.id, orgId);
-                    } catch (e) {
-                        console.warn(`Skipping line ${line.id} calculation:`, e);
-                    }
-                }
+            // Use bulk processing to avoid N+1 queries (O(1) DB round-trips instead of O(N))
+            try {
+                totalLedgersCreated = await processStatementSplitsBulk(sourceId, orgId);
+            } catch (e) {
+                logger.warn(
+                    { statementId: sourceId, error: e instanceof Error ? e.message : String(e) },
+                    "Skipping statement bulk calculation"
+                );
             }
         } else if (source === "LICENSE") {
             const license = await db.license.findUnique({
@@ -61,7 +61,10 @@ export async function POST(req: NextRequest) {
             try {
                 totalLedgersCreated += await processLicenseSplits(license.id, orgId);
             } catch (e) {
-                console.warn(`Skipping license ${license.id} calculation:`, e);
+                logger.warn(
+                    { licenseId: license.id, error: e instanceof Error ? e.message : String(e) },
+                    "Skipping license calculation"
+                );
             }
         } else {
             return NextResponse.json({ error: "Invalid source. Use STATEMENT or LICENSE" }, { status: 400 });
