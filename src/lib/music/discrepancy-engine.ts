@@ -6,6 +6,7 @@
  * - Rate anomalies: per-use rates below society averages
  * - Revenue drops: significant period-over-period declines
  * - Unmatched lines: statement lines with no catalog match
+ * - DSP vs PRO gaps: streams reported by DSPs but missing from PRO statements
  */
 
 import { db } from "@/lib/infra/db";
@@ -33,6 +34,30 @@ const TYPICAL_RATES: Record<string, { min: number; avg: number }> = {
     SOUNDEXCHANGE: { min: 0.001, avg: 0.0025 },
 };
 
+/**
+ * Minimum stream count that warrants a DSP vs PRO discrepancy finding.
+ * Below this threshold the royalty impact is negligible.
+ */
+const DSP_PRO_MIN_STREAMS = 1000;
+
+/**
+ * Fallback MLC per-stream rate (USD) used when TYPICAL_RATES lookup fails.
+ * Represents the average mechanical rate paid by licensed streaming services.
+ */
+const DEFAULT_MLC_RATE = 0.004;
+
+/** Stream volume that yields the maximum stream-volume confidence boost. */
+const DSP_CONFIDENCE_MAX_STREAM_VOLUME = 100_000;
+
+/** Maximum confidence boost from stream volume (fraction). */
+const DSP_CONFIDENCE_MAX_STREAM_BOOST = 0.25;
+
+/** Confidence boost earned per additional DSP source reporting the same ISRC. */
+const DSP_CONFIDENCE_PER_EXTRA_SOURCE = 0.05;
+
+/** Maximum confidence boost from multiple DSP sources reporting the same ISRC. */
+const DSP_CONFIDENCE_MAX_SOURCE_BOOST = 0.15;
+
 // ---------- Main Entry ----------
 
 /**
@@ -46,14 +71,15 @@ export async function runDiscrepancyChecks(
     const discrepancies: Discrepancy[] = [];
 
     // Run all checks in parallel
-    const [missing, rateIssues, drops, unmatched] = await Promise.all([
+    const [missing, rateIssues, drops, unmatched, dspPro] = await Promise.all([
         checkMissingWorks(statementId, orgId),
         checkRateAnomalies(statementId, orgId),
         checkRevenueDrops(orgId),
         checkUnmatchedLines(statementId, orgId),
+        checkDspProDiscrepancies(statementId, orgId),
     ]);
 
-    discrepancies.push(...missing, ...rateIssues, ...drops, ...unmatched);
+    discrepancies.push(...missing, ...rateIssues, ...drops, ...unmatched, ...dspPro);
 
     // Deduplicate by resourceId + type
     const seen = new Set<string>();
@@ -289,6 +315,103 @@ async function checkUnmatchedLines(statementId: string, orgId: string): Promise<
             resourceType: "StatementLine",
             resourceId: line.id,
             description: `"${line.title}" earned $${line.amount.toFixed(2)} (${line.uses} uses) from ${line.society || "unknown"} but isn't in your catalog.`,
+        });
+    }
+
+    return discrepancies;
+}
+
+// ---------- Check: DSP vs PRO Discrepancies ----------
+
+/**
+ * Cross-reference DSP stream data against PRO statement lines for the same period.
+ *
+ * Identifies ISRCs that have significant streaming activity in DSP reports
+ * but are absent from (or under-reported in) the corresponding PRO statement.
+ * This surfaces potential mechanical royalty gaps where streaming platforms
+ * reported plays to the DSP but the matching PRO/MLC payment is missing.
+ */
+async function checkDspProDiscrepancies(statementId: string, orgId: string): Promise<Discrepancy[]> {
+    const statement = await db.statement.findUnique({
+        where: { id: statementId },
+        select: { period: true, source: true },
+    });
+    if (!statement) return [];
+
+    // Fetch DSP reports for the same period and org
+    const dspReports = await db.dspReport.findMany({
+        where: { orgId, period: statement.period, streams: { gte: DSP_PRO_MIN_STREAMS } },
+        select: { id: true, isrc: true, title: true, artist: true, streams: true, revenue: true, source: true },
+    });
+
+    if (dspReports.length === 0) return [];
+
+    // Aggregate DSP streams per ISRC (multiple sources may report the same recording)
+    const dspByIsrc = new Map<string, { title: string; artist: string | null; totalStreams: number; totalRevenue: number; sources: string[] }>();
+    for (const report of dspReports) {
+        const existing = dspByIsrc.get(report.isrc);
+        if (existing) {
+            existing.totalStreams += report.streams;
+            existing.totalRevenue += Number(report.revenue);
+            existing.sources.push(report.source);
+        } else {
+            dspByIsrc.set(report.isrc, {
+                title: report.title,
+                artist: report.artist ?? null,
+                totalStreams: report.streams,
+                totalRevenue: Number(report.revenue),
+                sources: [report.source],
+            });
+        }
+    }
+
+    // Fetch ISRCs that appear in this statement (already matched to works or not)
+    const statementIsrcs = await db.statementLine.findMany({
+        where: { statementId, isrc: { not: null } },
+        select: { isrc: true, amount: true, uses: true },
+    });
+
+    const proIsrcSet = new Set(
+        statementIsrcs
+            .map((l: { isrc: string | null }) => l.isrc)
+            .filter((isrc): isrc is string => Boolean(isrc))
+            .map((isrc: string) => isrc.toUpperCase())
+    );
+
+    const discrepancies: Discrepancy[] = [];
+
+    for (const [isrc, dspData] of dspByIsrc) {
+        const normalizedIsrc = isrc.toUpperCase();
+        if (proIsrcSet.has(normalizedIsrc)) continue; // Already reported in PRO statement
+
+        // Estimate uncollected mechanical royalties using the MLC per-stream rate
+        const mlcRate = TYPICAL_RATES["MLC"]?.avg ?? DEFAULT_MLC_RATE;
+        const estimatedImpact = roundMoney(dspData.totalStreams * mlcRate);
+
+        // Confidence scales with stream volume and number of DSP sources
+        const streamBoost = Math.min(
+            dspData.totalStreams / DSP_CONFIDENCE_MAX_STREAM_VOLUME,
+            DSP_CONFIDENCE_MAX_STREAM_BOOST
+        );
+        const sourceBoost = Math.min(
+            (dspData.sources.length - 1) * DSP_CONFIDENCE_PER_EXTRA_SOURCE,
+            DSP_CONFIDENCE_MAX_SOURCE_BOOST
+        );
+        const confidence = Math.round(Math.min(95, 55 + streamBoost * 100 + sourceBoost * 100));
+
+        const severity: Discrepancy["severity"] =
+            estimatedImpact > 100 ? "HIGH" : estimatedImpact > 20 ? "MEDIUM" : "LOW";
+
+        const dspList = [...new Set(dspData.sources)].join(", ");
+
+        discrepancies.push({
+            type: "DSP_PRO_STREAM_GAP",
+            severity,
+            confidence,
+            estimatedImpact,
+            resourceType: "Recording",
+            resourceId: normalizedIsrc,
+            description: `ISRC ${normalizedIsrc} ("${dspData.title}") had ${dspData.totalStreams.toLocaleString()} streams on ${dspList} in ${statement.period} but was not reported in the ${statement.source} statement. Estimated uncollected mechanical: $${estimatedImpact.toFixed(2)}.`,
         });
     }
 
