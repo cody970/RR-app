@@ -18,6 +18,8 @@ import { SparkButton } from "@/components/spark/spark-button";
 import { HeroVisualizer } from "@/components/landing/hero-visualizer";
 import { GlowingEffectDemo } from "@/components/landing/glowing-features";
 import { HeroStarCta } from "@/components/landing/hero-star-cta";
+import { LandingMobileNav } from "@/components/landing/landing-mobile-nav";
+import { PricingSection } from "@/components/landing/pricing-section";
 
 export default function LandingPage() {
   return (
@@ -32,6 +34,9 @@ export default function LandingPage() {
       {/* Premium Header */}
       <header className="fixed top-0 left-0 right-0 z-50 bg-white/70 backdrop-blur-2xl border-b border-slate-200/60 transition-all duration-300">
         <div className="container mx-auto px-6 h-20 flex items-center justify-between">
+          {/* Mobile hamburger – rendered before logo so it sits left on small screens */}
+          <LandingMobileNav />
+
           <div className="flex items-center gap-3 group cursor-pointer">
             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center text-[10px] font-black text-white shadow-xl shadow-indigo-500/20 ring-1 ring-white/20 transition-transform group-hover:scale-110">
               RR
@@ -43,9 +48,10 @@ export default function LandingPage() {
           <nav className="hidden lg:flex items-center gap-10 text-sm font-bold text-slate-500 uppercase tracking-widest">
             <Link href="#features" className="hover:text-indigo-600 transition-colors">Features</Link>
             <Link href="#how-it-works" className="hover:text-indigo-600 transition-colors">Process</Link>
+            <Link href="#pricing" className="hover:text-indigo-600 transition-colors">Pricing</Link>
             <Link href="#security" className="hover:text-indigo-600 transition-colors">Security</Link>
           </nav>
-          <div className="flex items-center gap-6">
+          <div className="hidden lg:flex items-center gap-6">
             <Link href="/login" className="text-sm font-bold text-slate-500 hover:text-slate-900 transition-colors uppercase tracking-widest">
               Log in
             </Link>
