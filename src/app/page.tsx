@@ -1,25 +1,24 @@
 import Link from "next/link";
 import {
-  ArrowRight,
   Music,
   Shield,
   Zap,
-  FileCheck,
-  Upload,
-  ScanSearch,
   TrendingUp,
   Github,
   Twitter,
   Linkedin,
-  Bot
+  FileCheck,
+  Bot,
 } from "lucide-react";
-import { SparkButton } from "@/components/spark/spark-button";
 
 import { HeroVisualizer } from "@/components/landing/hero-visualizer";
 import { GlowingEffectDemo } from "@/components/landing/glowing-features";
 import { HeroStarCta } from "@/components/landing/hero-star-cta";
 import { LandingMobileNav } from "@/components/landing/landing-mobile-nav";
 import { PricingSection } from "@/components/landing/pricing-section";
+import { TestimonialsSection } from "@/components/landing/testimonials-section";
+import { CtaSection } from "@/components/landing/cta-section";
+import { CtaStickyBar } from "@/components/landing/cta-sticky-bar";
 
 export default function LandingPage() {
   return (
@@ -201,10 +200,11 @@ export default function LandingPage() {
                 </li>
               ))}
             </ul>
-            <Link href="/register">
-              <SparkButton size="lg" variant="ghost" className="bg-white text-slate-950 hover:bg-slate-100 rounded-2xl px-10 h-16 font-black uppercase tracking-widest text-xs transition-all shadow-xl">
-                Learn About Security
-              </SparkButton>
+            <Link
+              href="/register"
+              className="inline-flex items-center gap-2 h-14 px-10 rounded-2xl bg-white text-slate-900 text-sm font-black uppercase tracking-widest hover:bg-slate-100 transition-all shadow-xl"
+            >
+              Start for Free
             </Link>
           </div>
           <div className="lg:w-1/2 relative w-full aspect-square max-w-md mx-auto">
@@ -219,35 +219,14 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* CTA Section */}
-      <section className="py-32 relative overflow-hidden bg-white">
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[80%] h-px bg-gradient-to-r from-transparent via-indigo-500/20 to-transparent" />
-
-        <div className="container mx-auto max-w-4xl px-6 text-center relative z-10">
-          <h2 className="text-5xl md:text-7xl font-black text-slate-900 mb-8 tracking-tighter leading-tight">
-            Ready to recover <br />your royalties?
-          </h2>
-          <p className="text-xl text-slate-500 max-w-2xl mx-auto mb-16 font-medium leading-relaxed">
-            Join the next generation of music publishers and labels recovering millions in missing royalties with RoyaltyRadar.
-          </p>
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-6">
-            <Link href="/register">
-              <SparkButton size="lg" variant="secondary" className="h-16 px-12 text-sm font-black uppercase tracking-widest rounded-2xl shadow-2xl">
-                Start Free Trial
-                <ArrowRight className="ml-3 w-5 h-5" aria-hidden="true" />
-              </SparkButton>
-            </Link>
-            <Link href="/login">
-              <SparkButton size="lg" variant="tertiary" className="h-16 px-12 text-sm font-black uppercase tracking-widest rounded-2xl">
-                Sign In
-              </SparkButton>
-            </Link>
-          </div>
-        </div>
-      </section>
+      {/* Testimonials */}
+      <TestimonialsSection />
 
       {/* Pricing Section */}
       <PricingSection />
+
+      {/* High-impact CTA Section (replaces old bland one) */}
+      <CtaSection />
 
       {/* Trust Section */}
       <section className="py-20 border-t border-slate-200 bg-white">
@@ -317,7 +296,7 @@ export default function LandingPage() {
                 <li><Link href="#features" className="text-sm font-medium hover:text-indigo-600 transition-colors">Features</Link></li>
                 <li><Link href="#pricing" className="text-sm font-medium hover:text-indigo-600 transition-colors">Pricing</Link></li>
                 <li><Link href="#how-it-works" className="text-sm font-medium hover:text-indigo-600 transition-colors">Process</Link></li>
-                <li><Link href="/register" className="text-sm font-medium hover:text-indigo-600 transition-colors">Free Trial</Link></li>
+                <li><Link href="/register" className="text-sm font-medium hover:text-indigo-600 transition-colors">Start for Free</Link></li>
               </ul>
             </div>
 
@@ -354,6 +333,9 @@ export default function LandingPage() {
           </div>
         </div>
       </footer>
+
+      {/* Sticky bottom CTA bar — appears after 400px scroll */}
+      <CtaStickyBar />
     </div>
   );
 }

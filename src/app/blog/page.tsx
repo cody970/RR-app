@@ -193,23 +193,36 @@ export default function BlogPage() {
       {/* CTA Banner */}
       <section className="py-16 md:py-20 px-4 sm:px-6 bg-slate-950 relative overflow-hidden">
         <div className="absolute inset-0 grid-pattern opacity-[0.04] pointer-events-none" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[250px] bg-indigo-500/10 rounded-full blur-[100px] pointer-events-none" />
         <div className="container mx-auto max-w-3xl text-center relative z-10">
-          <h2 className="text-3xl sm:text-4xl md:text-5xl font-black text-white tracking-tighter mb-4">
+          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-400 mb-4">
+            Free plan forever · No credit card
+          </p>
+          <h2 className="text-3xl sm:text-4xl md:text-5xl font-black text-white tracking-tighter mb-4 leading-tight">
             Don&apos;t just read about recovery.
             <br />
-            <span className="text-gradient-gold">Do it.</span>
+            <span className="text-gradient-gold">Do it — for free.</span>
           </h2>
           <p className="text-slate-400 text-base sm:text-lg font-medium mb-8 leading-relaxed">
-            RoyaltyRadar automates everything you read about here — ISRC audits, ISWC
-            validation, society cross-matching, and dispute filing — in one platform.
+            RoyaltyRadar automates every audit described in these articles. ISRC
+            validation, ISWC cross-matching, Content ID monitoring, society dispute
+            filing — all in one platform. Start free in under 2 minutes.
           </p>
-          <Link
-            href="/register"
-            className="inline-flex items-center gap-2 h-14 px-8 rounded-2xl bg-white text-slate-900 text-sm font-black uppercase tracking-wider hover:bg-slate-100 transition-all shadow-2xl"
-          >
-            Start Free Trial
-            <ArrowRight className="h-4 w-4" aria-hidden="true" />
-          </Link>
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+            <Link
+              href="/register"
+              className="group inline-flex items-center gap-2 h-14 px-8 rounded-2xl bg-white text-slate-900 text-sm font-black uppercase tracking-wider hover:bg-slate-100 transition-all shadow-2xl"
+            >
+              Start for Free
+              <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" aria-hidden="true" />
+            </Link>
+            <Link
+              href="/#pricing"
+              className="inline-flex items-center h-14 px-6 rounded-2xl border border-white/10 text-white/70 text-sm font-bold hover:border-white/30 hover:text-white transition-all"
+            >
+              View pricing
+            </Link>
+          </div>
         </div>
       </section>
 

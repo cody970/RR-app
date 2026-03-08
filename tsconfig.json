@@ -38,6 +38,7 @@
   ],
   "exclude": [
     "node_modules",
-    "co-pilot1"
+    "co-pilot1",
+    "legacy-web"
   ]
 }

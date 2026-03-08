@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Clock, Tag, ArrowRight } from "lucide-react";
 import { getPostBySlug, blogPosts, getAllSlugs } from "@/lib/blog/posts";
+import { InlineBlogCta } from "@/components/blog/inline-blog-cta";
 import type { Metadata } from "next";
 
 interface Props {
@@ -140,21 +141,47 @@ export default async function BlogPostPage({ params }: Props) {
               ))}
             </div>
 
-            {/* Prose content */}
-            <div
-              className="prose prose-slate prose-lg max-w-none
-                prose-headings:font-black prose-headings:tracking-tight
-                prose-h2:text-2xl prose-h2:mt-10 prose-h2:mb-4 prose-h2:text-slate-900
-                prose-h3:text-lg prose-h3:mt-8 prose-h3:mb-3 prose-h3:text-slate-800
-                prose-p:text-slate-600 prose-p:leading-relaxed prose-p:mb-4
-                prose-ul:text-slate-600 prose-ul:my-4
-                prose-ol:text-slate-600 prose-ol:my-4
-                prose-li:mb-2
-                prose-strong:text-slate-900 prose-strong:font-bold
-                prose-em:text-slate-700
-                [&>p]:text-base sm:[&>p]:text-[17px]"
-              dangerouslySetInnerHTML={{ __html: post.content }}
-            />
+            {/* Prose content — split at midpoint to inject inline CTA */}
+            {(() => {
+              const paragraphs = post.content.split(/(?=<h2)/);
+              const mid = Math.floor(paragraphs.length / 2) || 1;
+              const firstHalf = paragraphs.slice(0, mid).join("");
+              const secondHalf = paragraphs.slice(mid).join("");
+              return (
+                <>
+                  <div
+                    className="prose prose-slate prose-lg max-w-none
+                      prose-headings:font-black prose-headings:tracking-tight
+                      prose-h2:text-2xl prose-h2:mt-10 prose-h2:mb-4 prose-h2:text-slate-900
+                      prose-h3:text-lg prose-h3:mt-8 prose-h3:mb-3 prose-h3:text-slate-800
+                      prose-p:text-slate-600 prose-p:leading-relaxed prose-p:mb-4
+                      prose-ul:text-slate-600 prose-ul:my-4
+                      prose-ol:text-slate-600 prose-ol:my-4
+                      prose-li:mb-2
+                      prose-strong:text-slate-900 prose-strong:font-bold
+                      prose-em:text-slate-700
+                      [&>p]:text-base sm:[&>p]:text-[17px]"
+                    dangerouslySetInnerHTML={{ __html: firstHalf }}
+                  />
+                  {/* Mid-article contextual CTA */}
+                  <InlineBlogCta hook={post.inlineCta} />
+                  <div
+                    className="prose prose-slate prose-lg max-w-none
+                      prose-headings:font-black prose-headings:tracking-tight
+                      prose-h2:text-2xl prose-h2:mt-10 prose-h2:mb-4 prose-h2:text-slate-900
+                      prose-h3:text-lg prose-h3:mt-8 prose-h3:mb-3 prose-h3:text-slate-800
+                      prose-p:text-slate-600 prose-p:leading-relaxed prose-p:mb-4
+                      prose-ul:text-slate-600 prose-ul:my-4
+                      prose-ol:text-slate-600 prose-ol:my-4
+                      prose-li:mb-2
+                      prose-strong:text-slate-900 prose-strong:font-bold
+                      prose-em:text-slate-700
+                      [&>p]:text-base sm:[&>p]:text-[17px]"
+                    dangerouslySetInnerHTML={{ __html: secondHalf }}
+                  />
+                </>
+              );
+            })()}
 
             {/* Divider */}
             <div className="mt-14 pt-10 border-t border-slate-200">
@@ -219,24 +246,39 @@ export default async function BlogPostPage({ params }: Props) {
         </section>
       )}
 
-      {/* CTA */}
+      {/* Bottom CTA */}
       <section className="py-14 px-4 sm:px-6 bg-slate-950 relative overflow-hidden">
         <div className="absolute inset-0 grid-pattern opacity-[0.04] pointer-events-none" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[250px] bg-indigo-500/10 rounded-full blur-[100px] pointer-events-none" />
         <div className="container mx-auto max-w-2xl text-center relative z-10">
-          <h2 className="text-2xl sm:text-3xl md:text-4xl font-black text-white tracking-tighter mb-4">
-            Ready to audit your catalog?
-          </h2>
-          <p className="text-slate-400 text-sm sm:text-base font-medium mb-6 leading-relaxed">
-            RoyaltyRadar automates everything you just read about — start a free trial and see
-            what you&apos;re missing.
+          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-400 mb-4">
+            Free plan · No credit card
           </p>
-          <Link
-            href="/register"
-            className="inline-flex items-center gap-2 h-12 px-7 rounded-2xl bg-white text-slate-900 text-sm font-black uppercase tracking-wider hover:bg-slate-100 transition-all shadow-xl"
-          >
-            Start Free Trial
-            <ArrowRight className="h-4 w-4" aria-hidden="true" />
-          </Link>
+          <h2 className="text-3xl sm:text-4xl md:text-5xl font-black text-white tracking-tighter mb-4 leading-tight">
+            Your catalog is leaking money.
+            <br />
+            <span className="text-gradient-gold">Find out how much.</span>
+          </h2>
+          <p className="text-slate-400 text-sm sm:text-base font-medium mb-8 leading-relaxed">
+            RoyaltyRadar automates everything in this article — ISRC validation,
+            society cross-matching, Content ID monitoring, and split tracking.
+            Start free, see results in minutes.
+          </p>
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+            <Link
+              href="/register"
+              className="group inline-flex items-center gap-2 h-14 px-8 rounded-2xl bg-white text-slate-900 text-sm font-black uppercase tracking-wider hover:bg-slate-100 transition-all shadow-2xl"
+            >
+              Start for Free
+              <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" aria-hidden="true" />
+            </Link>
+            <Link
+              href="/blog"
+              className="inline-flex items-center gap-2 h-14 px-6 rounded-2xl border border-white/10 text-white/70 text-sm font-bold hover:border-white/30 hover:text-white transition-all"
+            >
+              Read more articles
+            </Link>
+          </div>
         </div>
       </section>
     </div>

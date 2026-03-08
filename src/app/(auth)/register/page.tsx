@@ -88,10 +88,10 @@ export default function RegisterPage() {
                             <Building2 className="h-7 w-7 text-amber-600" aria-hidden="true" />
                         </div>
                         <h2 className="text-2xl font-bold tracking-tight text-slate-900 mb-2">
-                            Create Organization
+                            Start for free
                         </h2>
                         <p className="text-sm text-slate-500">
-                            Set up your catalog audit workspace
+                            No credit card needed · Free plan forever · Upgrade anytime
                         </p>
                     </div>
 
@@ -160,7 +160,7 @@ export default function RegisterPage() {
                         >
                             {!isSubmitting && (
                                 <>
-                                    Create account
+                                    Create free account
                                     <ArrowRight className="h-4 w-4" aria-hidden="true" />
                                 </>
                             )}
