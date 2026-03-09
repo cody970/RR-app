@@ -1,6 +1,46 @@
 "use client";
 
 import { useState } from "react";
+  const [importing, setImporting] = useState<string | null>(null);
+  const [importSuccess, setImportSuccess] = useState<string | null>(null);
+  const [importError, setImportError] = useState<string | null>(null);
+
+  async function handleImport(item: any) {
+    setImporting(item.id || item.title || item.name);
+    setImportSuccess(null);
+    setImportError(null);
+    // Normalize for import
+    let type = item.type;
+    let data: any = {};
+    if (type === "track" || type === "recording") {
+      data = {
+        title: item.title || item.name,
+        isrc: item.identifier || item.isrc || "",
+      };
+    } else if (type === "work" || type === "album") {
+      data = {
+        title: item.title || item.name,
+        iswc: item.identifier || item.iswc || "",
+      };
+    } else {
+      setImportError("Unsupported type for import");
+      setImporting(null);
+      return;
+    }
+    try {
+      const res = await fetch("/api/catalog/import", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ type, data }),
+      });
+      if (!res.ok) throw new Error("Import failed");
+      setImportSuccess(`Imported: ${item.title || item.name}`);
+    } catch (err: any) {
+      setImportError(err.message || "Unknown error");
+    } finally {
+      setImporting(null);
+    }
+  }
 import { musoEnrichSchema } from "@/lib/schemas";
 import { SearchCheck } from "lucide-react";
 
@@ -63,6 +103,8 @@ export default function SearchPage() {
       </form>
       {error && <div className="text-red-500 mb-4">{error}</div>}
       <div>
+        {importSuccess && <div className="text-green-600 mb-2">{importSuccess}</div>}
+        {importError && <div className="text-red-500 mb-2">{importError}</div>}
         {results.length > 0 ? (
           <ul className="space-y-4">
             {results.map((item, i) => (
@@ -70,7 +112,7 @@ export default function SearchPage() {
                 {item.image && (
                   <img src={item.image} alt="" className="w-12 h-12 rounded object-cover" />
                 )}
-                <div>
+                <div className="flex-1">
                   <div className="font-semibold">{item.title || item.name}</div>
                   <div className="text-xs text-slate-500 flex gap-2 items-center">
                     <span>{item.type}</span>
@@ -80,6 +122,15 @@ export default function SearchPage() {
                   </div>
                   {item.summary && <div className="text-sm mt-1">{item.summary}</div>}
                 </div>
+                {(item.source === "muso" || item.source === "spotify") && (item.type === "track" || item.type === "recording" || item.type === "work" || item.type === "album") && (
+                  <button
+                    className="ml-4 px-3 py-1.5 bg-green-600 text-white rounded-lg text-xs font-semibold disabled:opacity-50"
+                    disabled={importing === (item.id || item.title || item.name)}
+                    onClick={() => handleImport(item)}
+                  >
+                    {importing === (item.id || item.title || item.name) ? "Importing..." : "Import"}
+                  </button>
+                )}
               </li>
             ))}
           </ul>
