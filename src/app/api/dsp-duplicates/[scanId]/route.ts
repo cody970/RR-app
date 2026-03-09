@@ -1,24 +1,21 @@
 /**
- * GET /api/dsp-duplicates/[scanId] — Fetch duplicate groups for a completed scan
+ * GET   /api/dsp-duplicates/[scanId] — Fetch duplicate groups for a completed scan
+ * PATCH /api/dsp-duplicates/[scanId] — Update status of a duplicate group
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth/auth";
+import { requireAuth, AuthError } from "@/lib/auth/get-session";
+import { ApiErrors } from "@/lib/api/error-response";
 import { db } from "@/lib/infra/db";
+import { logger } from "@/lib/infra/logger";
 
 export async function GET(
     req: NextRequest,
     { params }: { params: { scanId: string } }
 ) {
     try {
-        const session = await getServerSession(authOptions);
-        if (!session?.user?.orgId) {
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-        }
-
+        const { orgId } = await requireAuth();
         const { scanId } = params;
-        const orgId = session.user.orgId;
 
         // Verify the scan belongs to this org
         const scan = await db.dspDuplicateScan.findFirst({
@@ -26,7 +23,7 @@ export async function GET(
         });
 
         if (!scan) {
-            return NextResponse.json({ error: "Scan not found" }, { status: 404 });
+            return ApiErrors.NotFound("Scan not found");
         }
 
         const url = new URL(req.url);
@@ -42,13 +39,15 @@ export async function GET(
 
         return NextResponse.json({ scan, groups });
     } catch (error) {
-        console.error("Error fetching DSP duplicate scan:", error);
-        return NextResponse.json({ error: "Failed to fetch scan results" }, { status: 500 });
+        if (error instanceof AuthError) {
+            return error.status === 403 ? ApiErrors.Forbidden() : ApiErrors.Unauthorized();
+        }
+        logger.error({ err: error, scanId: params.scanId }, "dsp_duplicates_api: failed to fetch scan");
+        return ApiErrors.Internal();
     }
 }
 
 /**
- * PATCH /api/dsp-duplicates/[scanId] — Update status of a duplicate group
  * Body: { groupId: string, status: "REVIEWED" | "RESOLVED" }
  */
 export async function PATCH(
@@ -56,29 +55,23 @@ export async function PATCH(
     { params }: { params: { scanId: string } }
 ) {
     try {
-        const session = await getServerSession(authOptions);
-        if (!session?.user?.orgId) {
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-        }
-
+        const { orgId } = await requireAuth();
         const { scanId } = params;
-        const orgId = session.user.orgId;
 
         // Verify ownership
         const scan = await db.dspDuplicateScan.findFirst({
             where: { id: scanId, orgId },
         });
         if (!scan) {
-            return NextResponse.json({ error: "Scan not found" }, { status: 404 });
+            return ApiErrors.NotFound("Scan not found");
         }
 
         const body = await req.json();
         const { groupId, status } = body as { groupId: string; status: string };
 
         if (!groupId || !["REVIEWED", "RESOLVED"].includes(status)) {
-            return NextResponse.json(
-                { error: "groupId and a valid status (REVIEWED | RESOLVED) are required" },
-                { status: 400 }
+            return ApiErrors.BadRequest(
+                "groupId and a valid status (REVIEWED | RESOLVED) are required"
             );
         }
 
@@ -88,12 +81,15 @@ export async function PATCH(
         });
 
         if (updated.count === 0) {
-            return NextResponse.json({ error: "Group not found" }, { status: 404 });
+            return ApiErrors.NotFound("Group not found");
         }
 
         return NextResponse.json({ success: true });
     } catch (error) {
-        console.error("Error updating duplicate group:", error);
-        return NextResponse.json({ error: "Failed to update group" }, { status: 500 });
+        if (error instanceof AuthError) {
+            return error.status === 403 ? ApiErrors.Forbidden() : ApiErrors.Unauthorized();
+        }
+        logger.error({ err: error, scanId: params.scanId }, "dsp_duplicates_api: failed to update group");
+        return ApiErrors.Internal();
     }
 }

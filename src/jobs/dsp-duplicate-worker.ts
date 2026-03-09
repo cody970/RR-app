@@ -7,6 +7,7 @@
 
 import { Worker, Job } from "bullmq";
 import { redis } from "@/lib/infra/redis";
+import { logger } from "@/lib/infra/logger";
 import { runDspDuplicateScan } from "@/lib/music/dsp-profile-engine";
 import { notifyOrg } from "@/lib/infra/notify";
 import { db } from "@/lib/infra/db";
@@ -19,7 +20,7 @@ interface DspDuplicateJobData {
 
 export async function processDspDuplicateJob(job: Job<DspDuplicateJobData>) {
     const { scanId, orgId } = job.data;
-    console.log(`[DspDuplicateWorker] Starting scan ${scanId} for org ${orgId}`);
+    logger.info({ scanId, orgId }, "dsp_duplicate_worker: starting scan");
 
     await runDspDuplicateScan(scanId, orgId);
 
@@ -47,7 +48,7 @@ export async function processDspDuplicateJob(job: Job<DspDuplicateJobData>) {
         });
     }
 
-    console.log(`[DspDuplicateWorker] Scan ${scanId} done — status: ${scan.status}`);
+    logger.info({ scanId, status: scan.status }, "dsp_duplicate_worker: scan complete");
 }
 
 const dspDuplicateWorker = new Worker<DspDuplicateJobData>(
@@ -60,11 +61,11 @@ const dspDuplicateWorker = new Worker<DspDuplicateJobData>(
 );
 
 dspDuplicateWorker.on("completed", (job) => {
-    console.log(`[DspDuplicateWorker] Job ${job.id} completed`);
+    logger.info({ jobId: job.id }, "dsp_duplicate_worker: job completed");
 });
 
 dspDuplicateWorker.on("failed", (job, err) => {
-    console.error(`[DspDuplicateWorker] Job ${job?.id} failed: ${err.message}`);
+    logger.error({ jobId: job?.id, err }, "dsp_duplicate_worker: job failed");
 });
 
-console.log("DSP Duplicate Profile worker started!");
+logger.info("dsp_duplicate_worker: started");

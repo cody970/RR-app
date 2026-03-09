@@ -4,9 +4,10 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth/auth";
+import { requireAuth, AuthError } from "@/lib/auth/get-session";
+import { ApiErrors } from "@/lib/api/error-response";
 import { db } from "@/lib/infra/db";
+import { logger } from "@/lib/infra/logger";
 import { Queue } from "bullmq";
 import { redis } from "@/lib/infra/redis";
 
@@ -16,13 +17,7 @@ const dspDuplicateQueue = new Queue("dsp-duplicate-queue", {
 
 export async function POST(_req: NextRequest) {
     try {
-        const session = await getServerSession(authOptions);
-        if (!session?.user?.orgId) {
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-        }
-
-        const orgId = session.user.orgId;
-        const userId = session.user.id;
+        const { orgId, userId } = await requireAuth();
 
         // Prevent concurrent scans
         const activeScan = await db.dspDuplicateScan.findFirst({
@@ -48,20 +43,20 @@ export async function POST(_req: NextRequest) {
 
         return NextResponse.json({ scanId: scan.id, status: "PENDING" }, { status: 201 });
     } catch (error) {
-        console.error("Error starting DSP duplicate scan:", error);
-        return NextResponse.json({ error: "Failed to start scan" }, { status: 500 });
+        if (error instanceof AuthError) {
+            return error.status === 403 ? ApiErrors.Forbidden() : ApiErrors.Unauthorized();
+        }
+        logger.error({ err: error }, "dsp_duplicates_api: failed to start scan");
+        return ApiErrors.Internal();
     }
 }
 
-export async function GET(req: NextRequest) {
+export async function GET(_req: NextRequest) {
     try {
-        const session = await getServerSession(authOptions);
-        if (!session?.user?.orgId) {
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-        }
+        const { orgId } = await requireAuth();
 
         const scans = await db.dspDuplicateScan.findMany({
-            where: { orgId: session.user.orgId },
+            where: { orgId },
             orderBy: { createdAt: "desc" },
             include: {
                 _count: { select: { groups: true } },
@@ -70,7 +65,10 @@ export async function GET(req: NextRequest) {
 
         return NextResponse.json({ scans });
     } catch (error) {
-        console.error("Error listing DSP duplicate scans:", error);
-        return NextResponse.json({ error: "Failed to list scans" }, { status: 500 });
+        if (error instanceof AuthError) {
+            return error.status === 403 ? ApiErrors.Forbidden() : ApiErrors.Unauthorized();
+        }
+        logger.error({ err: error }, "dsp_duplicates_api: failed to list scans");
+        return ApiErrors.Internal();
     }
 }
