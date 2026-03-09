@@ -16,6 +16,7 @@ const navSections = [
             { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
             { name: "Import", href: "/dashboard/import", icon: UploadCloud },
             { name: "Catalog", href: "/dashboard/catalog", icon: Library },
+            { name: "Search", href: "/dashboard/search", icon: SearchCheck },
         ],
     },
     {

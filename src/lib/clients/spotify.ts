@@ -1,4 +1,59 @@
 /**
+ * Generic Spotify search for tracks, albums, and artists by query string.
+ * Returns normalized results for aggregation with Muso.ai.
+ */
+export async function searchSpotify(query: string, limit: number = 10): Promise<any[]> {
+    try {
+        const token = await getSpotifyToken();
+        const res = await fetch(`https://api.spotify.com/v1/search?q=${encodeURIComponent(query)}&type=track,album,artist&limit=${limit}`, {
+            headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!res.ok) return [];
+        const data = await res.json();
+        const results: any[] = [];
+        if (data.tracks?.items) {
+            results.push(...data.tracks.items.map((t: any) => ({
+                type: "track",
+                title: t.name,
+                name: t.name,
+                image: t.album?.images?.[0]?.url,
+                summary: t.artists?.map((a: any) => a.name).join(", ") || "",
+                id: t.id,
+                uri: t.uri,
+                externalUrl: t.external_urls?.spotify,
+            })));
+        }
+        if (data.albums?.items) {
+            results.push(...data.albums.items.map((a: any) => ({
+                type: "album",
+                title: a.name,
+                name: a.name,
+                image: a.images?.[0]?.url,
+                summary: a.artists?.map((ar: any) => ar.name).join(", ") || "",
+                id: a.id,
+                uri: a.uri,
+                externalUrl: a.external_urls?.spotify,
+            })));
+        }
+        if (data.artists?.items) {
+            results.push(...data.artists.items.map((ar: any) => ({
+                type: "artist",
+                title: ar.name,
+                name: ar.name,
+                image: ar.images?.[0]?.url,
+                summary: "Artist",
+                id: ar.id,
+                uri: ar.uri,
+                externalUrl: ar.external_urls?.spotify,
+            })));
+        }
+        return results;
+    } catch (e) {
+        console.error("Spotify search error:", e);
+        return [];
+    }
+}
+/**
  * Spotify Web API Client
  * Uses Client Credentials flow for server-to-server metadata lookups.
  */
