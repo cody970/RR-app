@@ -4,338 +4,367 @@ import {
   Shield,
   Zap,
   TrendingUp,
-  Github,
-  Twitter,
-  Linkedin,
-  FileCheck,
-  Bot,
+  ArrowRight,
+  ChevronRight,
+  Upload,
+  ScanSearch,
+  Search,
+  Lock,
+  Sparkles,
+  Settings,
+  Box,
 } from "lucide-react";
 
-import { HeroVisualizer } from "@/components/landing/hero-visualizer";
-import { GlowingEffectDemo } from "@/components/landing/glowing-features";
-import { HeroStarCta } from "@/components/landing/hero-star-cta";
 import { LandingMobileNav } from "@/components/landing/landing-mobile-nav";
 import { PricingSection } from "@/components/landing/pricing-section";
 import { TestimonialsSection } from "@/components/landing/testimonials-section";
 import { CtaSection } from "@/components/landing/cta-section";
-import { CtaStickyBar } from "@/components/landing/cta-sticky-bar";
+import {
+  FadeIn,
+  BlurIn,
+  StaggerChildren,
+  StaggerItem,
+  AnimatedCounter,
+  TextReveal,
+  ScrollProgress,
+  ParallaxSection,
+} from "@/components/landing/scroll-animations";
 
 export default function LandingPage() {
   return (
-    <div className="min-h-screen bg-white text-slate-900 overflow-hidden relative selection:bg-indigo-500/20">
-      {/* Dark grid background overlay */}
-      <div className="absolute inset-0 grid-pattern opacity-[0.03] pointer-events-none" />
+    <div className="min-h-screen bg-[#000000] text-[#f5f5f7] overflow-hidden selection:bg-green-500/20">
+      <ScrollProgress />
 
-      {/* Ambient animated gradients */}
-      <div className="absolute top-[-10%] left-[-10%] w-[60%] h-[60%] bg-indigo-500/10 rounded-full blur-[120px] animate-pulse-glow" />
-      <div className="absolute bottom-[-10%] right-[-10%] w-[60%] h-[60%] bg-violet-500/10 rounded-full blur-[120px] animate-pulse-glow delay-500" />
-
-      {/* Premium Header */}
-      <header className="fixed top-0 left-0 right-0 z-50 bg-white/70 backdrop-blur-2xl border-b border-slate-200/60 transition-all duration-300">
-        <div className="container mx-auto px-6 h-20 flex items-center justify-between">
-          {/* Mobile hamburger – rendered before logo so it sits left on small screens */}
+      {/* ── Apple-style Nav ── */}
+      <nav className="fixed top-0 left-0 right-0 z-50 bg-[rgba(0,0,0,0.8)] backdrop-blur-xl backdrop-saturate-[1.8]">
+        <div className="mx-auto max-w-[980px] px-4 sm:px-6 h-12 flex items-center justify-between">
           <LandingMobileNav />
 
-          <div className="flex items-center gap-3 group cursor-pointer">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center text-[10px] font-black text-white shadow-xl shadow-indigo-500/20 ring-1 ring-white/20 transition-transform group-hover:scale-110">
+          <Link href="/" className="flex items-center gap-2 shrink-0">
+            <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-green-400 to-emerald-600 flex items-center justify-center text-[8px] font-black text-black">
               RR
             </div>
-            <span className="text-2xl font-black tracking-tighter text-slate-900">
-              Royalty<span className="text-gradient-gold">Radar</span>
+            <span className="text-sm font-semibold text-[#f5f5f7] tracking-tight hidden sm:inline">
+              RoyaltyRadar
             </span>
+          </Link>
+
+          <div className="hidden lg:flex items-center gap-7 text-xs text-[#d1d1d6]">
+            <Link href="#features" className="hover:text-white transition-colors">Features</Link>
+            <Link href="#how-it-works" className="hover:text-white transition-colors">How It Works</Link>
+            <Link href="#pricing" className="hover:text-white transition-colors">Pricing</Link>
+            <Link href="#security" className="hover:text-white transition-colors">Security</Link>
+            <Link href="/blog" className="hover:text-white transition-colors">Blog</Link>
           </div>
-          <nav className="hidden lg:flex items-center gap-10 text-sm font-bold text-slate-500 uppercase tracking-widest">
-            <Link href="#features" className="hover:text-indigo-600 transition-colors">Features</Link>
-            <Link href="#how-it-works" className="hover:text-indigo-600 transition-colors">Process</Link>
-            <Link href="#pricing" className="hover:text-indigo-600 transition-colors">Pricing</Link>
-            <Link href="#security" className="hover:text-indigo-600 transition-colors">Security</Link>
-            <Link href="/blog" className="hover:text-indigo-600 transition-colors">Blog</Link>
-          </nav>
-          <div className="hidden lg:flex items-center gap-6">
-            <Link href="/login" className="text-sm font-bold text-slate-500 hover:text-slate-900 transition-colors uppercase tracking-widest">
-              Log in
+
+          <div className="flex items-center gap-5">
+            <Link href="/login" className="text-xs text-[#d1d1d6] hover:text-white transition-colors hidden sm:inline">
+              Sign In
             </Link>
-            <Link href="/register">
-              <SparkButton variant="secondary" size="lg" className="w-full sm:w-auto h-11 rounded-2xl uppercase tracking-wider text-xs">
-                Start Free Trial
-              </SparkButton>
-            </Link>
-          </div>
-        </div>
-      </header>
-
-      {/* Hero Section */}
-      <section className="relative pt-40 pb-24 md:pt-56 md:pb-40 px-6">
-        <HeroVisualizer />
-        <div className="container mx-auto max-w-6xl text-center relative z-10">
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-indigo-50/50 border border-indigo-100 text-[10px] font-black text-indigo-600 mb-10 animate-slide-up uppercase tracking-[0.2em] shadow-sm backdrop-blur-sm">
-            <span className="flex h-2 w-2 rounded-full bg-indigo-500 animate-pulse" />
-            Next-Gen Royalty Intelligence
-          </div>
-
-          <h1 className="text-6xl md:text-8xl font-black tracking-tighter mb-10 animate-slide-up delay-100 text-slate-900 leading-[0.95]">
-            Stop leaving your <br className="hidden md:block" />
-            <span className="relative inline-block mt-4">
-              <span className="text-gradient-gold">
-                royalties
-              </span>
-              <div className="absolute -bottom-4 left-0 right-0 h-2 bg-gradient-to-r from-indigo-500/20 via-violet-500/20 to-transparent rounded-full" />
-            </span> on the table.
-          </h1>
-
-          <p className="text-xl md:text-2xl text-slate-500 max-w-3xl mx-auto mb-16 animate-slide-up delay-200 leading-relaxed font-medium">
-            The ultimate catalog audit and revenue recovery platform for modern rights holders. We scan millions of global data points to heal your metadata and unlock hidden revenue.
-          </p>
-
-          <HeroStarCta />
-
-          {/* Dashboard Preview / Stats */}
-          <div className="mt-24 pt-12 border-t border-slate-100 flex flex-wrap justify-center gap-12 sm:gap-32 animate-slide-up delay-400">
-            <div className="text-center group">
-              <div className="text-4xl font-black text-slate-900 group-hover:text-indigo-600 transition-colors">10M+</div>
-              <div className="text-[10px] text-slate-400 mt-2 uppercase tracking-[0.2em] font-black">Tracks Audited</div>
-            </div>
-            <div className="text-center group">
-              <div className="text-4xl font-black text-gradient-gold group-hover:scale-110 transition-transform">$2.4M</div>
-              <div className="text-[10px] text-slate-400 mt-2 uppercase tracking-[0.2em] font-black">Recovered</div>
-            </div>
-            <div className="text-center group">
-              <div className="text-4xl font-black text-slate-900 group-hover:text-violet-600 transition-colors">99.9%</div>
-              <div className="text-[10px] text-slate-400 mt-2 uppercase tracking-[0.2em] font-black">Match Accuracy</div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Feature Grid */}
-      <section id="features" className="py-32 bg-white relative">
-        <div className="container mx-auto max-w-6xl px-6 relative z-10">
-          <div className="text-center mb-24">
-            <h2 className="text-4xl md:text-6xl font-black mb-6 text-slate-900 tracking-tighter">Total Catalog Visibility</h2>
-            <p className="text-slate-500 max-w-2xl mx-auto text-xl font-medium leading-relaxed">Everything you need to clean your catalog and maximize your global royalty collections in one unified workspace.</p>
-          </div>
-
-          <GlowingEffectDemo />
-        </div>
-      </section>
-
-      {/* How it Works Section */}
-      <section id="how-it-works" className="py-32 bg-slate-50/50 relative overflow-hidden">
-        <div className="absolute inset-0 grid-pattern opacity-[0.03] pointer-events-none" />
-        <div className="container mx-auto max-w-6xl px-6 relative z-10">
-          <div className="flex flex-col lg:flex-row items-end justify-between mb-20 gap-8">
-            <div className="max-w-2xl">
-              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-indigo-50 border border-indigo-100 text-[10px] font-black text-indigo-600 mb-6 uppercase tracking-widest">
-                Simple Process
-              </div>
-              <h2 className="text-4xl md:text-6xl font-black text-slate-900 tracking-tighter">Three Steps to Recovery.</h2>
-            </div>
-            <p className="text-slate-500 text-xl font-medium max-w-md lg:text-right">We&apos;ve distilled complex royalty auditing into a streamlined three-step workflow.</p>
-          </div>
-
-          <div className="grid md:grid-cols-3 gap-10">
-            {[
-              {
-                step: "01",
-                icon: Upload,
-                title: "Import Catalog",
-                description: "Upload your works via CSV, CWR files, or connect directly to your distributor API.",
-              },
-              {
-                step: "02",
-                icon: ScanSearch,
-                title: "AI Analysis",
-                description: "Our engine cross-references millions of data points across global societies and DSPs.",
-              },
-              {
-                step: "03",
-                icon: TrendingUp,
-                title: "Recover Revenue",
-                description: "Get actionable findings with one-click dispute filing and recovery tracking.",
-              },
-            ].map((item, i) => (
-              <div key={item.step} className={`relative group animate-slide-up opacity-0 delay-${(i + 1) * 100}`}>
-                <div className="p-10 rounded-3xl bg-white border border-slate-100 hover:border-indigo-200 transition-all duration-500 hover:shadow-2xl hover:shadow-indigo-500/5 hover:-translate-y-2 glass-card h-full flex flex-col">
-                  <div className="flex items-center justify-between mb-10">
-                    <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-indigo-500/10 to-violet-500/10 border border-indigo-100 flex items-center justify-center transition-transform group-hover:scale-110 group-hover:rotate-3">
-                      <item.icon className="h-7 w-7 text-indigo-600" />
-                    </div>
-                    <div className="text-5xl font-black text-slate-100 group-hover:text-indigo-50 transition-colors">{item.step}</div>
-                  </div>
-                  <h3 className="text-2xl font-black text-slate-900 mb-4 tracking-tight">{item.title}</h3>
-                  <p className="text-slate-500 leading-relaxed font-medium">{item.description}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Visual Showcase Section */}
-      <section id="security" className="py-40 bg-slate-950 relative overflow-hidden">
-        <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-indigo-500/20 to-transparent" />
-        <div className="absolute bottom-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-violet-500/20 to-transparent" />
-
-        <div className="container mx-auto max-w-6xl px-6 relative z-10 flex flex-col lg:flex-row items-center gap-24">
-          <div className="lg:w-1/2">
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 border border-white/10 text-[10px] font-black text-indigo-400 mb-8 uppercase tracking-widest">
-              <Shield className="w-4 h-4" /> Enterprise Grade
-            </div>
-            <h2 className="text-5xl md:text-7xl font-black mb-8 text-white tracking-tighter leading-[0.95]">Secure your music<br />royalties in the vault.</h2>
-            <p className="text-slate-400 text-xl leading-relaxed mb-12 font-medium">
-              Your royalty data is your most valuable asset. We protect it with banking-grade encryption and immutable audit trails.
-            </p>
-            <ul className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-12">
-              {[
-                { icon: Shield, text: "SOC 2 Type II Certified" },
-                { icon: FileCheck, text: "Immutable Audit Logs" },
-                { icon: Zap, text: "Real-Time Fraud Detection" },
-                { icon: Bot, text: "AI-Driven Validation" }
-              ].map((feature, idx) => (
-                <li key={idx} className="flex items-center gap-4 text-slate-300 font-bold text-sm">
-                  <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center flex-shrink-0 border border-white/10 group-hover:border-indigo-500/30 transition-colors">
-                    <feature.icon className="w-5 h-5 text-indigo-500" />
-                  </div>
-                  <span>{feature.text}</span>
-                </li>
-              ))}
-            </ul>
             <Link
               href="/register"
-              className="inline-flex items-center gap-2 h-14 px-10 rounded-2xl bg-white text-slate-900 text-sm font-black uppercase tracking-widest hover:bg-slate-100 transition-all shadow-xl"
+              className="inline-flex items-center h-7 px-3.5 rounded-full bg-[#f5f5f7] text-[#1d1d1f] text-xs font-medium hover:bg-white transition-colors"
             >
-              Start for Free
+              Get Started
             </Link>
           </div>
-          <div className="lg:w-1/2 relative w-full aspect-square max-w-md mx-auto">
-            <div className="absolute inset-0 bg-gradient-to-tr from-indigo-500/20 to-violet-500/10 blur-[100px] animate-pulse-glow" />
-            <div className="relative h-full w-full rounded-[3rem] overflow-hidden border border-white/10 bg-slate-900/50 backdrop-blur-xl group flex items-center justify-center shadow-2xl">
-              <div className="w-32 h-32 rounded-full bg-indigo-500/20 flex items-center justify-center animate-bounce shadow-[0_0_80px_rgba(79,70,229,0.3)] ring-1 ring-indigo-500/30">
-                <Shield className="w-14 h-14 text-indigo-400" />
-              </div>
-              <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-transparent to-transparent pointer-events-none" />
+        </div>
+      </nav>
+
+      {/* ── Hero ── */}
+      <section className="relative pt-32 pb-20 md:pt-44 md:pb-32 px-6">
+        <div className="mx-auto max-w-[980px] text-center">
+          <FadeIn direction="up" distance={20} duration={0.8}>
+            <p className="text-green-400 text-sm md:text-base font-medium tracking-wide mb-4">
+              AI-Powered Music Royalty Platform
+            </p>
+          </FadeIn>
+
+          <BlurIn delay={0.15}>
+            <h1 className="text-[clamp(2.5rem,8vw,5.5rem)] font-semibold tracking-[-0.025em] leading-[1.05] mb-6 bg-gradient-to-b from-[#f5f5f7] to-[#86868b] bg-clip-text text-transparent">
+              Every royalty you&rsquo;re owed.
+              <br />
+              Found and recovered.
+            </h1>
+          </BlurIn>
+
+          <FadeIn direction="up" delay={0.3} distance={20}>
+            <p className="text-lg md:text-xl text-[#86868b] max-w-2xl mx-auto mb-10 leading-relaxed font-normal">
+              RoyaltyRadar scans your entire catalog against global rights databases, identifies missing revenue, and helps you recover it — automatically.
+            </p>
+          </FadeIn>
+
+          <FadeIn direction="up" delay={0.45} distance={15}>
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+              <Link
+                href="/register"
+                className="inline-flex items-center gap-2 h-12 px-7 rounded-full bg-green-500 text-black text-sm font-medium hover:bg-green-400 transition-colors"
+              >
+                Start for Free
+                <ArrowRight className="h-4 w-4" />
+              </Link>
+              <Link
+                href="#how-it-works"
+                className="inline-flex items-center gap-1 text-green-400 text-sm font-medium hover:text-green-300 transition-colors group"
+              >
+                See how it works
+                <ChevronRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+              </Link>
+            </div>
+          </FadeIn>
+        </div>
+
+        {/* Stats bar with animated counters */}
+        <FadeIn direction="up" delay={0.6} distance={20}>
+          <div className="mx-auto max-w-[980px] mt-24 pt-10 border-t border-[#1d1d1f] flex flex-wrap justify-center gap-10 sm:gap-20">
+            <div className="text-center">
+              <AnimatedCounter value={10} suffix="M+" className="text-3xl md:text-4xl font-semibold text-[#f5f5f7] tracking-tight" duration={2} />
+              <div className="text-xs text-[#86868b] mt-1">Tracks Audited</div>
+            </div>
+            <div className="text-center">
+              <AnimatedCounter value={2.4} prefix="$" suffix="M" className="text-3xl md:text-4xl font-semibold text-[#f5f5f7] tracking-tight" duration={2.5} />
+              <div className="text-xs text-[#86868b] mt-1">Recovered</div>
+            </div>
+            <div className="text-center">
+              <AnimatedCounter value={99.9} suffix="%" className="text-3xl md:text-4xl font-semibold text-[#f5f5f7] tracking-tight" duration={2} />
+              <div className="text-xs text-[#86868b] mt-1">Match Accuracy</div>
             </div>
           </div>
+        </FadeIn>
+      </section>
+
+      {/* ── Features ── */}
+      <section id="features" className="py-24 md:py-36">
+        <div className="mx-auto max-w-[980px] px-6 text-center mb-16 md:mb-24">
+          <FadeIn>
+            <h2 className="text-4xl md:text-5xl font-semibold tracking-tight text-[#f5f5f7] mb-4">
+              Total Catalog Visibility.
+            </h2>
+          </FadeIn>
+          <TextReveal
+            text="Everything you need to clean your catalog and maximize your global royalty collections."
+            className="text-lg md:text-xl text-[#86868b] max-w-2xl mx-auto"
+          />
         </div>
+
+        <StaggerChildren className="mx-auto max-w-[1120px] px-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5" stagger={0.08}>
+          {[
+            {
+              icon: Search,
+              title: "Deep Metadata Audits",
+              description: "Cross-reference your catalog against societies, DSPs, and global databases to find missing ISRC and ISWC linkages.",
+              color: "text-blue-400",
+              bg: "bg-blue-500/10",
+            },
+            {
+              icon: Settings,
+              title: "Dispute Automation",
+              description: "Generate and file CWR-compliant dispute letters for split conflicts across all major collection societies.",
+              color: "text-purple-400",
+              bg: "bg-purple-500/10",
+            },
+            {
+              icon: Lock,
+              title: "Bank-Grade Security",
+              description: "Enterprise encryption, SOC 2 compliance, and immutable cryptographic audit trails protect your data.",
+              color: "text-green-400",
+              bg: "bg-green-500/10",
+            },
+            {
+              icon: Sparkles,
+              title: "Anomaly Detection",
+              description: "Identify unusual streaming patterns and potential royalty fraud with machine learning models.",
+              color: "text-orange-400",
+              bg: "bg-orange-500/10",
+            },
+            {
+              icon: Box,
+              title: "Black Box Recovery",
+              description: "Find unclaimed royalties in society black boxes by matching unlinked DSP streaming data to your rights.",
+              color: "text-pink-400",
+              bg: "bg-pink-500/10",
+            },
+            {
+              icon: Music,
+              title: "DSP Analytics",
+              description: "Real-time streaming analytics with direct integrations to Spotify, Apple Music, and more.",
+              color: "text-cyan-400",
+              bg: "bg-cyan-500/10",
+            },
+          ].map((feature) => (
+            <StaggerItem key={feature.title}>
+              <div className="group rounded-2xl bg-[#1d1d1f] p-7 transition-all duration-300 hover:bg-[#2d2d2f] h-full">
+                <div className={`w-10 h-10 rounded-xl ${feature.bg} flex items-center justify-center mb-5`}>
+                  <feature.icon className={`h-5 w-5 ${feature.color}`} />
+                </div>
+                <h3 className="text-lg font-semibold text-[#f5f5f7] mb-2 tracking-tight">
+                  {feature.title}
+                </h3>
+                <p className="text-sm text-[#86868b] leading-relaxed">
+                  {feature.description}
+                </p>
+              </div>
+            </StaggerItem>
+          ))}
+        </StaggerChildren>
+      </section>
+
+      {/* ── How It Works ── */}
+      <section id="how-it-works" className="py-24 md:py-36 bg-[#000000]">
+        <div className="mx-auto max-w-[980px] px-6">
+          <div className="text-center mb-16 md:mb-24">
+            <FadeIn>
+              <h2 className="text-4xl md:text-5xl font-semibold tracking-tight text-[#f5f5f7] mb-4">
+                Three steps. Full recovery.
+              </h2>
+            </FadeIn>
+            <FadeIn delay={0.15}>
+              <p className="text-lg text-[#86868b] max-w-xl mx-auto">
+                Complex royalty auditing, distilled into a simple workflow.
+              </p>
+            </FadeIn>
+          </div>
+
+          <StaggerChildren className="grid md:grid-cols-3 gap-8" stagger={0.15}>
+            {[
+              {
+                step: "1",
+                icon: Upload,
+                title: "Import",
+                description: "Upload via CSV, CWR, or connect your distributor API. Your entire catalog in minutes.",
+              },
+              {
+                step: "2",
+                icon: ScanSearch,
+                title: "Analyze",
+                description: "Our AI cross-references millions of data points across global societies and DSPs.",
+              },
+              {
+                step: "3",
+                icon: TrendingUp,
+                title: "Recover",
+                description: "Actionable findings with one-click dispute filing and real-time recovery tracking.",
+              },
+            ].map((item) => (
+              <StaggerItem key={item.step}>
+                <div className="text-center md:text-left">
+                  <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-[#1d1d1f] mb-6 mx-auto md:mx-0">
+                    <item.icon className="h-5 w-5 text-green-400" />
+                  </div>
+                  <div className="text-green-400 text-xs font-medium tracking-widest uppercase mb-2">
+                    Step {item.step}
+                  </div>
+                  <h3 className="text-2xl font-semibold text-[#f5f5f7] mb-3 tracking-tight">
+                    {item.title}
+                  </h3>
+                  <p className="text-[#86868b] text-sm leading-relaxed">
+                    {item.description}
+                  </p>
+                </div>
+              </StaggerItem>
+            ))}
+          </StaggerChildren>
+        </div>
+      </section>
+
+      {/* ── Security ── */}
+      <section id="security" className="py-24 md:py-36">
+        <ParallaxSection className="mx-auto max-w-[980px] px-6" speed={0.08}>
+          <div className="text-center mb-16">
+            <FadeIn>
+              <h2 className="text-4xl md:text-5xl font-semibold tracking-tight text-[#f5f5f7] mb-4">
+                Your data. Our vault.
+              </h2>
+            </FadeIn>
+            <TextReveal
+              text="Your royalty data is your most valuable asset. We protect it with banking-grade infrastructure."
+              className="text-lg text-[#86868b] max-w-2xl mx-auto"
+            />
+          </div>
+
+          <StaggerChildren className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5" stagger={0.1}>
+            {[
+              { icon: Shield, title: "SOC 2 Type II", desc: "Independently certified compliance" },
+              { icon: Lock, title: "Encryption", desc: "AES-256 at rest, TLS 1.3 in transit" },
+              { icon: Zap, title: "Fraud Detection", desc: "Real-time anomaly monitoring" },
+              { icon: Sparkles, title: "AI Validation", desc: "Automated data integrity checks" },
+            ].map((item) => (
+              <StaggerItem key={item.title}>
+                <div className="rounded-2xl bg-[#1d1d1f] p-6 text-center transition-all duration-300 hover:bg-[#2d2d2f]">
+                  <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-green-500/10 mb-4">
+                    <item.icon className="h-5 w-5 text-green-400" />
+                  </div>
+                  <h3 className="text-base font-semibold text-[#f5f5f7] mb-1">{item.title}</h3>
+                  <p className="text-sm text-[#86868b]">{item.desc}</p>
+                </div>
+              </StaggerItem>
+            ))}
+          </StaggerChildren>
+        </ParallaxSection>
       </section>
 
       {/* Testimonials */}
       <TestimonialsSection />
 
-      {/* Pricing Section */}
+      {/* Pricing */}
       <PricingSection />
 
-      {/* High-impact CTA Section (replaces old bland one) */}
+      {/* CTA */}
       <CtaSection />
 
-      {/* Trust Section */}
-      <section className="py-20 border-t border-slate-200 bg-white">
-        <div className="container mx-auto px-6 max-w-5xl">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-10">
-            <div className="flex items-center gap-4 text-slate-500">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500/15 to-yellow-500/10 flex items-center justify-center">
-                <Shield className="w-5 h-5 text-amber-500" />
-              </div>
-              <div>
-                <h4 className="font-bold text-slate-900">SOC 2 Type II Certified</h4>
-                <p className="text-sm">Bank-grade security for your catalog data</p>
-              </div>
-            </div>
-            <div className="w-px h-12 bg-slate-200 hidden md:block" />
-            <div className="flex items-center gap-4 text-slate-500">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-slate-400/15 to-slate-500/10 flex items-center justify-center">
-                <Zap className="w-5 h-5 text-slate-500" />
-              </div>
-              <div>
-                <h4 className="font-bold text-slate-900">Lightning Fast</h4>
-                <p className="text-sm">Process 100k+ rows in under 2 minutes</p>
-              </div>
-            </div>
-            <div className="w-px h-12 bg-slate-200 hidden md:block" />
-            <div className="flex items-center gap-4 text-slate-500">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500/15 to-yellow-500/10 flex items-center justify-center">
-                <Music className="w-5 h-5 text-amber-600" />
-              </div>
-              <div>
-                <h4 className="font-bold text-slate-900">Live DSP Analytics</h4>
-                <p className="text-sm">Direct integration with Spotify & Apple Music</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
+      {/* ── Footer (Apple-style) ── */}
+      <footer className="bg-[#1d1d1f] text-[#86868b]">
+        <div className="mx-auto max-w-[980px] px-6 pt-5 pb-5">
+          <p className="text-[11px] text-[#6e6e73] leading-relaxed pb-4 border-b border-[#424245]">
+            RoyaltyRadar is designed to help rights holders identify and recover missing royalties. Results may vary depending on catalog completeness and data available from collection societies.
+          </p>
 
-      {/* Footer */}
-      <footer className="bg-slate-50 text-slate-500 pt-24 pb-12 relative overflow-hidden border-t border-slate-100">
-        <div className="container mx-auto max-w-6xl px-6">
-          <div className="grid md:grid-cols-4 gap-16 mb-20">
-            {/* Brand */}
-            <div className="md:col-span-1">
-              <div className="flex items-center gap-3 mb-8">
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center text-[10px] font-black text-white shadow-xl shadow-indigo-500/15">
-                  RR
-                </div>
-                <span className="text-xl font-black text-slate-900 tracking-tighter">RoyaltyRadar</span>
-              </div>
-              <p className="text-sm font-medium leading-relaxed mb-8">
-                AI-powered music catalog audit & revenue recovery platform for modern rights holders.
-              </p>
-              <div className="flex items-center gap-4">
-                {[Twitter, Linkedin, Github].map((Icon, i) => (
-                  <a key={i} href="#" className="w-10 h-10 rounded-xl bg-white border border-slate-200 hover:border-indigo-500 hover:text-indigo-600 flex items-center justify-center transition-all shadow-sm hover:-translate-y-1">
-                    <Icon className="w-4 h-4" />
-                  </a>
-                ))}
-              </div>
-            </div>
-
-            {/* Product */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-6 gap-y-8 py-7 border-b border-[#424245]">
             <div>
-              <h4 className="text-[10px] font-black text-slate-900 uppercase tracking-[0.2em] mb-8">Product</h4>
-              <ul className="space-y-4">
-                <li><Link href="#features" className="text-sm font-medium hover:text-indigo-600 transition-colors">Features</Link></li>
-                <li><Link href="#pricing" className="text-sm font-medium hover:text-indigo-600 transition-colors">Pricing</Link></li>
-                <li><Link href="#how-it-works" className="text-sm font-medium hover:text-indigo-600 transition-colors">Process</Link></li>
-                <li><Link href="/register" className="text-sm font-medium hover:text-indigo-600 transition-colors">Start for Free</Link></li>
+              <h4 className="text-xs font-semibold text-[#f5f5f7] mb-3">Product</h4>
+              <ul className="space-y-2">
+                <li><Link href="#features" className="text-[11px] hover:text-[#f5f5f7] transition-colors">Features</Link></li>
+                <li><Link href="#pricing" className="text-[11px] hover:text-[#f5f5f7] transition-colors">Pricing</Link></li>
+                <li><Link href="#how-it-works" className="text-[11px] hover:text-[#f5f5f7] transition-colors">How It Works</Link></li>
+                <li><Link href="#security" className="text-[11px] hover:text-[#f5f5f7] transition-colors">Security</Link></li>
               </ul>
             </div>
-
-            {/* Company */}
             <div>
-              <h4 className="text-[10px] font-black text-slate-900 uppercase tracking-[0.2em] mb-8">Company</h4>
-              <ul className="space-y-4">
-                <li><Link href="/blog" className="text-sm font-medium hover:text-indigo-600 transition-colors">Blog</Link></li>
-                <li><Link href="#" className="text-sm font-medium hover:text-indigo-600 transition-colors">About Us</Link></li>
-                <li><Link href="#" className="text-sm font-medium hover:text-indigo-600 transition-colors">Careers</Link></li>
-                <li><Link href="#" className="text-sm font-medium hover:text-indigo-600 transition-colors">Contact</Link></li>
+              <h4 className="text-xs font-semibold text-[#f5f5f7] mb-3">Account</h4>
+              <ul className="space-y-2">
+                <li><Link href="/register" className="text-[11px] hover:text-[#f5f5f7] transition-colors">Get Started</Link></li>
+                <li><Link href="/login" className="text-[11px] hover:text-[#f5f5f7] transition-colors">Sign In</Link></li>
               </ul>
             </div>
-
-            {/* Legal */}
             <div>
-              <h4 className="text-[10px] font-black text-slate-900 uppercase tracking-[0.2em] mb-8">Legal</h4>
-              <ul className="space-y-4">
-                <li><Link href="#" className="text-sm font-medium hover:text-indigo-600 transition-colors">Privacy Policy</Link></li>
-                <li><Link href="#" className="text-sm font-medium hover:text-indigo-600 transition-colors">Terms of Service</Link></li>
-                <li><Link href="#" className="text-sm font-medium hover:text-indigo-600 transition-colors">Security Hub</Link></li>
+              <h4 className="text-xs font-semibold text-[#f5f5f7] mb-3">Company</h4>
+              <ul className="space-y-2">
+                <li><Link href="/blog" className="text-[11px] hover:text-[#f5f5f7] transition-colors">Blog</Link></li>
+                <li><Link href="#" className="text-[11px] hover:text-[#f5f5f7] transition-colors">About Us</Link></li>
+                <li><Link href="#" className="text-[11px] hover:text-[#f5f5f7] transition-colors">Careers</Link></li>
+                <li><Link href="#" className="text-[11px] hover:text-[#f5f5f7] transition-colors">Contact</Link></li>
+              </ul>
+            </div>
+            <div>
+              <h4 className="text-xs font-semibold text-[#f5f5f7] mb-3">Legal</h4>
+              <ul className="space-y-2">
+                <li><Link href="#" className="text-[11px] hover:text-[#f5f5f7] transition-colors">Privacy Policy</Link></li>
+                <li><Link href="#" className="text-[11px] hover:text-[#f5f5f7] transition-colors">Terms of Service</Link></li>
+                <li><Link href="#" className="text-[11px] hover:text-[#f5f5f7] transition-colors">Security Hub</Link></li>
               </ul>
             </div>
           </div>
 
-          <div className="border-t border-slate-200 pt-12 flex flex-col md:flex-row items-center justify-between gap-6">
-            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">
-              © {new Date().getFullYear()} RR SYSTEMS. ALL RIGHTS RESERVED.
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-2 pt-4">
+            <p className="text-[11px] text-[#6e6e73]">
+              Copyright © {new Date().getFullYear()} RR Systems Inc. All rights reserved.
             </p>
-            <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-slate-100/50 border border-slate-200 text-[10px] font-black text-slate-500 uppercase tracking-widest">
-              <Shield className="w-3 h-3 text-indigo-500" />
-              SOC 2 TYPE II COMPLIANT
-            </div>
+            <p className="text-[11px] text-[#6e6e73]">
+              SOC 2 Type II Certified
+            </p>
           </div>
         </div>
       </footer>
-
-      {/* Sticky bottom CTA bar — appears after 400px scroll */}
-      <CtaStickyBar />
     </div>
   );
 }

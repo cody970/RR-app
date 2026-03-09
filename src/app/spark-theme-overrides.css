@@ -10,26 +10,26 @@
 
 :root {
   /* ── Brand colours ─────────────────────────────────────────────────── */
-  --sprk-color-primary:        #d97706;   /* amber-600  */
-  --sprk-color-primary-dark:   #b45309;   /* amber-700  */
-  --sprk-color-primary-light:  #fbbf24;   /* amber-400  */
-  --sprk-color-secondary:      #1e293b;   /* slate-800  */
-  --sprk-color-success:        #059669;   /* emerald-600 */
+  --sprk-color-primary:        #22c55e;   /* green-500 - muso.ai style */
+  --sprk-color-primary-dark:   #16a34a;   /* green-600  */
+  --sprk-color-primary-light:  #4ade80;   /* green-400  */
+  --sprk-color-secondary:      #3b82f6;   /* blue-500  */
+  --sprk-color-success:        #22c55e;   /* green-500 */
   --sprk-color-error:          #dc2626;   /* red-600    */
-  --sprk-color-warning:        #d97706;   /* amber-600  */
-  --sprk-color-info:           #2563eb;   /* blue-600   */
+  --sprk-color-warning:        #f59e0b;   /* amber-500  */
+  --sprk-color-info:           #3b82f6;   /* blue-500   */
 
   /* ── Neutral palette ───────────────────────────────────────────────── */
-  --sprk-color-neutral-50:     #f8fafc;
-  --sprk-color-neutral-100:    #f1f5f9;
-  --sprk-color-neutral-200:    #e2e8f0;
-  --sprk-color-neutral-300:    #cbd5e1;
-  --sprk-color-neutral-400:    #94a3b8;
-  --sprk-color-neutral-500:    #64748b;
-  --sprk-color-neutral-600:    #475569;
-  --sprk-color-neutral-700:    #334155;
-  --sprk-color-neutral-800:    #1e293b;
-  --sprk-color-neutral-900:    #0f172a;
+  --sprk-color-neutral-50:     #fafafa;
+  --sprk-color-neutral-100:    #f5f5f5;
+  --sprk-color-neutral-200:    #e5e5e5;
+  --sprk-color-neutral-300:    #d4d4d4;
+  --sprk-color-neutral-400:    #a3a3a3;
+  --sprk-color-neutral-500:    #737373;
+  --sprk-color-neutral-600:    #525252;
+  --sprk-color-neutral-700:    #404040;
+  --sprk-color-neutral-800:    #262626;
+  --sprk-color-neutral-900:    #171717;
 
   /* ── Typography ────────────────────────────────────────────────────── */
   --sprk-font-family:          'Inter', system-ui, sans-serif;
@@ -82,17 +82,17 @@
 
 /* ── Dark-mode token overrides ────────────────────────────────────────── */
 .dark {
-  --sprk-color-neutral-50:     #0f172a;
-  --sprk-color-neutral-100:    #1e293b;
-  --sprk-color-neutral-200:    #334155;
-  --sprk-color-neutral-300:    #475569;
-  --sprk-color-neutral-400:    #64748b;
-  --sprk-color-neutral-500:    #94a3b8;
-  --sprk-color-neutral-600:    #cbd5e1;
-  --sprk-color-neutral-700:    #e2e8f0;
-  --sprk-color-neutral-800:    #f1f5f9;
-  --sprk-color-neutral-900:    #f8fafc;
-  --sprk-border-color:         #334155;
+  --sprk-color-neutral-50:     #0a0a0a;
+  --sprk-color-neutral-100:    #141414;
+  --sprk-color-neutral-200:    #1a1a1a;
+  --sprk-color-neutral-300:    #262626;
+  --sprk-color-neutral-400:    #404040;
+  --sprk-color-neutral-500:    #737373;
+  --sprk-color-neutral-600:    #a3a3a3;
+  --sprk-color-neutral-700:    #d4d4d4;
+  --sprk-color-neutral-800:    #e5e5e5;
+  --sprk-color-neutral-900:    #fafafa;
+  --sprk-border-color:         #1a1a1a;
 }
 
 /* ── Skip-to-content link (Phase 5 a11y) ─────────────────────────────── */

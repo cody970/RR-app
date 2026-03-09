@@ -61,15 +61,15 @@ properties and are available globally.
 
 | Token | Light value | Dark value | Description |
 |---|---|---|---|
-| `--sprk-color-primary` | `#d97706` (amber-600) | ← same | Brand primary |
-| `--sprk-color-primary-dark` | `#b45309` (amber-700) | ← same | Hover state |
-| `--sprk-color-primary-light` | `#fbbf24` (amber-400) | ← same | Active / focus ring |
-| `--sprk-color-secondary` | `#1e293b` (slate-800) | ← same | Secondary actions |
-| `--sprk-color-success` | `#059669` (emerald-600) | ← same | Success messages |
+| `--sprk-color-primary` | `#22c55e` (green-500) | ← same | Brand primary |
+| `--sprk-color-primary-dark` | `#16a34a` (green-600) | ← same | Hover state |
+| `--sprk-color-primary-light` | `#4ade80` (green-400) | ← same | Active / focus ring |
+| `--sprk-color-secondary` | `#3b82f6` (blue-500) | ← same | Secondary actions |
+| `--sprk-color-success` | `#22c55e` (green-500) | ← same | Success messages |
 | `--sprk-color-error` | `#dc2626` (red-600) | ← same | Error / danger states |
-| `--sprk-color-warning` | `#d97706` (amber-600) | ← same | Warning messages |
-| `--sprk-color-info` | `#2563eb` (blue-600) | ← same | Informational messages |
-| `--sprk-color-neutral-{50…900}` | slate-{50…900} | inverted scale | Neutral greys |
+| `--sprk-color-warning` | `#f59e0b` (amber-500) | ← same | Warning messages |
+| `--sprk-color-info` | `#3b82f6` (blue-500) | ← same | Informational messages |
+| `--sprk-color-neutral-{50…900}` | neutral-{50…900} | inverted scale | Neutral greys |
 
 ### Typography tokens
 
