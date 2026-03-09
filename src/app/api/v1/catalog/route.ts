@@ -54,7 +54,7 @@ export async function GET(req: Request) {
                         writers: {
                             include: {
                                 writer: {
-                                    select: { id: true, name: true, ipi: true },
+                                    select: { id: true, name: true, ipiCae: true },
                                 },
                             },
                         },
