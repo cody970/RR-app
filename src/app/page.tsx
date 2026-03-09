@@ -19,6 +19,7 @@ import { LandingMobileNav } from "@/components/landing/landing-mobile-nav";
 import { PricingSection } from "@/components/landing/pricing-section";
 import { TestimonialsSection } from "@/components/landing/testimonials-section";
 import { CtaSection } from "@/components/landing/cta-section";
+import { FreeAuditSection } from "@/components/landing/free-audit-section";
 import {
   FadeIn,
   BlurIn,
@@ -31,8 +32,44 @@ import {
 } from "@/components/landing/scroll-animations";
 
 export default function LandingPage() {
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    name: "RoyaltyRadar",
+    applicationCategory: "BusinessApplication",
+    operatingSystem: "Web",
+    description:
+      "AI-powered platform that scans music catalogs against global rights databases, identifies missing revenue, and helps recover it automatically.",
+    offers: [
+      {
+        "@type": "Offer",
+        price: "0",
+        priceCurrency: "USD",
+        name: "Free",
+      },
+      {
+        "@type": "Offer",
+        price: "29",
+        priceCurrency: "USD",
+        name: "Starter",
+        priceValidUntil: "2027-12-31",
+      },
+      {
+        "@type": "Offer",
+        price: "99",
+        priceCurrency: "USD",
+        name: "Pro",
+        priceValidUntil: "2027-12-31",
+      },
+    ],
+  };
+
   return (
-    <div className="min-h-screen bg-[#000000] text-[#f5f5f7] overflow-hidden selection:bg-green-500/20">
+    <div id="main-content" className="min-h-screen bg-[#000000] text-[#f5f5f7] overflow-hidden selection:bg-green-500/20">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
       <ScrollProgress />
 
       {/* ── Apple-style Nav ── */}
@@ -51,6 +88,7 @@ export default function LandingPage() {
 
           <div className="hidden lg:flex items-center gap-7 text-xs text-[#d1d1d6]">
             <Link href="#features" className="hover:text-white transition-colors">Features</Link>
+            <Link href="#free-audit" className="hover:text-white transition-colors">Free Scan</Link>
             <Link href="#how-it-works" className="hover:text-white transition-colors">How It Works</Link>
             <Link href="#pricing" className="hover:text-white transition-colors">Pricing</Link>
             <Link href="#security" className="hover:text-white transition-colors">Security</Link>
@@ -114,9 +152,72 @@ export default function LandingPage() {
           </FadeIn>
         </div>
 
+        {/* Hero product visual */}
+        <FadeIn direction="up" delay={0.55} distance={30}>
+          <div className="mx-auto max-w-[880px] mt-16 md:mt-20 rounded-2xl border border-[#2d2d2f] bg-[#1d1d1f] overflow-hidden shadow-2xl shadow-green-500/5" role="img" aria-label="RoyaltyRadar dashboard showing catalog audit results with 1,247 works scanned, 23 issues found, and $18.4K estimated recovery">
+            <div className="flex items-center gap-1.5 px-4 py-2.5 border-b border-[#2d2d2f]">
+              <div className="w-2.5 h-2.5 rounded-full bg-[#ff5f57]" />
+              <div className="w-2.5 h-2.5 rounded-full bg-[#febc2e]" />
+              <div className="w-2.5 h-2.5 rounded-full bg-[#28c840]" />
+              <span className="ml-3 text-[10px] text-[#6e6e73] font-mono">RoyaltyRadar — Catalog Audit</span>
+            </div>
+            <div className="p-6 md:p-8 space-y-4">
+              {/* Mock audit summary row */}
+              <div className="grid grid-cols-3 gap-4">
+                <div className="rounded-xl bg-[#2d2d2f] p-4">
+                  <div className="text-[10px] text-[#6e6e73] uppercase tracking-wider mb-1">Works Scanned</div>
+                  <div className="text-2xl font-semibold text-[#f5f5f7] tracking-tight">1,247</div>
+                  <div className="text-[10px] text-green-400 mt-1">+12% vs last audit</div>
+                </div>
+                <div className="rounded-xl bg-[#2d2d2f] p-4">
+                  <div className="text-[10px] text-[#6e6e73] uppercase tracking-wider mb-1">Issues Found</div>
+                  <div className="text-2xl font-semibold text-red-400 tracking-tight">23</div>
+                  <div className="text-[10px] text-amber-400 mt-1">8 critical</div>
+                </div>
+                <div className="rounded-xl bg-[#2d2d2f] p-4">
+                  <div className="text-[10px] text-[#6e6e73] uppercase tracking-wider mb-1">Est. Recovery</div>
+                  <div className="text-2xl font-semibold text-green-400 tracking-tight">$18.4K</div>
+                  <div className="text-[10px] text-[#86868b] mt-1">across 3 societies</div>
+                </div>
+              </div>
+              {/* Mock findings rows */}
+              <div className="space-y-2">
+                {[
+                  { severity: "critical", label: "3 works missing ISWC — ASCAP registration gap", status: "Action needed" },
+                  { severity: "critical", label: "Unclaimed mechanicals at The MLC — $4,200 est.", status: "Auto-filing" },
+                  { severity: "warning", label: "5 recordings with mismatched ISRC on Spotify", status: "Review" },
+                  { severity: "info", label: "12 tracks eligible for SoundExchange royalties", status: "Registered" },
+                ].map((row) => (
+                  <div key={row.label} className="flex items-center gap-3 rounded-lg bg-[#2d2d2f]/60 px-4 py-2.5">
+                    <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${
+                      row.severity === "critical" ? "bg-red-400" : row.severity === "warning" ? "bg-amber-400" : "bg-blue-400"
+                    }`} />
+                    <span className="text-xs text-[#d1d1d6] flex-1 truncate">{row.label}</span>
+                    <span className={`text-[10px] font-medium shrink-0 ${
+                      row.severity === "critical" ? "text-red-400" : row.severity === "warning" ? "text-amber-400" : "text-green-400"
+                    }`}>{row.status}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </FadeIn>
+
+        {/* Social proof logos */}
+        <FadeIn direction="up" delay={0.65} distance={15}>
+          <div className="mx-auto max-w-[680px] mt-16 text-center">
+            <p className="text-[11px] uppercase tracking-widest text-[#6e6e73] mb-5">Trusted by rights holders working with</p>
+            <div className="flex flex-wrap items-center justify-center gap-x-8 gap-y-3 text-[#424245]">
+              {["ASCAP", "BMI", "SESAC", "The MLC", "SoundExchange", "Spotify", "Apple Music"].map((name) => (
+                <span key={name} className="text-xs font-semibold tracking-wide uppercase">{name}</span>
+              ))}
+            </div>
+          </div>
+        </FadeIn>
+
         {/* Stats bar with animated counters */}
-        <FadeIn direction="up" delay={0.6} distance={20}>
-          <div className="mx-auto max-w-[980px] mt-24 pt-10 border-t border-[#1d1d1f] flex flex-wrap justify-center gap-10 sm:gap-20">
+        <FadeIn direction="up" delay={0.75} distance={20}>
+          <div className="mx-auto max-w-[980px] mt-16 pt-10 border-t border-[#1d1d1f] flex flex-wrap justify-center gap-10 sm:gap-20">
             <div className="text-center">
               <AnimatedCounter value={10} suffix="M+" className="text-3xl md:text-4xl font-semibold text-[#f5f5f7] tracking-tight" duration={2} />
               <div className="text-xs text-[#86868b] mt-1">Tracks Audited</div>
@@ -134,7 +235,7 @@ export default function LandingPage() {
       </section>
 
       {/* ── Features ── */}
-      <section id="features" className="py-24 md:py-36">
+      <section id="features" className="py-24 md:py-36" aria-label="Features">
         <div className="mx-auto max-w-[980px] px-6 text-center mb-16 md:mb-24">
           <FadeIn>
             <h2 className="text-4xl md:text-5xl font-semibold tracking-tight text-[#f5f5f7] mb-4">
@@ -210,7 +311,7 @@ export default function LandingPage() {
       </section>
 
       {/* ── How It Works ── */}
-      <section id="how-it-works" className="py-24 md:py-36 bg-[#000000]">
+      <section id="how-it-works" className="py-24 md:py-36 bg-[#000000]" aria-label="How it works">
         <div className="mx-auto max-w-[980px] px-6">
           <div className="text-center mb-16 md:mb-24">
             <FadeIn>
@@ -267,8 +368,11 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* ── Free Royalty Health Check (Lead Gen) ── */}
+      <FreeAuditSection />
+
       {/* ── Security ── */}
-      <section id="security" className="py-24 md:py-36">
+      <section id="security" className="py-24 md:py-36" aria-label="Security">
         <ParallaxSection className="mx-auto max-w-[980px] px-6" speed={0.08}>
           <div className="text-center mb-16">
             <FadeIn>
@@ -309,6 +413,72 @@ export default function LandingPage() {
       {/* Pricing */}
       <PricingSection />
 
+      {/* ── ROI Comparison ── */}
+      <section className="py-24 md:py-36 bg-[#000000]">
+        <div className="mx-auto max-w-[980px] px-6">
+          <div className="text-center mb-16">
+            <FadeIn>
+              <h2 className="text-4xl md:text-5xl font-semibold tracking-tight text-[#f5f5f7] mb-4">
+                Manual audits vs. RoyaltyRadar.
+              </h2>
+            </FadeIn>
+            <FadeIn delay={0.1}>
+              <p className="text-lg text-[#86868b] max-w-xl mx-auto">
+                See why hundreds of publishers made the switch.
+              </p>
+            </FadeIn>
+          </div>
+
+          <StaggerChildren className="grid md:grid-cols-2 gap-5" stagger={0.12}>
+            {/* Without */}
+            <StaggerItem>
+              <div className="rounded-2xl bg-[#1d1d1f] p-8 h-full border border-[#2d2d2f]">
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-red-500/10 text-red-400 text-[10px] font-semibold uppercase tracking-wider mb-6">
+                  Without RoyaltyRadar
+                </div>
+                <ul className="space-y-4" role="list">
+                  {[
+                    { label: "Catalog audit timeline", value: "3\u20136 months" },
+                    { label: "Cost of manual review", value: "$15K\u2013$50K+" },
+                    { label: "Errors caught", value: "~40\u201360%" },
+                    { label: "Society coverage", value: "1\u20132 territories" },
+                    { label: "Ongoing monitoring", value: "None" },
+                  ].map((row) => (
+                    <li key={row.label} className="flex items-center justify-between">
+                      <span className="text-sm text-[#86868b]">{row.label}</span>
+                      <span className="text-sm font-medium text-[#d1d1d6]">{row.value}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </StaggerItem>
+
+            {/* With */}
+            <StaggerItem>
+              <div className="rounded-2xl bg-[#1d1d1f] p-8 h-full border border-green-500/20 ring-1 ring-green-500/10">
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-green-500/10 text-green-400 text-[10px] font-semibold uppercase tracking-wider mb-6">
+                  With RoyaltyRadar
+                </div>
+                <ul className="space-y-4" role="list">
+                  {[
+                    { label: "Catalog audit timeline", value: "Under 5 minutes" },
+                    { label: "Starting cost", value: "Free" },
+                    { label: "Errors caught", value: "99.9% accuracy" },
+                    { label: "Society coverage", value: "Global \u2014 50+ territories" },
+                    { label: "Ongoing monitoring", value: "24/7 real-time" },
+                  ].map((row) => (
+                    <li key={row.label} className="flex items-center justify-between">
+                      <span className="text-sm text-[#86868b]">{row.label}</span>
+                      <span className="text-sm font-medium text-green-400">{row.value}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </StaggerItem>
+          </StaggerChildren>
+        </div>
+      </section>
+
       {/* CTA */}
       <CtaSection />
 
@@ -340,17 +510,17 @@ export default function LandingPage() {
               <h4 className="text-xs font-semibold text-[#f5f5f7] mb-3">Company</h4>
               <ul className="space-y-2">
                 <li><Link href="/blog" className="text-[11px] hover:text-[#f5f5f7] transition-colors">Blog</Link></li>
-                <li><Link href="#" className="text-[11px] hover:text-[#f5f5f7] transition-colors">About Us</Link></li>
-                <li><Link href="#" className="text-[11px] hover:text-[#f5f5f7] transition-colors">Careers</Link></li>
-                <li><Link href="#" className="text-[11px] hover:text-[#f5f5f7] transition-colors">Contact</Link></li>
+                <li><Link href="/about" className="text-[11px] hover:text-[#f5f5f7] transition-colors">About Us</Link></li>
+                <li><Link href="/careers" className="text-[11px] hover:text-[#f5f5f7] transition-colors">Careers</Link></li>
+                <li><Link href="/contact" className="text-[11px] hover:text-[#f5f5f7] transition-colors">Contact</Link></li>
               </ul>
             </div>
             <div>
               <h4 className="text-xs font-semibold text-[#f5f5f7] mb-3">Legal</h4>
               <ul className="space-y-2">
-                <li><Link href="#" className="text-[11px] hover:text-[#f5f5f7] transition-colors">Privacy Policy</Link></li>
-                <li><Link href="#" className="text-[11px] hover:text-[#f5f5f7] transition-colors">Terms of Service</Link></li>
-                <li><Link href="#" className="text-[11px] hover:text-[#f5f5f7] transition-colors">Security Hub</Link></li>
+                <li><Link href="/privacy" className="text-[11px] hover:text-[#f5f5f7] transition-colors">Privacy Policy</Link></li>
+                <li><Link href="/terms" className="text-[11px] hover:text-[#f5f5f7] transition-colors">Terms of Service</Link></li>
+                <li><Link href="#security" className="text-[11px] hover:text-[#f5f5f7] transition-colors">Security Hub</Link></li>
               </ul>
             </div>
           </div>

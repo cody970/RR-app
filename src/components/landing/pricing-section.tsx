@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { Check, X, ArrowRight } from "lucide-react";
 import {
@@ -12,7 +13,8 @@ export type PlanName = "Free" | "Starter" | "Pro" | "Enterprise";
 
 interface Tier {
   name: PlanName;
-  price: string;
+  monthlyPrice: string;
+  annualPrice: string;
   period: string;
   description: string;
   cta: string;
@@ -26,7 +28,8 @@ interface Tier {
 export const TIERS: Tier[] = [
   {
     name: "Free",
-    price: "$0",
+    monthlyPrice: "$0",
+    annualPrice: "$0",
     period: "/month",
     description: "Start exploring your catalog with zero commitment.",
     cta: "Get Started Free",
@@ -48,7 +51,8 @@ export const TIERS: Tier[] = [
   },
   {
     name: "Starter",
-    price: "$29",
+    monthlyPrice: "$29",
+    annualPrice: "$24",
     period: "/month",
     description: "For independent artists and small catalog owners.",
     cta: "Start 14-Day Trial",
@@ -64,7 +68,8 @@ export const TIERS: Tier[] = [
   },
   {
     name: "Pro",
-    price: "$99",
+    monthlyPrice: "$99",
+    annualPrice: "$79",
     period: "/month",
     description: "For established publishers managing large catalogs.",
     cta: "Start 14-Day Trial",
@@ -83,7 +88,8 @@ export const TIERS: Tier[] = [
   },
   {
     name: "Enterprise",
-    price: "Custom",
+    monthlyPrice: "Custom",
+    annualPrice: "Custom",
     period: "",
     description: "For labels and large publishers at scale.",
     cta: "Contact Sales",
@@ -102,11 +108,13 @@ export const TIERS: Tier[] = [
 ];
 
 export function PricingSection() {
+  const [annual, setAnnual] = useState(false);
+
   return (
     <section id="pricing" className="py-24 md:py-36 bg-[#000000]">
       <div className="mx-auto max-w-[1120px] px-6">
         {/* Header */}
-        <div className="text-center mb-16">
+        <div className="text-center mb-10">
           <FadeIn>
             <h2 className="text-4xl md:text-5xl font-semibold tracking-tight text-[#f5f5f7] mb-4">
               Start free. Scale when ready.
@@ -118,6 +126,34 @@ export function PricingSection() {
             </p>
           </FadeIn>
         </div>
+
+        {/* Billing toggle */}
+        <FadeIn delay={0.15}>
+          <div className="flex items-center justify-center gap-3 mb-14">
+            <span className={`text-sm transition-colors ${!annual ? "text-[#f5f5f7] font-medium" : "text-[#6e6e73]"}`}>
+              Monthly
+            </span>
+            <button
+              onClick={() => setAnnual(!annual)}
+              className={`relative w-11 h-6 rounded-full transition-colors ${annual ? "bg-green-500" : "bg-[#424245]"}`}
+              role="switch"
+              aria-checked={annual}
+              aria-label="Toggle annual billing"
+            >
+              <span
+                className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow-sm transition-transform ${annual ? "translate-x-5" : ""}`}
+              />
+            </button>
+            <span className={`text-sm transition-colors ${annual ? "text-[#f5f5f7] font-medium" : "text-[#6e6e73]"}`}>
+              Annual
+            </span>
+            {annual && (
+              <span className="ml-1 px-2 py-0.5 rounded-full bg-green-500/10 text-green-400 text-[10px] font-semibold uppercase tracking-wider">
+                Save 20%
+              </span>
+            )}
+          </div>
+        </FadeIn>
 
         {/* Cards */}
         <StaggerChildren className="grid gap-5 sm:grid-cols-2 xl:grid-cols-4 items-start" stagger={0.1}>
@@ -145,12 +181,18 @@ export function PricingSection() {
               {/* Price */}
               <div className="flex items-baseline gap-1 mb-3">
                 <span className="text-4xl font-semibold tracking-tight text-[#f5f5f7]">
-                  {tier.price}
+                  {annual ? tier.annualPrice : tier.monthlyPrice}
                 </span>
                 {tier.period && (
                   <span className="text-sm text-[#86868b]">{tier.period}</span>
                 )}
               </div>
+              {annual && tier.monthlyPrice !== "$0" && tier.monthlyPrice !== "Custom" && (
+                <p className="text-[11px] text-[#6e6e73] -mt-1.5 mb-2">
+                  Billed annually ({tier.annualPrice}
+                  {" \u00d7 12"})
+                </p>
+              )}
 
               <p className="text-sm text-[#86868b] leading-relaxed mb-5">
                 {tier.description}

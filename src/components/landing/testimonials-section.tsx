@@ -1,3 +1,11 @@
+"use client";
+
+import {
+  FadeIn,
+  StaggerChildren,
+  StaggerItem,
+} from "@/components/landing/scroll-animations";
+
 const testimonials = [
   {
     quote:
@@ -39,20 +47,24 @@ export function TestimonialsSection() {
       <div className="mx-auto max-w-[980px] px-6">
         {/* Header */}
         <div className="text-center mb-16">
-          <h2 className="text-4xl md:text-5xl font-semibold tracking-tight text-[#f5f5f7] mb-4">
-            Real recoveries. Real money.
-          </h2>
-          <p className="text-lg text-[#86868b] max-w-xl mx-auto">
-            What publishers and producers found when they finally looked.
-          </p>
+          <FadeIn>
+            <h2 className="text-4xl md:text-5xl font-semibold tracking-tight text-[#f5f5f7] mb-4">
+              Real recoveries. Real money.
+            </h2>
+          </FadeIn>
+          <FadeIn delay={0.1}>
+            <p className="text-lg text-[#86868b] max-w-xl mx-auto">
+              What publishers and producers found when they finally looked.
+            </p>
+          </FadeIn>
         </div>
 
         {/* Testimonial grid */}
-        <div className="grid gap-5 md:grid-cols-2">
+        <StaggerChildren className="grid gap-5 md:grid-cols-2" stagger={0.1}>
           {testimonials.map((t) => (
+            <StaggerItem key={t.name}>
             <figure
-              key={t.name}
-              className="flex flex-col rounded-2xl bg-[#1d1d1f] p-7 transition-all duration-300 hover:bg-[#2d2d2f]"
+              className="flex flex-col rounded-2xl bg-[#1d1d1f] p-7 transition-all duration-300 hover:bg-[#2d2d2f] h-full"
             >
               <blockquote className="flex-1">
                 <p className="text-[15px] text-[#d1d1d6] leading-relaxed">
@@ -74,8 +86,9 @@ export function TestimonialsSection() {
                 </div>
               </figcaption>
             </figure>
+            </StaggerItem>
           ))}
-        </div>
+        </StaggerChildren>
       </div>
     </section>
   );
