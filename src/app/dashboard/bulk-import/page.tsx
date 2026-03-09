@@ -19,39 +19,45 @@ export default function BulkImportPage() {
     if (!file) return;
     setStatus("Uploading...");
     setProgress(0);
-    const chunkSize = 10 * 1024 * 1024; // 10MB
-    const totalChunks = Math.ceil(file.size / chunkSize);
-    const uploadId = `${file.name}-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
-    for (let i = 0; i < totalChunks; i++) {
-      const start = i * chunkSize;
-      const end = Math.min(start + chunkSize, file.size);
-      const chunk = file.slice(start, end);
-      const res = await fetch("/api/bulk-upload/chunk", {
+    try {
+      const chunkSize = 10 * 1024 * 1024; // 10MB
+      const totalChunks = Math.ceil(file.size / chunkSize);
+      const uploadId = `${file.name}-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+      for (let i = 0; i < totalChunks; i++) {
+        const start = i * chunkSize;
+        const end = Math.min(start + chunkSize, file.size);
+        const chunk = file.slice(start, end);
+        const res = await fetch("/api/bulk-upload/chunk", {
+          method: "POST",
+          headers: {
+            "x-upload-id": uploadId,
+            "x-chunk-index": i.toString(),
+            "x-chunks-total": totalChunks.toString(),
+          },
+          body: chunk,
+        });
+        if (!res.ok) {
+          setStatus(`Failed at chunk ${i + 1}`);
+          return;
+        }
+        setProgress(Math.round(((i + 1) / totalChunks) * 100));
+      }
+      // Notify backend to assemble and process
+      const completeRes = await fetch("/api/bulk-upload/complete", {
         method: "POST",
-        headers: {
-          "x-upload-id": uploadId,
-          "x-chunk-index": i.toString(),
-          "x-chunks-total": totalChunks.toString(),
-        },
-        body: chunk,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ uploadId, chunksTotal: totalChunks, filename: file.name }),
       });
-      if (!res.ok) {
-        setStatus(`Failed at chunk ${i + 1}`);
+      if (!completeRes.ok) {
+        setStatus("Failed to complete upload");
         return;
       }
-      setProgress(Math.round(((i + 1) / totalChunks) * 100));
+      setStatus("Upload complete and processing started");
+    } catch (err) {
+      setStatus("An error occurred during upload. Please try again or check your connection.");
+      // Optionally log error for debugging
+      // console.error(err);
     }
-    // Notify backend to assemble and process
-    const completeRes = await fetch("/api/bulk-upload/complete", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ uploadId, chunksTotal: totalChunks, filename: file.name }),
-    });
-    if (!completeRes.ok) {
-      setStatus("Failed to complete upload");
-      return;
-    }
-    setStatus("Upload complete and processing started");
   }
 
   return (

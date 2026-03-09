@@ -41,8 +41,10 @@ import { useState } from "react";
       setImporting(null);
     }
   }
+
 import { musoEnrichSchema } from "@/lib/schemas";
 import { SearchCheck } from "lucide-react";
+import { exportToCSV, exportToJSON } from "@/lib/reports/export-utils";
 
 export default function SearchPage() {
   const [query, setQuery] = useState("");
@@ -101,6 +103,22 @@ export default function SearchPage() {
           {loading ? "Searching..." : "Search"}
         </button>
       </form>
+      {results.length > 0 && (
+        <div className="flex gap-2 mb-4">
+          <button
+            className="px-3 py-1.5 bg-slate-200 dark:bg-slate-700 rounded text-xs font-semibold"
+            onClick={() => exportToCSV("search_results", results)}
+          >
+            Export CSV
+          </button>
+          <button
+            className="px-3 py-1.5 bg-slate-200 dark:bg-slate-700 rounded text-xs font-semibold"
+            onClick={() => exportToJSON("search_results", results)}
+          >
+            Export JSON
+          </button>
+        </div>
+      )}
       {error && <div className="text-red-500 mb-4">{error}</div>}
       <div>
         {importSuccess && <div className="text-green-600 mb-2">{importSuccess}</div>}
