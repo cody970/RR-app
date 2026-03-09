@@ -1,14 +1,12 @@
 import { NextResponse, NextRequest } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth/auth";
 import { db } from "@/lib/infra/db";
-import { Prisma, PayeeLedger } from "@prisma/client";
+import { Prisma } from "@prisma/client";
+import { requireAuth } from "@/lib/auth/get-session";
+import { ApiErrors } from "@/lib/api/error-response";
 
 export async function GET(_req: NextRequest) {
     try {
-        const session = await getServerSession(authOptions);
-        if (!session?.user) return new Response("Unauthorized", { status: 401 });
-        const orgId = session.user.orgId;
+        const { orgId } = await requireAuth();
 
         const payouts = await db.payout.findMany({
             where: { orgId },
@@ -21,6 +19,7 @@ export async function GET(_req: NextRequest) {
 
         return NextResponse.json(payouts);
     } catch (err: unknown) {
+        if (err && typeof err === "object" && "status" in err) return err as Response;
         const errorMessage = err instanceof Error ? err.message : "Unknown error";
         return NextResponse.json({ error: errorMessage }, { status: 500 });
     }
@@ -29,22 +28,24 @@ export async function GET(_req: NextRequest) {
 // POST: Batch UNPAID ledgers into a new Payout
 export async function POST(req: NextRequest) {
     try {
-        const session = await getServerSession(authOptions);
-        if (!session?.user) return new Response("Unauthorized", { status: 401 });
-        const orgId = session.user.orgId;
+        const { orgId } = await requireAuth();
 
         const body = await req.json();
         const { payeeId, period } = body;
 
         if (!payeeId || !period) {
-            return NextResponse.json({ error: "Missing payeeId or period" }, { status: 400 });
+            return ApiErrors.BadRequest("Missing payeeId or period");
         }
 
         // We use a transaction to safely mark ledgers as PAID and create the Payout
         const tx = await db.$transaction(async (prisma: Prisma.TransactionClient) => {
-            // 1. Find the writer or publisher
-            const writer = await prisma.writer.findUnique({ where: { id: payeeId, orgId } });
-            const publisher = !writer ? await prisma.publisher.findUnique({ where: { id: payeeId, orgId } }) : null;
+            // 1. Find the writer or publisher in parallel.
+            // Querying both concurrently is faster than the sequential short-circuit (writer → publisher)
+            // because the publisher path benefits most and the cost of one extra findUnique is negligible.
+            const [writer, publisher] = await Promise.all([
+                prisma.writer.findUnique({ where: { id: payeeId, orgId } }),
+                prisma.publisher.findUnique({ where: { id: payeeId, orgId } }),
+            ]);
 
             if (!writer && !publisher) {
                 throw new Error("Payee not found");
@@ -66,8 +67,11 @@ export async function POST(req: NextRequest) {
                 throw new Error("No unpaid balance for this payee.");
             }
 
-            // Calculate total
-            const totalAmount = ledgers.reduce((acc: number, l: PayeeLedger) => acc + l.amount, 0);
+            // Calculate total using Decimal arithmetic to preserve monetary precision
+            const totalAmount = ledgers.reduce(
+                (acc: Prisma.Decimal, l) => acc.add(l.amount),
+                new Prisma.Decimal(0)
+            );
 
             // 3. Create Payout
             const payout = await prisma.payout.create({
@@ -83,7 +87,7 @@ export async function POST(req: NextRequest) {
             });
 
             // 4. Update ledgers to PAID and link payout
-            const ledgerIds = ledgers.map((l: PayeeLedger) => l.id);
+            const ledgerIds = ledgers.map(l => l.id);
             await prisma.payeeLedger.updateMany({
                 where: { id: { in: ledgerIds } },
                 data: {
@@ -108,6 +112,7 @@ export async function POST(req: NextRequest) {
 
         return NextResponse.json(tx);
     } catch (err: unknown) {
+        if (err && typeof err === "object" && "status" in err) return err as Response;
         const errorMessage = err instanceof Error ? err.message : "Unknown error";
         return NextResponse.json({ error: errorMessage }, { status: 500 });
     }
