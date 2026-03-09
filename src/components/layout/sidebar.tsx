@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import {
     LayoutDashboard, Library, UploadCloud, ScanSearch, SearchCheck,
     FileCheck2, DollarSign, Briefcase, Workflow, Bot, FileText, Shield,
-    Users, CreditCard, LogOut, Wallet, BarChart3, Monitor, Music2, Shuffle, Copy,
+    Users, CreditCard, LogOut, Wallet, BarChart3, Monitor, Music2, Shuffle, Copy, Plug,
 } from "lucide-react";
 import { signOut } from "next-auth/react";
 
@@ -47,6 +47,7 @@ const navSections = [
         items: [
             { name: "Team", href: "/dashboard/settings/team", icon: Users },
             { name: "Billing", href: "/dashboard/settings/billing", icon: CreditCard },
+            { name: "Integrations", href: "/dashboard/settings/integrations", icon: Plug },
             { name: "Audit Trail", href: "/dashboard/settings/audit-logs", icon: Shield },
         ],
     },
