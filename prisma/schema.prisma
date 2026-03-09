@@ -49,6 +49,8 @@ model Organization {
   contentIdJobs    ContentIdJob[]
   // Webhook system
   webhooks         Webhook[]
+  // DSP duplicate profile scans
+  dspDuplicateScans DspDuplicateScan[]
   currency      String         @default("USD")
   
   // Stripe Billing Fields
@@ -1121,5 +1123,43 @@ model ContentIdJob {
   organization Organization @relation(fields: [orgId], references: [id])
 
   @@index([orgId])
+  @@index([status])
+}
+
+// ---------- DSP Duplicate Profile Detection ----------
+
+model DspDuplicateScan {
+  id              String             @id @default(cuid())
+  orgId           String
+  status          String             @default("PENDING") // PENDING, SCANNING, COMPLETE, FAILED
+  totalArtists    Int                @default(0)
+  duplicatesFound Int                @default(0)
+  error           String?
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+
+  organization    Organization       @relation(fields: [orgId], references: [id])
+  groups          DspDuplicateGroup[]
+
+  @@index([orgId])
+  @@index([status])
+}
+
+model DspDuplicateGroup {
+  id               String           @id @default(cuid())
+  scanId           String
+  canonicalName    String           // Best-guess canonical artist name
+  aliases          String[]         // All detected name variants (one per DSP entry)
+  dsps             String[]         // DSPs where the duplicate variants were found
+  totalStreams      Int              @default(0)
+  estimatedRevenue Decimal          @default(0) @db.Decimal(18, 4)
+  confidence       Int              // 0–100 matching confidence
+  status           String           @default("OPEN") // OPEN, REVIEWED, RESOLVED
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
+  scan             DspDuplicateScan @relation(fields: [scanId], references: [id])
+
+  @@index([scanId])
   @@index([status])
 }

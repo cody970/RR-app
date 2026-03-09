@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import {
     LayoutDashboard, Library, UploadCloud, ScanSearch, SearchCheck,
     FileCheck2, DollarSign, Briefcase, Workflow, Bot, FileText, Shield,
-    Users, CreditCard, LogOut, Wallet, BarChart3, Monitor, Music2, Shuffle,
+    Users, CreditCard, LogOut, Wallet, BarChart3, Monitor, Music2, Shuffle, Copy,
 } from "lucide-react";
 import { signOut } from "next-auth/react";
 
@@ -28,6 +28,7 @@ const navSections = [
             { name: "Analytics", href: "/dashboard/analytics", icon: BarChart3 },
             { name: "Content ID", href: "/dashboard/content-id", icon: Monitor },
             { name: "MLC Matching", href: "/dashboard/mlc-matching", icon: Music2 },
+            { name: "DSP Duplicates", href: "/dashboard/dsp-duplicates", icon: Copy },
         ],
     },
     {
