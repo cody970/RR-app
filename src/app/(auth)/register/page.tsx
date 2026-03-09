@@ -138,7 +138,7 @@ export default function RegisterPage() {
                                     placeholder="••••••••"
                                     autoComplete="new-password"
                                     className="h-12 bg-white pr-12"
-                                    helperText="Minimum 6 characters"
+                                    helperText="Min 12 chars, uppercase, lowercase, number & special character"
                                     error={errors.password?.message}
                                     {...register("password")}
                                 />
