@@ -31,7 +31,7 @@ export async function GET(req: Request) {
                             id: true,
                             title: true,
                             isrc: true,
-                            artist: true,
+                            artistName: true,
                             durationSec: true,
                             workId: true,
                         },

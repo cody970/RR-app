@@ -30,7 +30,8 @@ export async function GET(req: Request) {
             db.finding.findMany({
                 where,
                 include: {
-                    resource: true,
+                    tasks: true,
+                    registrationGap: true,
                 },
                 orderBy: {
                     createdAt: "desc",

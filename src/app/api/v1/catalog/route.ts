@@ -78,7 +78,7 @@ export async function GET(req: Request) {
                 writers: w.writers.map((ww) => ({
                     id: ww.writer.id,
                     name: ww.writer.name,
-                    ipi: ww.writer.ipi,
+                    ipi: ww.writer.ipiCae,
                     splitPercent: ww.splitPercent,
                     role: ww.role,
                 })),
@@ -107,7 +107,7 @@ export async function GET(req: Request) {
                         id: true,
                         title: true,
                         isrc: true,
-                        artist: true,
+                        artistName: true,
                         workId: true,
                         createdAt: true,
                         updatedAt: true,
