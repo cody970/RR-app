@@ -1,10 +1,11 @@
 "use client";
 
 import { useEffect, useState, useCallback, useRef } from "react";
-import { Search, Library, Disc3, CheckCircle2, XCircle, ChevronLeft, ChevronRight, AlertTriangle, Loader2 } from "lucide-react";
+import { Search, Library, Disc3, CheckCircle2, XCircle, ChevronLeft, ChevronRight, AlertTriangle, Loader2, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast-provider";
 import { DataState } from "@/components/ui/data-state";
+import { SearchAddModal } from "@/components/catalog/search-add-modal";
 
 // ---------- Types ----------
 
@@ -36,6 +37,7 @@ export default function CatalogPage() {
     const [error, setError] = useState<string | null>(null);
     const [enrichingId, setEnrichingId] = useState<string | null>(null);
     const [processingActionId, setProcessingActionId] = useState<string | null>(null);
+    const [showAddModal, setShowAddModal] = useState(false);
     const toast = useToast();
     const abortControllerRef = useRef<AbortController | null>(null);
 
@@ -56,8 +58,8 @@ export default function CatalogPage() {
             });
             if (res.ok) {
                 const data = await res.json();
-                setItems(data.items);
-                setTotal(data.total);
+                setItems(data.works || data.items || []);
+                setTotal(data.pagination?.total ?? data.total ?? 0);
             } else {
                 const data = await res.json().catch(() => ({}));
                 setError(data.error || "Failed to load catalog data");
@@ -221,6 +223,15 @@ export default function CatalogPage() {
                 </div>
 
                 <span className="text-sm text-slate-500">{total} {tab}</span>
+
+                <Button
+                    onClick={() => setShowAddModal(true)}
+                    className="bg-amber-500 hover:bg-amber-600 text-white shadow-sm"
+                    size="sm"
+                >
+                    <Plus className="h-4 w-4 mr-1.5" />
+                    Add
+                </Button>
             </div>
 
             {/* Table Area */}
@@ -387,6 +398,12 @@ export default function CatalogPage() {
                     )}
                 </DataState>
             </div>
+
+            <SearchAddModal
+                open={showAddModal}
+                onClose={() => setShowAddModal(false)}
+                onAdded={() => fetchCatalog()}
+            />
         </div>
     );
 }
